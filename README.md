@@ -36,4 +36,73 @@ This setup provides real **5G connectivity** for testing secure overlay networki
 
 ## 🏗 Architecture
 
+       ┌──────────────┐
+       │   Cloud VM   │
+       │ WireGuard    │
+       │ VPN Gateway  │
+       └──────┬───────┘
+              │ Encrypted Tunnel
+              │ (WireGuard over 5G)
+       ┌──────▼───────┐
+       │ Edge Node    │
+       │ Orange Pi 5  │
+       │ + RM502Q-GL  │
+       └──────────────┘
+
+
+Key idea:
+- 5G provides connectivity
+- WireGuard provides encryption & identity
+- Overlay network connects Edge ↔ Cloud securely
+
+---
+
+## 🔐 Key Features
+
+- WireGuard VPN over 5G network
+- Edge-to-Cloud secure tunnel
+- ARM64 embedded deployment
+- Zero-Trust networking model
+- Low-latency encrypted communication
+- Reproducible lab environment
+
+---
+
+## 🧪 Research Goals
+
+This project investigates:
+
+- Secure networking for Edge computing
+- WireGuard performance over 5G
+- Edge-Cloud architecture design
+- Feasibility of lightweight VPN on ARM devices
+- Foundation for distributed data collection systems
+
+---
+
+## ⚙️ Tech Stack
+
+- WireGuard
+- Linux (Ubuntu/Debian ARM64)
+- 5G WWAN (Quectel RM502Q-GL)
+- Embedded networking (Orange Pi 5 Max)
+
+---
+
+## 📂 Repository Structure (planned)
+
+---
+
+## 📌 Status
+
+🚧 Work in progress — lab environment under development.
+
+---
+
+## 👤 Author
+
+Nguyen Trung Hieu  
+Cloud / System Engineer Enthusiast  
+
+
 
