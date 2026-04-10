@@ -3,6 +3,7 @@
 # Port: 64203/UDP | OS: Ubuntu 22.04 LTS
 ###############################################################
 
+
 terraform {
   required_version = ">= 1.5.0"
 
@@ -11,6 +12,8 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+
+
   }
 }
 
@@ -55,16 +58,25 @@ resource "aws_security_group" "wireguard" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # SSH — giới hạn theo IP quản trị
+  # Registration API — TCP
   ingress {
-    description = "SSH từ IP quản trị"
+    description = "WireGuard Registration API"
+    from_port   = var.wg_api_port
+    to_port     = var.wg_api_port
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] # Should restrict IP if possible
+  }
+
+  # SSH - limit by admin IP
+  ingress {
+    description = "SSH from admin IP"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
     cidr_blocks = var.admin_ssh_cidr
   }
 
-  # Cho phép toàn bộ traffic ra ngoài
+  # Allow all outbound traffic
   egress {
     description = "All outbound traffic"
     from_port   = 0
@@ -102,7 +114,7 @@ resource "aws_instance" "wireguard" {
   subnet_id              = var.subnet_id
   vpc_security_group_ids = [aws_security_group.wireguard.id]
 
-  # Bật IP public tạm (trước khi gán EIP)
+  # Enable temporary public IP (before assigning EIP)
   associate_public_ip_address = true
 
   root_block_device {
@@ -116,15 +128,17 @@ resource "aws_instance" "wireguard" {
     })
   }
 
-  # User data — tự động cài WireGuard khi khởi động
+  # User data — automatically install WireGuard on startup
   user_data = base64encode(templatefile("${path.module}/user_data.sh", {
     wireguard_port    = var.wireguard_port
     wireguard_network = var.wireguard_network
+    wg_api_token      = var.wg_api_token
+    wg_api_port       = var.wg_api_port
   }))
 
   metadata_options {
     http_endpoint               = "enabled"
-    http_tokens                 = "required" # IMDSv2 bắt buộc
+    http_tokens                 = "required" # IMDSv2 required
     http_put_response_hop_limit = 1
   }
 

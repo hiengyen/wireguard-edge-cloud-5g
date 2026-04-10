@@ -17,7 +17,16 @@ else
 fi
 
 # 2. Define device and APN configuration
-DEVICE="/dev/cdc-wdm0"
+# Find the first available cdc-wdm device dynamically
+DEVICE=$(find /dev -maxdepth 1 -name "cdc-wdm*" | head -n 1)
+
+if [[ -z "${DEVICE:-}" ]]; then
+    echo "[ERROR] No QMI device (/dev/cdc-wdm*) found."
+    exit 1
+else
+    echo "[INFO] Detected QMI device: ${DEVICE}"
+fi
+
 APN="internet"
 
 # 3. Ensure script is executed as root

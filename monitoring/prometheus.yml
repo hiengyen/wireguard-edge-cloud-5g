@@ -1,0 +1,13 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'cloud-gateway'
+    static_configs:
+      - targets: ['localhost:9100']
+
+  - job_name: 'edge-node'
+    static_configs:
+      # This targets the Edge node over the WireGuard VPN tunnel
+      # Assuming default wireguard_network from variables.tf
+      - targets: ['10.8.0.2:9100']

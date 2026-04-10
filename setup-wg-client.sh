@@ -48,9 +48,9 @@ find_5g_uplink() {
 
     log "Found: $iface [$state]" >&2 
 
-    # WWAN thường state UNKNOWN -> vẫn hợp lệ
+    # WWAN often has state UNKNOWN -> valid
     if [[ "$state" == "up" || "$state" == "unknown" ]]; then
-      # check có IP chưa
+      # check IP 
       if ip -4 addr show "$iface" | grep -q inet; then
         log "Using $iface (has IP)" >&2
         echo "$iface"
@@ -109,15 +109,50 @@ generate_keys() {
 prompt_server() {
   header "Server info"
 
-  read -rp "Server endpoint: " WG_SERVER_ENDPOINT
+  read -rp "Server endpoint IP/Domain: " WG_SERVER_ENDPOINT
   read -rp "Server port [51820]: " WG_SERVER_PORT
   WG_SERVER_PORT=${WG_SERVER_PORT:-51820}
 
   read -rp "Server public key: " WG_SERVER_PUBKEY
-  read -rp "Client IP (10.0.0.2/24): " WG_CLIENT_IP
-  WG_CLIENT_IP=${WG_CLIENT_IP:-10.0.0.2/24}
-  
+  read -rp "Client IP (e.g. 10.8.0.2/32): " WG_CLIENT_IP
+  WG_CLIENT_IP=${WG_CLIENT_IP:-10.8.0.2/32}
+
+  read -rp "Auto-register via Server API? [y/N]: " AUTO_REGISTER
+  if [[ "$AUTO_REGISTER" =~ ^[Yy]$ ]]; then
+    read -rp "API Port [5000]: " API_PORT
+    API_PORT=${API_PORT:-5000}
+    read -rp "API Token: " API_TOKEN
+  fi
 }
+
+# ---------- Register client ----------
+register_client() {
+  if [[ ! "${AUTO_REGISTER:-}" =~ ^[Yy]$ ]]; then
+    return
+  fi
+  
+  header "Registering Public Key via API"
+  log "Endpoint: http://$WG_SERVER_ENDPOINT:$API_PORT/register"
+  
+  if ! command -v curl &>/dev/null; then
+    apt-get install -y curl || dnf install -y curl || yum install -y curl
+  fi
+
+  JSON_PAYLOAD="{\"pubkey\":\"$PUBLIC_KEY\", \"ip\":\"$WG_CLIENT_IP\"}"
+  
+  HTTP_STATUS=$(curl -s -o /tmp/wg_api_response.txt -w "%{http_code}" -X POST \
+       -H "Content-Type: application/json" \
+       -H "Authorization: Bearer $API_TOKEN" \
+       -d "$JSON_PAYLOAD" \
+       "http://$WG_SERVER_ENDPOINT:$API_PORT/register")
+
+  if [[ "$HTTP_STATUS" == "200" ]]; then
+      log "Registered successfully on Server!"
+  else
+      error "Failed to register. HTTP Status: $HTTP_STATUS"
+      error "Response: $(cat /tmp/wg_api_response.txt 2>/dev/null)"
+  fi
+  rm -f /tmp/wg_api_response.txt
 
 # ---------- Write config ----------
 write_config() {
@@ -179,5 +214,6 @@ install_wireguard
 generate_keys
 prompt_server
 write_config "$UPLINK"
+register_client
 enable_wg
 summary

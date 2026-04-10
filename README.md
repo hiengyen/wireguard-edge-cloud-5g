@@ -23,11 +23,11 @@ The platform also integrates:
 
 Edge node is built on an ARM64 embedded platform:
 
-| Component | Model |
-|---|---|
-| SBC | **Orange Pi 5 Max** |
-| WWAN Adapter | **ADTlink WS18** |
-| 5G Module | **Quectel RM502Q-GL** |
+| Component    | Model                 |
+| ------------ | --------------------- |
+| SBC          | **Orange Pi 5 Max**   |
+| WWAN Adapter | **ADTlink WS18**      |
+| 5G Module    | **Quectel RM502Q-GL** |
 
 This setup provides real **5G connectivity** for testing secure overlay networking in realistic conditions.
 
@@ -70,11 +70,11 @@ To ensure visibility and observability of the Edge-Cloud infrastructure, the pro
 
 ### Components
 
-| Tool | Purpose |
-|---|---|
-| **Prometheus** | Metrics collection & time-series database |
-| **Grafana** | Visualization & dashboards |
-| **Node Exporter** | System metrics from Edge node |
+| Tool              | Purpose                                   |
+| ----------------- | ----------------------------------------- |
+| **Prometheus**    | Metrics collection & time-series database |
+| **Grafana**       | Visualization & dashboards                |
+| **Node Exporter** | System metrics from Edge node             |
 
 ### Collected Metrics
 
@@ -100,18 +100,21 @@ Both Edge and Cloud nodes follow Linux hardening best practices.
 ### Hardening Measures
 
 **Network Security**
+
 - Disable password SSH login
 - Enforce SSH key authentication
 - Firewall rules using `iptables` / `nftables`
 - Restrict exposed ports
 
 **System Security**
+
 - Minimal package installation
 - Automatic security updates
 - Strong file permissions
 - Audit logging enabled
 
 **WireGuard Security**
+
 - Public-key cryptography authentication
 - Limited peer access control
 - Private overlay network isolation
@@ -141,7 +144,6 @@ This project investigates:
 ---
 
 ## 📂 Repository Structure (planned)
-
 
 ---
 
