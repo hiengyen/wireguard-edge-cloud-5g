@@ -1,8 +1,14 @@
 # WireGuard Edge–Cloud 5G Secure Overlay
 
+🇬🇧 [English](#-english) | 🇻🇳 [Tiếng Việt](#-tiếng-việt)
+
+---
+
+## 🇬🇧 English
+
 Secure Edge–Cloud connectivity using **WireGuard VPN over 5G** for distributed systems.
 
-This project explores how to build a lightweight, secure, and scalable networking architecture that connects **Edge devices and Cloud infrastructure** through a **5G private overlay network**, combined with **monitoring and system hardening**.
+This project demonstrates a lightweight, secure, and scalable networking architecture connecting **Edge devices and Cloud infrastructure** through a **5G private overlay network**, utilizing Zero-touch auto-registration, infrastructure monitoring, and system hardening.
 
 ---
 
@@ -11,149 +17,248 @@ This project explores how to build a lightweight, secure, and scalable networkin
 Modern distributed systems increasingly rely on Edge computing and 5G connectivity.  
 This project demonstrates how to deploy a **Zero-Trust secure tunnel** between Edge nodes and Cloud services using **WireGuard** on embedded ARM devices.
 
-The platform also integrates:
+The platform integrates:
 
 - Infrastructure monitoring (Prometheus + Grafana)
 - System hardening and security best practices
-- Reproducible lab environment for Edge–Cloud research
-
----
-
-## 🧰 Hardware Platform
-
-Edge node is built on an ARM64 embedded platform:
-
-| Component    | Model                 |
-| ------------ | --------------------- |
-| SBC          | **Orange Pi 5 Max**   |
-| WWAN Adapter | **ADTlink WS18**      |
-| 5G Module    | **Quectel RM502Q-GL** |
-
-This setup provides real **5G connectivity** for testing secure overlay networking in realistic conditions.
+- Auto-Registration API for seamless Zero-touch VPN enrollment
 
 ---
 
 ## 🏗 Architecture
 
-                ┌────────────────────┐
-                │   Cloud Gateway    │
-                │ WireGuard Server   │
-                │ Prometheus Server  │
-                │ Grafana Dashboard  │
-                └─────────┬──────────┘
-                          │
-            Encrypted Tunnel (WireGuard over 5G)
-                          │
-                ┌─────────▼──────────┐
-                │     Edge Node      │
-                │   Orange Pi 5 Max  │
-                │ WireGuard Client   │
-                │ Node Exporter      │
-                └────────────────────┘
+                ┌────────────────────────┐
+                │     Cloud Gateway      │
+                │    (AWS EC2 Ubuntu)    │
+                │ - WireGuard Server     │
+                │ - Registration API     │
+                │ - Prometheus/Grafana   │
+                └──────────┬─────────────┘
+                           │
+             Encrypted Tunnel (WireGuard)
+                  over Public 5G Network
+                           │
+                ┌──────────▼─────────────┐
+                │       Edge Node        │
+                │ - Orange Pi 5 Max      │
+                │ - 5G WWAN Quectel      │
+                │ - WireGuard Client     │
+                │ - Node Exporter        │
+                └────────────────────────┘
 
 ---
+
+## 📂 Repository Structure
+
+```text
+wireguard-edge-cloud-5g/
+├── README.md                 # You are here!
+├── cloud/                    # Cloud Gateway components
+│   ├── terraform/            # AWS IaC (VPC, EC2, SG, Auto-install WG & API)
+│   ├── monitoring/           # Prometheus & Grafana docker infrastructure
+│   └── vpn-reference/        # Reference configuration files
+├── edge/                     # Edge Node components
+│   ├── 5g-wwan/              # Cellular network physical layer scripts
+│   │   ├── wwan-start.sh     # Dynamic device detection & QMI Raw-IP connect
+│   │   ├── wwan-stop.sh      # Cleanly stop network session
+│   │   ├── wwan-monitor.sh   # Keepalive & Ping monitor daemon
+│   │   └── wwan.service      # Systemd service for auto connectivity
+│   └── vpn/                  # VPN Overlay network layer
+│       └── setup-wg-client.sh# Key generation & Zero-Touch cloud auto-registration
+└── shared/                   # Cross-platform utilities
+    └── scripts/
+        ├── hardening.sh      # UFW Firewall & Fail2Ban & SSH security config
+        └── install-node-exporter.sh # Prometheus metrics agent installation
+```
 
 ## 🔐 Key Features
 
-- WireGuard VPN over public 5G network
-- Secure Edge ↔ Cloud overlay network
-- ARM64 embedded deployment
-- Zero-Trust networking model
-- Real-time infrastructure monitoring
-- Hardened Linux systems
+- **5G QMI Network Automation:** Dynamically locates and connects Quectel RM502Q-GL via raw IP.
+- **Zero-Touch VPN Registration:** Edge nodes automatically generate key pairs and register with the AWS Cloud Gateway through a token-secured REST API.
+- **Infrastructure as Code (IaC):** Cloud environments are 100% automated using Terraform.
+- **Observability:** Prometheus and Grafana dashboards actively pull metrics via the private `10.8.0.x` tunnel.
+- **Hardening:** Best-practice security including UFW restricted ports, Fail2Ban, and key-only SSH.
 
 ---
 
-## 📊 Monitoring Stack
+## 🚀 Quick Start
 
-To ensure visibility and observability of the Edge-Cloud infrastructure, the project deploys a lightweight monitoring stack.
+### 1. Cloud Provisioning
 
-### Components
+Deploy the Cloud Server using Terraform:
 
-| Tool              | Purpose                                   |
-| ----------------- | ----------------------------------------- |
-| **Prometheus**    | Metrics collection & time-series database |
-| **Grafana**       | Visualization & dashboards                |
-| **Node Exporter** | System metrics from Edge node             |
+```bash
+cd cloud/terraform
+terraform init
+terraform apply
+```
 
-### Collected Metrics
+_Note down the API token, Server Endpoint, and Port displayed in the Terraform outputs or inside `variables.tf`._
 
-- CPU / RAM / Disk usage
-- Network throughput over WireGuard tunnel
-- System uptime and load
-- 5G connectivity performance indicators
+### 2. Edge Physical Connection
 
-### Monitoring Goals
+Connect your Quectel 5G Module via USB/M.2 to the Edge SBC (e.g., Orange Pi).
 
-- Detect performance bottlenecks
-- Observe WireGuard tunnel stability
-- Monitor resource usage on embedded hardware
-- Provide real-time dashboards for operations
+```bash
+sudo ./edge/5g-wwan/wwan-start.sh
+```
 
----
+### 3. Edge VPN Auto-Registration
 
-## 🛡 System Hardening
+Once connected to the internet, join the VPN overlay:
 
-Security is a core focus of this project.  
-Both Edge and Cloud nodes follow Linux hardening best practices.
+```bash
+sudo ./edge/vpn/setup-wg-client.sh
+```
 
-### Hardening Measures
+_When prompted, select `Y` to automatically register the device via the API, using the Token specified in Terraform._
 
-**Network Security**
+### 4. Shared Operations (Hardening & Monitoring)
 
-- Disable password SSH login
-- Enforce SSH key authentication
-- Firewall rules using `iptables` / `nftables`
-- Restrict exposed ports
+On both environments, run:
 
-**System Security**
+```bash
+sudo ./shared/scripts/hardening.sh
+sudo ./shared/scripts/install-node-exporter.sh
+```
 
-- Minimal package installation
-- Automatic security updates
-- Strong file permissions
-- Audit logging enabled
+For Grafana, navigate to the Cloud node:
 
-**WireGuard Security**
-
-- Public-key cryptography authentication
-- Limited peer access control
-- Private overlay network isolation
+```bash
+cd cloud/monitoring
+sudo docker-compose up -d
+```
 
 ---
 
-## 🧪 Research Goals
+## 🇻🇳 Tiếng Việt
 
-This project investigates:
+Kết nối bảo mật an toàn giữa Edge và Cloud thông qua **WireGuard VPN trên sóng mạng 5G** dành cho các hệ thống phân tán.
 
-- Secure networking for Edge computing
-- WireGuard performance over 5G
-- Monitoring distributed Edge infrastructure
-- Hardening embedded Linux devices
-- Building Zero-Trust Edge-Cloud architecture
+Dự án này là minh chứng về việc xây dựng kiến trúc mạng nhẹ, bảo mật và dễ mở rộng kết nối giữa các **Thiết bị biên (Edge)** và **Máy chủ đám mây (Cloud)** thông qua **mạng ảo nội bộ trên nền tảng 5G**, tích hợp khả năng tự động đăng ký (Zero-touch), giám sát cơ sở hạ tầng và làm cứng (hardening) hệ thống.
 
 ---
 
-## ⚙️ Tech Stack
+## 🚀 Tổng quan
 
-- WireGuard
-- Prometheus + Grafana
-- Linux (Ubuntu/Debian ARM64)
-- 5G WWAN (Quectel RM502Q-GL)
-- Embedded networking (Orange Pi 5 Max)
+Các hệ thống phân tán hiện đại ngày càng phụ thuộc vào điện toán biên (Edge Computing) và kết nối không dây 5G.
+Dự án này cho thấy cách triển khai một **đường hầm bảo mật Zero-Trust** giữa các Edge node và dịch vụ Cloud bằng việc sử dụng **WireGuard** trên thiết bị ARM nhúng.
 
----
+Nền tảng này tích hợp sẵn:
 
-## 📂 Repository Structure (planned)
-
----
-
-## 📌 Status
-
-🚧 Work in progress — lab environment under development.
+- Phân hệ Giám sát Hạ tầng (Prometheus + Grafana).
+- Áp dụng các tiêu chuẩn Làm cứng hệ thống/Bảo mật lõi (System Hardening).
+- Auto-Registration API hỗ trợ tính năng gia nhập mạng VPN tự động (Zero-touch).
 
 ---
 
-## 👤 Author
+## 🏗 Kiến trúc Hệ thống
 
-Nguyen Trung Hieu  
+                ┌────────────────────────┐
+                │     Cloud Gateway      │
+                │    (AWS EC2 Ubuntu)    │
+                │ - Dịch vụ WireGuard    │
+                │ - Registration API     │
+                │ - Prometheus/Grafana   │
+                └──────────┬─────────────┘
+                           │
+             Đường hầm mã hóa (WireGuard)
+                  qua Internet sóng 5G
+                           │
+                ┌──────────▼─────────────┐
+                │       Edge Node        │
+                │ - Orange Pi 5 Max      │
+                │ - 5G WWAN Quectel      │
+                │ - Client WireGuard     │
+                │ - Node Exporter        │
+                └────────────────────────┘
+
+---
+
+## 📂 Tổ chức Thư mục
+
+```text
+wireguard-edge-cloud-5g/
+├── README.md                 # Chính là tài liệu này (Song ngữ)
+├── cloud/                    # Phân hệ Máy chủ Cổng kết nối
+│   ├── terraform/            # Triển khai tự động AWS (VPC, EC2, tự động tải WG & API)
+│   ├── monitoring/           # Cụm Docker cho Prometheus & Grafana
+│   └── vpn-reference/        # Nơi lưu cấu hình tham chiếu của Server
+├── edge/                     # Phân hệ Thiết bị Đầu cuối
+│   ├── 5g-wwan/              # Kịch bản giao tiếp phần cứng mạng di động
+│   │   ├── wwan-start.sh     # Phát hiện thiết bị tĩnh/động & kết nối QMI Raw-IP
+│   │   ├── wwan-stop.sh      # Ngắt kết nối mạng sạch sẽ
+│   │   ├── wwan-monitor.sh   # Tiến trình Ping giám sát chống rớt mạng
+│   │   └── wwan.service      # Service Systemd hỗ trợ tự động chạy lúc khởi động
+│   └── vpn/                  # Tầng mạng ảo (Overlay network)
+│       └── setup-wg-client.sh# Sinh khóa mã hóa & Gia nhập mạng tự động không chạm
+└── shared/                   # Các thư viện dùng chung cho cả Cloud và Edge
+    └── scripts/
+        ├── hardening.sh      # Bật UFW Firewall, Fail2Ban, cấm SSH password
+        └── install-node-exporter.sh # Cài Agent theo dõi sức khoẻ phần cứng
+```
+
+## 🔐 Tính Năng Chính
+
+- **Tự động Giao tiếp 5G QMI:** Định danh và kết nối tự động tới modem Quectel RM502Q-GL qua chế độ raw IP, hạn chế lỗi gán cứng `/dev/cdc-wdm0`.
+- **Đăng Ký VPN Tự Động (Zero-Touch):** Edge nodes tự định hình cặp khóa bảo mật và đăng ký xin phép truy cập lên trung tâm AWS bằng một REST API kết nối qua phương thức Token bảo mật.
+- **Hạ tầng dưới dạng Mã (IaC):** Server rỗng được khởi tạo và cài cắm 100% tự động qua môi trường Terraform.
+- **Khả năng Quan sát (Observability):** Dashboard Grafana và trạm trung chuyển Prometheus tự động cào metrics (sức khoẻ phần cứng) bọc kín theo luồng đường hầm `10.8.0.x`.
+- **Bảo Mật (Hardening):** Phản ứng tiêu chuẩn cho Ubuntu Server qua tường lửa drop-all của UFW (Port-whitelist), Fail2Ban chặn bruteforce, và loại bỏ hoàn toàn SSH bằng tài khoản/mật khẩu.
+
+---
+
+## 🚀 Hướng Dẫn Nhanh
+
+### 1. Triển khai Cloud
+
+Xây dựng Server Cloud qua Terraform:
+
+```bash
+cd cloud/terraform
+terraform init
+terraform apply
+```
+
+_Lưu ý ghi chép lại các giá trị đầu ra (API token, Endpoint, Port Server, v.v)._
+
+### 2. Kết nối Mạng phần cứng
+
+Cắm anten, gắn 5G Module qua ngõ USB/PCIe M.2 vào thiết bị SBC (Ví dụ: Orange Pi).
+
+```bash
+sudo ./edge/5g-wwan/wwan-start.sh
+```
+
+### 3. Đăng ký Tự động Cấu Hình VPN
+
+Sau khi có kết nối Internet do SIM cấp, khởi chạy đường hầm ảo vào hệ thống:
+
+```bash
+sudo ./edge/vpn/setup-wg-client.sh
+```
+
+_Gõ phím `Y` khi nhận được lời mời hỏi để hệ thống tiến hành giao tiếp nối kết chìa khoá tự động qua API._
+
+### 4. Phụ bản Quản trị (Bảo mật & Giám sát)
+
+Hoạt động dùng chung ở cả 2 bề mặt của hệ thống:
+
+```bash
+sudo ./shared/scripts/hardening.sh
+sudo ./shared/scripts/install-node-exporter.sh
+```
+
+Trực tiếp kích hoạt giao diện trang điều khiển giám sát (chỉ chạy trên Cloud):
+
+```bash
+cd cloud/monitoring
+sudo docker-compose up -d
+```
+
+---
+
+## 👤 Author / Tác Giả
+
+**Nguyen Trung Hieu**  
 Cloud / System Engineer Enthusiast
