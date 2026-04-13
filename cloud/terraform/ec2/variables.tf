@@ -1,7 +1,3 @@
-###############################################################
-# Variables
-###############################################################
-
 variable "aws_region" {
   description = "AWS region to deploy"
   type        = string
@@ -39,7 +35,7 @@ variable "key_pair_name" {
 variable "wireguard_port" {
   description = "UDP port for WireGuard"
   type        = number
-  default     = 64203
+  default     = 51820
 }
 
 variable "wireguard_network" {

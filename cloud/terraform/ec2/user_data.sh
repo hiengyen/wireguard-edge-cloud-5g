@@ -1,7 +1,7 @@
 #!/bin/bash
-###############################################################
-# User Data Script — Auto-install WireGuard on Ubuntu 22.04
-###############################################################
+
+# Auto-install WireGuard
+
 
 set -euo pipefail
 exec > /var/log/user-data.log 2>&1

@@ -1,25 +1,7 @@
-###############################################################
-# WireGuard EC2 Server — Terraform Configuration
-# Port: 64203/UDP | OS: Ubuntu 22.04 LTS
-###############################################################
-
-
-terraform {
-  required_version = ">= 1.5.0"
-
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-
-
-  }
-}
-
 provider "aws" {
   region = var.aws_region
 }
+
 
 ###############################################################
 # Data Sources
@@ -49,44 +31,64 @@ resource "aws_security_group" "wireguard" {
   description = "Security Group for WireGuard VPN server"
   vpc_id      = var.vpc_id
 
-  # WireGuard VPN — UDP
-  ingress {
-    description = "WireGuard VPN"
-    from_port   = var.wireguard_port
-    to_port     = var.wireguard_port
-    protocol    = "udp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  # Registration API — TCP
-  ingress {
-    description = "WireGuard Registration API"
-    from_port   = var.wg_api_port
-    to_port     = var.wg_api_port
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] # Should restrict IP if possible
-  }
-
-  # SSH - limit by admin IP
-  ingress {
-    description = "SSH from admin IP"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = var.admin_ssh_cidr
-  }
-
-  # Allow all outbound traffic
-  egress {
-    description = "All outbound traffic"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
   tags = merge(var.common_tags, {
     Name = "${var.project_name}-wireguard-sg"
+  })
+}
+
+# WireGuard VPN — UDP ingress
+resource "aws_vpc_security_group_ingress_rule" "wireguard_udp" {
+  security_group_id = aws_security_group.wireguard.id
+  description       = "WireGuard VPN"
+  from_port         = var.wireguard_port
+  to_port           = var.wireguard_port
+  ip_protocol       = "udp"
+  cidr_ipv4         = "0.0.0.0/0"
+
+  tags = merge(var.common_tags, {
+    Name = "${var.project_name}-wg-udp-ingress"
+  })
+}
+
+# Registration API — TCP ingress
+resource "aws_vpc_security_group_ingress_rule" "wg_api" {
+  security_group_id = aws_security_group.wireguard.id
+  description       = "WireGuard Registration API"
+  from_port         = var.wg_api_port
+  to_port           = var.wg_api_port
+  ip_protocol       = "tcp"
+  cidr_ipv4         = "0.0.0.0/0" # Should restrict IP if possible
+
+  tags = merge(var.common_tags, {
+    Name = "${var.project_name}-wg-api-ingress"
+  })
+}
+
+# SSH — limit by admin IP
+resource "aws_vpc_security_group_ingress_rule" "ssh" {
+  for_each = toset(var.admin_ssh_cidr)
+
+  security_group_id = aws_security_group.wireguard.id
+  description       = "SSH from admin IP"
+  from_port         = 22
+  to_port           = 22
+  ip_protocol       = "tcp"
+  cidr_ipv4         = each.value
+
+  tags = merge(var.common_tags, {
+    Name = "${var.project_name}-ssh-ingress"
+  })
+}
+
+# Allow all outbound traffic
+resource "aws_vpc_security_group_egress_rule" "all_outbound" {
+  security_group_id = aws_security_group.wireguard.id
+  description       = "All outbound traffic"
+  ip_protocol       = "-1"
+  cidr_ipv4         = "0.0.0.0/0"
+
+  tags = merge(var.common_tags, {
+    Name = "${var.project_name}-all-egress"
   })
 }
 
@@ -95,12 +97,17 @@ resource "aws_security_group" "wireguard" {
 ###############################################################
 
 resource "aws_eip" "wireguard" {
-  instance = aws_instance.wireguard.id
-  domain   = "vpc"
+  domain = "vpc"
 
   tags = merge(var.common_tags, {
     Name = "${var.project_name}-wireguard-eip"
   })
+}
+
+# Associate EIP to instance explicitly (best practice in v6)
+resource "aws_eip_association" "wireguard" {
+  instance_id   = aws_instance.wireguard.id
+  allocation_id = aws_eip.wireguard.id
 }
 
 ###############################################################

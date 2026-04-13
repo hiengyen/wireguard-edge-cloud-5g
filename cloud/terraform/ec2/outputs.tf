@@ -1,7 +1,3 @@
-###############################################################
-# Outputs
-###############################################################
-
 output "instance_id" {
   description = "EC2 Instance ID"
   value       = aws_instance.wireguard.id

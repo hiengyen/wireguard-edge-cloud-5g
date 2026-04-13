@@ -1,28 +1,19 @@
-###############################################################
-# terraform.tfvars — Điền giá trị thực tế của bạn vào đây
-# KHÔNG commit file này lên git (thêm vào .gitignore)
-###############################################################
-
 aws_region   = "ap-southeast-1"
-project_name = "vpn"
+project_name = "wireguard-vpn"
 
-# Lấy từ AWS Console > VPC
 vpc_id    = "vpc-xxxxxxxxxxxxxxxxx"
 subnet_id = "subnet-xxxxxxxxxxxxxxxxx"
 
-# Tên Key Pair đã tạo trên AWS
 key_pair_name = "my-wireguard-key"
 
-# Instance type — t3.micro đủ cho cá nhân/nhỏ
 instance_type = "t3.micro"
 
-# WireGuard config
-wireguard_port    = 64203
-wireguard_network = "10.8.0.0/24"
+
+wireguard_port    = 51820
+wireguard_network = "10.100.0.0/24"
 root_volume_size  = 20
 
-# ⚠️ QUAN TRỌNG: Giới hạn SSH theo IP thực của bạn
-# Tra IP tại: https://checkip.amazonaws.com
+# CheckIP: https://checkip.amazonaws.com
 admin_ssh_cidr = ["<YOUR_PUBLIC_IP>/32"]
 
 common_tags = {
