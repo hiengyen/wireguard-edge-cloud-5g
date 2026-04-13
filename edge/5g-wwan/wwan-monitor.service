@@ -1,14 +1,24 @@
 [Unit]
-Description=WWAN Connection Monitor
-After=wwan.service
+Description=WWAN Connection Watchdog
 Requires=wwan.service
+After=wwan.service
+# Bind lifecycle: if wwan.service is manually stopped, also stop this monitor.
+PartOf=wwan.service
+# Rate limiting: Prevent infinity loops that crash CPU
+StartLimitBurst=3
+StartLimitIntervalSec=60
 
 [Service]
 Type=simple
+# Clean up log parsing with a professional tag
+SyslogIdentifier=WWAN-Watchdog
 ExecStart=/usr/local/bin/wwan-monitor.sh
 Restart=always
 RestartSec=10
 
+# Resource limits designed for edge platforms
+MemoryMax=15M
+OOMScoreAdjust=100
+
 [Install]
 WantedBy=multi-user.target
-
