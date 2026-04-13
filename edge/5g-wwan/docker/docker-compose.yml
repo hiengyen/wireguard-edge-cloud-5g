@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  edge_5g_wwan:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: edge_5g_wwan
+    network_mode: "host"       # Critical: allow container to manipulate the physical network cards
+    privileged: true           # Critical: required to manage Raw-IP and Kernel capabilities
+    restart: always            # Built-in Watchdog System (Replaces wwan-monitor.sh!)
+    volumes:
+      - /dev:/dev              # Let container locate and control the Quectel USB modem
+      - /sys:/sys              # Let container set the Raw-IP flags

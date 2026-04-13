@@ -60,9 +60,9 @@ wireguard-edge-cloud-5g/
 ├── edge/                     # Edge Node components
 │   ├── 5g-wwan/              # Cellular network physical layer scripts
 │   │   ├── wwan-start.sh     # Dynamic device detection & QMI Raw-IP connect
-│   │   ├── wwan-stop.sh      # Cleanly stop network session
-│   │   ├── wwan-monitor.sh   # Keepalive & Ping monitor daemon
-│   │   └── wwan.service      # Systemd service for auto connectivity
+│   │   ├── docker/           # Alternative: Containerized WWAN deployment
+│   │   ├── install.sh        # Systemd installation script
+│   │   └── uninstall.sh      # Cleanup automation
 │   └── vpn/                  # VPN Overlay network layer
 │       └── setup-wg-client.sh# Key generation & Zero-Touch cloud auto-registration
 └── shared/                   # Cross-platform utilities
@@ -97,10 +97,18 @@ _Note down the API token, Server Endpoint, and Port displayed in the Terraform o
 
 ### 2. Edge Physical Connection
 
-Connect your Quectel 5G Module via USB/M.2 to the Edge SBC (e.g., Orange Pi).
+Connect your Quectel 5G Module via USB/M.2 to the Edge SBC (e.g., Orange Pi). You have two deployment options:
 
+**Option A: Systemd Service (Native)**
 ```bash
-sudo ./edge/5g-wwan/wwan-start.sh
+cd edge/5g-wwan
+sudo ./install.sh
+```
+
+**Option B: Docker Containerized (Alternative)**
+```bash
+cd edge/5g-wwan/docker
+sudo docker-compose up -d
 ```
 
 ### 3. Edge VPN Auto-Registration
@@ -187,9 +195,9 @@ wireguard-edge-cloud-5g/
 ├── edge/                     # Phân hệ Thiết bị Đầu cuối
 │   ├── 5g-wwan/              # Kịch bản giao tiếp phần cứng mạng di động
 │   │   ├── wwan-start.sh     # Phát hiện thiết bị tĩnh/động & kết nối QMI Raw-IP
-│   │   ├── wwan-stop.sh      # Ngắt kết nối mạng sạch sẽ
-│   │   ├── wwan-monitor.sh   # Tiến trình Ping giám sát chống rớt mạng
-│   │   └── wwan.service      # Service Systemd hỗ trợ tự động chạy lúc khởi động
+│   │   ├── docker/           # Triển khai giải pháp thay thế qua Docker Container
+│   │   ├── install.sh        # Tiện ích tự động cài đặt Systemd Service
+│   │   └── uninstall.sh      # Tiện ích dọn dẹp hệ thống
 │   └── vpn/                  # Tầng mạng ảo (Overlay network)
 │       └── setup-wg-client.sh# Sinh khóa mã hóa & Gia nhập mạng tự động không chạm
 └── shared/                   # Các thư viện dùng chung cho cả Cloud và Edge
@@ -224,10 +232,20 @@ _Lưu ý ghi chép lại các giá trị đầu ra (API token, Endpoint, Port Se
 
 ### 2. Kết nối Mạng phần cứng
 
-Cắm anten, gắn 5G Module qua ngõ USB/PCIe M.2 vào thiết bị SBC (Ví dụ: Orange Pi).
+Cắm anten, gắn 5G Module qua ngõ USB/PCIe M.2 vào thiết bị SBC (Ví dụ: Orange Pi). 
 
+Bạn có thể chọn 1 trong 2 cách triển khai:
+
+**Cách 1: Chạy trực tiếp qua Systemd (Khuyên dùng)**
 ```bash
-sudo ./edge/5g-wwan/wwan-start.sh
+cd edge/5g-wwan
+sudo ./install.sh
+```
+
+**Cách 2: Đóng gói siêu sạch qua Docker (Alternative)**
+```bash
+cd edge/5g-wwan/docker
+sudo docker-compose up -d
 ```
 
 ### 3. Đăng ký Tự động Cấu Hình VPN
