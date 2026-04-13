@@ -1,7 +1,6 @@
 [Unit]
 Description=WWAN QMI Auto-Connect
-After=network.target
-Before=network-online.target
+After=network.target network-online.target multi-user.target
 
 [Service]
 Type=oneshot
