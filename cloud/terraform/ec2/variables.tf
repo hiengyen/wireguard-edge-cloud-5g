@@ -27,10 +27,7 @@ variable "instance_type" {
 
 }
 
-variable "key_pair_name" {
-  description = "AWS Key Pair name for EC2 SSH access"
-  type        = string
-}
+
 
 variable "wireguard_port" {
   description = "UDP port for WireGuard"

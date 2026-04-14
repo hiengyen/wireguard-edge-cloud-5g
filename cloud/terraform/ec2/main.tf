@@ -117,7 +117,6 @@ resource "aws_eip_association" "wireguard" {
 resource "aws_instance" "wireguard" {
   ami                    = data.aws_ami.ubuntu.id
   instance_type          = var.instance_type
-  key_name               = var.key_pair_name
   subnet_id              = var.subnet_id
   vpc_security_group_ids = [aws_security_group.wireguard.id]
 
