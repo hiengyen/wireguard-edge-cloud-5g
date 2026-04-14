@@ -54,7 +54,7 @@ The platform integrates:
 wireguard-edge-cloud-5g/
 ├── README.md                 # You are here!
 ├── cloud/                    # Cloud Gateway components
-│   ├── terraform/            # AWS IaC (VPC, EC2, SG, Auto-install WG & API)
+│   ├── terraform/ec2/        # AWS IaC (AWS Provider v6, EC2, SG, Auto-install WG & API)
 │   ├── monitoring/           # Prometheus & Grafana docker infrastructure
 │   └── vpn-reference/        # Reference configuration files
 ├── edge/                     # Edge Node components
@@ -88,9 +88,10 @@ wireguard-edge-cloud-5g/
 Deploy the Cloud Server using Terraform:
 
 ```bash
-cd cloud/terraform
+cd cloud/terraform/ec2
 terraform init
-terraform apply
+terraform plan -out=tfplan
+terraform apply "tfplan"
 ```
 
 _Note down the API token, Server Endpoint, and Port displayed in the Terraform outputs or inside `variables.tf`._
@@ -189,7 +190,7 @@ Nền tảng này tích hợp sẵn:
 wireguard-edge-cloud-5g/
 ├── README.md                 # Chính là tài liệu này (Song ngữ)
 ├── cloud/                    # Phân hệ Máy chủ Cổng kết nối
-│   ├── terraform/            # Triển khai tự động AWS (VPC, EC2, tự động tải WG & API)
+│   ├── terraform/ec2/        # Triển khai tự động AWS (Provider v6, EC2, tự động tải WG & API)
 │   ├── monitoring/           # Cụm Docker cho Prometheus & Grafana
 │   └── vpn-reference/        # Nơi lưu cấu hình tham chiếu của Server
 ├── edge/                     # Phân hệ Thiết bị Đầu cuối
@@ -223,9 +224,10 @@ wireguard-edge-cloud-5g/
 Xây dựng Server Cloud qua Terraform:
 
 ```bash
-cd cloud/terraform
+cd cloud/terraform/ec2
 terraform init
-terraform apply
+terraform plan -out=tfplan
+terraform apply "tfplan"
 ```
 
 _Lưu ý ghi chép lại các giá trị đầu ra (API token, Endpoint, Port Server, v.v)._
