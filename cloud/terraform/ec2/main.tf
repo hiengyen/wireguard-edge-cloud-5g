@@ -136,7 +136,7 @@ resource "aws_instance" "wireguard" {
   }
 
   # User data — automatically install WireGuard on startup
-  user_data = base64encode(templatefile("${path.module}/user_data.sh", {
+  user_data_base64 = base64encode(templatefile("${path.module}/user_data.sh", {
     wireguard_port    = var.wireguard_port
     wireguard_network = var.wireguard_network
     wg_api_token      = var.wg_api_token

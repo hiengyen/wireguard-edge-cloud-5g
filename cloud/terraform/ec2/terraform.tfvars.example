@@ -4,7 +4,7 @@ project_name = "wireguard-vpn"
 vpc_id    = "vpc-xxxxxxxxxxxxxxxxx"
 subnet_id = "subnet-xxxxxxxxxxxxxxxxx"
 
-key_pair_name = "my-wireguard-key"
+key_pair_name = "my-key"
 
 instance_type = "t3.micro"
 
