@@ -24,7 +24,11 @@ variable "instance_type" {
   description = "EC2 instance type"
   type        = string
   default     = "t3.micro"
+}
 
+variable "key_name" {
+  description = "Name of the AWS EC2 Key Pair for SSH access (must exist in AWS before applying)"
+  type        = string
 }
 
 
