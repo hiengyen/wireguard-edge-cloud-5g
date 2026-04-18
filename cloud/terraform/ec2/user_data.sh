@@ -9,8 +9,8 @@ exec > /var/log/user-data.log 2>&1
 echo "=== Starting WireGuard installation ==="
 
 # Update and install WireGuard
-apt-get update -y
-apt-get install -y wireguard wireguard-tools qrencode
+dnf update -y
+dnf install -y wireguard-tools qrencode
 
 # Enable IP forwarding
 echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf

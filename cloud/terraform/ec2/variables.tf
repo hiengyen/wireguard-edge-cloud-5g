@@ -31,8 +31,6 @@ variable "key_name" {
   type        = string
 }
 
-
-
 variable "wireguard_port" {
   description = "UDP port for WireGuard"
   type        = number
@@ -54,7 +52,7 @@ variable "root_volume_size" {
 variable "admin_ssh_cidr" {
   description = "List of allowed SSH CIDRs (should restrict to your IP)"
   type        = list(string)
-  default     = ["0.0.0.0/0"] # ⚠️ Replace with your actual IP!
+  default     = ["0.0.0.0/0"] # Replace with your actual IP!
 }
 
 variable "common_tags" {

@@ -2,18 +2,17 @@ provider "aws" {
   region = var.aws_region
 }
 
-
 ###############################################################
 # Data Sources
 ###############################################################
 
-data "aws_ami" "ubuntu" {
+data "aws_ami" "amazon_linux" {
+  owners      = ["137112412989"] # Amazon
   most_recent = true
-  owners      = ["099720109477"] # Canonical
 
   filter {
     name   = "name"
-    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
+    values = ["al2023-ami-*-x86_64"]
   }
 
   filter {
@@ -115,7 +114,7 @@ resource "aws_eip_association" "wireguard" {
 ###############################################################
 
 resource "aws_instance" "wireguard" {
-  ami                    = data.aws_ami.ubuntu.id
+  ami                    = data.aws_ami.amazon_linux.id
   instance_type          = var.instance_type
   key_name               = var.key_name
   subnet_id              = var.subnet_id
