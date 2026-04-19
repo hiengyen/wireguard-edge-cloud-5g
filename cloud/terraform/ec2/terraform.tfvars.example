@@ -5,7 +5,7 @@ vpc_id    = "vpc-xxxxxxxxxxxxxxxxx"
 subnet_id = "subnet-xxxxxxxxxxxxxxxxx"
 
 instance_type = "t3.micro"
-
+key_name      = "your-key-pair-name"
 
 wireguard_port    = 51820
 wireguard_network = "10.100.0.0/24"
