@@ -29,7 +29,7 @@ The platform integrates:
 
                 ┌────────────────────────┐
                 │     Cloud Gateway      │
-                │    (AWS EC2 Ubuntu)    │
+                │ (Amazon Linux 2023 EC2)│
                 │ - WireGuard Server     │
                 │ - Registration API     │
                 │ - Prometheus/Grafana   │
@@ -165,7 +165,7 @@ Nền tảng này tích hợp sẵn:
 
                 ┌────────────────────────┐
                 │     Cloud Gateway      │
-                │    (AWS EC2 Ubuntu)    │
+                │ (Amazon Linux 2023 EC2)│
                 │ - Dịch vụ WireGuard    │
                 │ - Registration API     │
                 │ - Prometheus/Grafana   │
@@ -213,7 +213,7 @@ wireguard-edge-cloud-5g/
 - **Đăng Ký VPN Tự Động (Zero-Touch):** Edge nodes tự định hình cặp khóa bảo mật và đăng ký xin phép truy cập lên trung tâm AWS bằng một REST API kết nối qua phương thức Token bảo mật.
 - **Hạ tầng dưới dạng Mã (IaC):** Server rỗng được khởi tạo và cài cắm 100% tự động qua môi trường Terraform.
 - **Khả năng Quan sát (Observability):** Dashboard Grafana và trạm trung chuyển Prometheus tự động cào metrics (sức khoẻ phần cứng) bọc kín theo luồng đường hầm `10.8.0.x`.
-- **Bảo Mật (Hardening):** Phản ứng tiêu chuẩn cho Ubuntu Server qua tường lửa drop-all của UFW (Port-whitelist), Fail2Ban chặn bruteforce, và loại bỏ hoàn toàn SSH bằng tài khoản/mật khẩu.
+- **Bảo Mật (Hardening):** Áp dụng tiêu chuẩn bảo mật cho Amazon Linux 2023 qua tường lửa drop-all của UFW (Port-whitelist), Fail2Ban chặn bruteforce, và loại bỏ hoàn toàn SSH bằng tài khoản/mật khẩu.
 
 ---
 
