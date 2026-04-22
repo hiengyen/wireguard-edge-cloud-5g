@@ -67,7 +67,7 @@ wireguard-edge-cloud-5g/
 │       └── setup-wg-client.sh# Key generation & Zero-Touch cloud auto-registration
 └── shared/                   # Cross-platform utilities
     └── scripts/
-        ├── hardening.sh      # UFW Firewall & Fail2Ban & SSH security config
+        ├── hardening.sh      # Distro-aware SSH/Firewall/Fail2Ban hardening
         └── install-node-exporter.sh # Prometheus metrics agent installation
 ```
 
@@ -77,7 +77,7 @@ wireguard-edge-cloud-5g/
 - **Zero-Touch VPN Registration:** Edge nodes automatically generate key pairs and register with the AWS Cloud Gateway through a token-secured REST API.
 - **Infrastructure as Code (IaC):** Cloud environments are 100% automated using Terraform.
 - **Observability:** Prometheus and Grafana dashboards actively pull metrics via the private `10.8.0.x` tunnel.
-- **Hardening:** Best-practice security including UFW restricted ports, Fail2Ban, and key-only SSH.
+- **Hardening:** Best-practice security including OS-aware firewalling (`ufw` on Armbian/Debian, `firewalld` on Amazon Linux 2023), Fail2Ban, and key-only SSH.
 
 ---
 
@@ -130,6 +130,12 @@ On both environments, run:
 sudo ./shared/scripts/hardening.sh
 sudo ./shared/scripts/install-node-exporter.sh
 ```
+
+`hardening.sh` auto-detects the target OS:
+- Edge Node on Armbian/Debian: configures `ufw`
+- Cloud Gateway on Amazon Linux 2023: configures `firewalld`
+
+If you use a non-default WireGuard port, run `hardening.sh` with `WIREGUARD_PORT=<port>`.
 
 For Grafana, navigate to the Cloud node:
 
@@ -203,7 +209,7 @@ wireguard-edge-cloud-5g/
 │       └── setup-wg-client.sh# Sinh khóa mã hóa & Gia nhập mạng tự động không chạm
 └── shared/                   # Các thư viện dùng chung cho cả Cloud và Edge
     └── scripts/
-        ├── hardening.sh      # Bật UFW Firewall, Fail2Ban, cấm SSH password
+        ├── hardening.sh      # Hardening SSH/Firewall/Fail2Ban theo từng distro
         └── install-node-exporter.sh # Cài Agent theo dõi sức khoẻ phần cứng
 ```
 
@@ -213,7 +219,7 @@ wireguard-edge-cloud-5g/
 - **Đăng Ký VPN Tự Động (Zero-Touch):** Edge nodes tự định hình cặp khóa bảo mật và đăng ký xin phép truy cập lên trung tâm AWS bằng một REST API kết nối qua phương thức Token bảo mật.
 - **Hạ tầng dưới dạng Mã (IaC):** Server rỗng được khởi tạo và cài cắm 100% tự động qua môi trường Terraform.
 - **Khả năng Quan sát (Observability):** Dashboard Grafana và trạm trung chuyển Prometheus tự động cào metrics (sức khoẻ phần cứng) bọc kín theo luồng đường hầm `10.8.0.x`.
-- **Bảo Mật (Hardening):** Áp dụng tiêu chuẩn bảo mật cho Amazon Linux 2023 qua tường lửa drop-all của UFW (Port-whitelist), Fail2Ban chặn bruteforce, và loại bỏ hoàn toàn SSH bằng tài khoản/mật khẩu.
+- **Bảo Mật (Hardening):** Áp dụng hardening theo môi trường đích: `ufw` cho Armbian/Debian ở Edge, `firewalld` cho Amazon Linux 2023 ở Cloud, kết hợp Fail2Ban và chỉ cho phép SSH bằng khoá.
 
 ---
 
@@ -268,6 +274,12 @@ Hoạt động dùng chung ở cả 2 bề mặt của hệ thống:
 sudo ./shared/scripts/hardening.sh
 sudo ./shared/scripts/install-node-exporter.sh
 ```
+
+`hardening.sh` sẽ tự nhận diện hệ điều hành:
+- Edge Node chạy Armbian/Debian: cấu hình `ufw`
+- Cloud Gateway chạy Amazon Linux 2023: cấu hình `firewalld`
+
+Nếu bạn dùng cổng WireGuard khác `51820`, hãy chạy với biến `WIREGUARD_PORT=<port>`.
 
 Trực tiếp kích hoạt giao diện trang điều khiển giám sát (chỉ chạy trên Cloud):
 

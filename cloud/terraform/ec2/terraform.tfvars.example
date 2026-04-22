@@ -14,8 +14,16 @@ root_volume_size  = 20
 # CheckIP: https://checkip.amazonaws.com
 admin_ssh_cidr = ["<YOUR_PUBLIC_IP>/32"]
 
+# Restrict to known edge node egress IPs in production.
+# Default 0.0.0.0/0 is acceptable if the Bearer token is strong enough.
+wg_api_cidr = "0.0.0.0/0"
+
 common_tags = {
   Project     = "WireGuard-VPN"
   ManagedBy   = "Terraform"
   Environment = "production"
 }
+
+# API Token — DO NOT hardcode here. Use environment variable instead:
+#   export TF_VAR_wg_api_token="your-strong-secret-token"
+# wg_api_token = "..."

@@ -2,6 +2,7 @@
 # ==============================================================
 # Install Node Exporter for Prometheus Monitoring
 # Run this on both Cloud Gateway and Edge Node
+# Supported targets: Amazon Linux 2023 x86_64 and Armbian aarch64
 # ==============================================================
 
 set -euo pipefail

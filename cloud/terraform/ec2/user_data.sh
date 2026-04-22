@@ -84,17 +84,43 @@ qrencode -t ansiutf8 < /etc/wireguard/client1.conf
 systemctl enable wg-quick@wg0
 systemctl start wg-quick@wg0
 
+# ===== Fetch API Token from Secrets Manager (IMDSv2) =====
+echo "=== Fetching API token from Secrets Manager ==="
+
+# Step 1: Get IMDSv2 session token
+IMDS_SESSION=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" \
+  -H "X-aws-ec2-metadata-token-ttl-seconds: 60")
+
+# Step 2: Detect current region from IMDS
+REGION=$(curl -s -H "X-aws-ec2-metadata-token: $IMDS_SESSION" \
+  http://169.254.169.254/latest/meta-data/placement/region)
+
+# Step 3: Fetch secret value from Secrets Manager
+API_TOKEN=$(aws secretsmanager get-secret-value \
+  --region "$REGION" \
+  --secret-id "${secret_id}" \
+  --query SecretString \
+  --output text)
+
+# Step 4: Write to root-only file — never in env or user_data
+echo "$API_TOKEN" > /etc/wireguard/.api_token
+chmod 600 /etc/wireguard/.api_token
+unset API_TOKEN
+
+echo "API token stored securely at /etc/wireguard/.api_token"
+
 # ===== Install WireGuard API (For Client Registration) =====
 echo "=== Installing Registration API ==="
 
 cat > /opt/wg-api.py << 'EOF'
 import json
 import subprocess
+import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
-import urllib.request
-import ssl
 
-TOKEN = "${wg_api_token}"
+# Token is read from a root-only file — never hardcoded or in environment
+with open('/etc/wireguard/.api_token', 'r') as _f:
+    TOKEN = _f.read().strip()
 
 class RegistrationHandler(BaseHTTPRequestHandler):
     def do_POST(self):

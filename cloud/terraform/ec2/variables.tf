@@ -66,8 +66,9 @@ variable "common_tags" {
 }
 
 variable "wg_api_token" {
-  description = "Security token for WireGuard Client registration API"
+  description = "Security token for WireGuard Client registration API. Use TF_VAR_wg_api_token env var instead of hardcoding in tfvars."
   type        = string
+  sensitive   = true
   default     = "wg-edge-secret-2026"
 }
 
@@ -75,4 +76,10 @@ variable "wg_api_port" {
   description = "HTTP Port for client registration API"
   type        = number
   default     = 5000
+}
+
+variable "wg_api_cidr" {
+  description = "CIDR allowed to call the Registration API. Restrict to known IPs in production (e.g. your edge node egress IP)."
+  type        = string
+  default     = "0.0.0.0/0"
 }

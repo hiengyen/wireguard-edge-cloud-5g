@@ -20,7 +20,7 @@ header() { echo -e "\n${CYAN}===== $* =====${NC}"; }
 
 # ---------- Configuration ----------
 WG_INTERFACE="wg0"
-WG_PORT=51820
+WG_PORT="${WIREGUARD_PORT:-51820}"
 
 WG_CONFIG="/etc/wireguard/${WG_INTERFACE}.conf"
 WG_KEYS_DIR="/etc/wireguard/keys"
@@ -36,9 +36,35 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
+install_pkg() {
+  local packages=("$@")
+
+  if command -v apt-get &>/dev/null; then
+    apt-get update -qq
+    apt-get install -y "${packages[@]}"
+  elif command -v dnf &>/dev/null; then
+    dnf install -y "${packages[@]}"
+  elif command -v yum &>/dev/null; then
+    yum install -y "${packages[@]}"
+  else
+    error "Unsupported distro"
+    exit 1
+  fi
+}
+
+require_command() {
+  local cmd="$1"
+
+  if ! command -v "$cmd" &>/dev/null; then
+    error "Required command not found: $cmd"
+    exit 1
+  fi
+}
+
 # ---------- Find 5G uplink ----------
 find_5g_uplink() {
   header "Scanning 5G interface (${UPLINK_PATTERN})" >&2
+  require_command ip
 
   for dev in /sys/class/net/${UPLINK_PATTERN}; do
     [[ -e "$dev" ]] || continue
@@ -67,36 +93,38 @@ find_5g_uplink() {
 install_wireguard() {
   header "Install WireGuard"
 
-  if command -v wg &>/dev/null; then
+  if command -v wg &>/dev/null && command -v wg-quick &>/dev/null; then
     log "WireGuard already installed"
     return
   fi
 
-  if command -v apt-get &>/dev/null; then
-    apt-get update -qq
-    apt-get install -y wireguard wireguard-tools
-  elif command -v dnf &>/dev/null; then
-    dnf install -y wireguard-tools
-  elif command -v yum &>/dev/null; then
-    yum install -y epel-release
-    yum install -y wireguard-tools
-  else
-    error "Unsupported distro"
-    exit 1
+  if command -v yum &>/dev/null && ! command -v dnf &>/dev/null; then
+    install_pkg epel-release
   fi
+
+  if command -v apt-get &>/dev/null; then
+    install_pkg wireguard wireguard-tools
+  else
+    install_pkg wireguard-tools
+  fi
+
+  require_command wg
+  require_command wg-quick
 }
 
 # ---------- Generate keys ----------
 generate_keys() {
   header "Generate keys"
 
+  mkdir -p "/etc/wireguard"
+  chmod 700 "/etc/wireguard"
   mkdir -p "$WG_KEYS_DIR"
   chmod 700 "$WG_KEYS_DIR"
 
   PRIV="${WG_KEYS_DIR}/privatekey"
   PUB="${WG_KEYS_DIR}/publickey"
 
-  if [[ ! -f "$PRIV" ]]; then
+  if [[ ! -f "$PRIV" || ! -f "$PUB" ]]; then
     wg genkey | tee "$PRIV" | wg pubkey > "$PUB"
     chmod 600 "$PRIV"
   fi
@@ -110,10 +138,20 @@ prompt_server() {
   header "Server info"
 
   read -rp "Server endpoint IP/Domain: " WG_SERVER_ENDPOINT
+  if [[ -z "${WG_SERVER_ENDPOINT}" ]]; then
+    error "Server endpoint must not be empty"
+    exit 1
+  fi
+
   read -rp "Server port [51820]: " WG_SERVER_PORT
   WG_SERVER_PORT=${WG_SERVER_PORT:-51820}
 
   read -rp "Server public key: " WG_SERVER_PUBKEY
+  if [[ -z "${WG_SERVER_PUBKEY}" ]]; then
+    error "Server public key must not be empty"
+    exit 1
+  fi
+
   read -rp "Client IP (e.g. 10.8.0.2/32): " WG_CLIENT_IP
   WG_CLIENT_IP=${WG_CLIENT_IP:-10.8.0.2/32}
 
@@ -122,6 +160,10 @@ prompt_server() {
     read -rp "API Port [5000]: " API_PORT
     API_PORT=${API_PORT:-5000}
     read -rp "API Token: " API_TOKEN
+    if [[ -z "${API_TOKEN}" ]]; then
+      error "API token must not be empty when auto-registration is enabled"
+      exit 1
+    fi
   fi
 }
 
@@ -135,25 +177,32 @@ register_client() {
   log "Endpoint: http://$WG_SERVER_ENDPOINT:$API_PORT/register"
   
   if ! command -v curl &>/dev/null; then
-    apt-get install -y curl || dnf install -y curl || yum install -y curl
+    install_pkg curl
   fi
 
   JSON_PAYLOAD="{\"pubkey\":\"$PUBLIC_KEY\", \"ip\":\"$WG_CLIENT_IP\"}"
   
-  HTTP_STATUS=$(curl -s -o /tmp/wg_api_response.txt -w "%{http_code}" -X POST \
+  if ! HTTP_STATUS=$(curl -s -o /tmp/wg_api_response.txt -w "%{http_code}" -X POST \
        -H "Content-Type: application/json" \
        -H "Authorization: Bearer $API_TOKEN" \
        -d "$JSON_PAYLOAD" \
-       "http://$WG_SERVER_ENDPOINT:$API_PORT/register")
+       "http://$WG_SERVER_ENDPOINT:$API_PORT/register"); then
+      error "Failed to reach registration API"
+      error "Response: $(cat /tmp/wg_api_response.txt 2>/dev/null)"
+      rm -f /tmp/wg_api_response.txt
+      exit 1
+  fi
 
   if [[ "$HTTP_STATUS" == "200" ]]; then
       log "Registered successfully on Server!"
   else
       error "Failed to register. HTTP Status: $HTTP_STATUS"
       error "Response: $(cat /tmp/wg_api_response.txt 2>/dev/null)"
+      rm -f /tmp/wg_api_response.txt
+      exit 1
   fi
   rm -f /tmp/wg_api_response.txt
-
+}
 # ---------- Write config ----------
 write_config() {
   uplink="$1"
@@ -184,6 +233,7 @@ EOF
 enable_wg() {
   header "Enable WireGuard"
 
+  require_command systemctl
   systemctl enable wg-quick@${WG_INTERFACE} 2>/dev/null || true
   systemctl restart wg-quick@${WG_INTERFACE}
 
@@ -213,7 +263,7 @@ UPLINK=$(find_5g_uplink)
 install_wireguard
 generate_keys
 prompt_server
-write_config "$UPLINK"
 register_client
+write_config "$UPLINK"
 enable_wg
 summary
