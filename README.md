@@ -23,6 +23,8 @@ The platform integrates:
 - System hardening and security best practices
 - Auto-Registration API for seamless Zero-touch VPN enrollment
 
+Default overlay network values in this repository are standardized to `10.8.0.0/24`.
+
 ---
 
 ## 🏗 Architecture
@@ -74,10 +76,29 @@ wireguard-edge-cloud-5g/
 ## 🔐 Key Features
 
 - **5G QMI Network Automation:** Dynamically locates and connects Quectel RM502Q-GL via raw IP.
-- **Zero-Touch VPN Registration:** Edge nodes automatically generate key pairs and register with the AWS Cloud Gateway through a token-secured REST API.
+- **Zero-Touch VPN Registration:** Edge nodes can register through a token-secured API, but API ingress is disabled by default and should be exposed only behind trusted CIDRs or TLS.
 - **Infrastructure as Code (IaC):** Cloud environments are 100% automated using Terraform.
-- **Observability:** Prometheus and Grafana dashboards actively pull metrics via the private `10.8.0.x` tunnel.
+- **Observability:** Prometheus and Grafana dashboards actively pull metrics via the private `10.8.0.0/24` tunnel.
 - **Hardening:** Best-practice security including OS-aware firewalling (`ufw` on Armbian/Debian, `firewalld` on Amazon Linux 2023), Fail2Ban, and key-only SSH.
+
+## ⚙️ Environment File
+
+The repository includes [`.env.example`](/home/hiengyen/CODE/wireguard-edge-cloud-5g/.env.example:1) to centralize deployment and runtime variables.
+
+Important groups:
+- `TF_VAR_*`: Terraform inputs for cloud provisioning
+- `GRAFANA_ADMIN_PASSWORD`: password used by `cloud/monitoring/docker-compose.yml`
+- `WIREGUARD_*`: edge VPN client runtime defaults
+- `WWAN_APN`, `SSH_ADMIN_PORT`: edge WWAN and hardening runtime settings
+
+Recommended workflow:
+
+```bash
+cp .env.example .env
+set -a && . ./.env && set +a
+```
+
+After that, Terraform, Docker Compose, and shell scripts can reuse the same exported values.
 
 ---
 
@@ -88,13 +109,20 @@ wireguard-edge-cloud-5g/
 Deploy the Cloud Server using Terraform:
 
 ```bash
+cp .env.example .env
+set -a && . ./.env && set +a
 cd cloud/terraform/ec2
 terraform init
 terraform plan -out=tfplan
 terraform apply "tfplan"
 ```
 
-_Note down the API token, Server Endpoint, and Port displayed in the Terraform outputs or inside `variables.tf`._
+_Prepare a strong `TF_VAR_wg_api_token` before `terraform apply`. Terraform will output the server endpoint, but not the token._
+
+The default example uses:
+- Overlay network: `10.8.0.0/24`
+- Sample edge client IP: `10.8.0.2/24`
+- Registration API: disabled by default
 
 ### 2. Edge Physical Connection
 
@@ -120,7 +148,7 @@ Once connected to the internet, join the VPN overlay:
 sudo ./edge/vpn/setup-wg-client.sh
 ```
 
-_When prompted, select `Y` to automatically register the device via the API, using the Token specified in Terraform._
+_When prompted, use auto-registration only if you intentionally enabled API ingress and restricted it to trusted CIDRs or placed it behind TLS._
 
 ### 4. Shared Operations (Hardening & Monitoring)
 
@@ -137,9 +165,10 @@ sudo ./shared/scripts/install-node-exporter.sh
 
 If you use a non-default WireGuard port, run `hardening.sh` with `WIREGUARD_PORT=<port>`.
 
-For Grafana, navigate to the Cloud node:
+For Grafana, set a non-default password first, then start the monitoring stack:
 
 ```bash
+set -a && . ./.env && set +a
 cd cloud/monitoring
 sudo docker-compose up -d
 ```
@@ -164,6 +193,8 @@ Nền tảng này tích hợp sẵn:
 - Phân hệ Giám sát Hạ tầng (Prometheus + Grafana).
 - Áp dụng các tiêu chuẩn Làm cứng hệ thống/Bảo mật lõi (System Hardening).
 - Auto-Registration API hỗ trợ tính năng gia nhập mạng VPN tự động (Zero-touch).
+
+Các giá trị overlay mặc định trong repo này đã được chuẩn hoá về `10.8.0.0/24`.
 
 ---
 
@@ -216,10 +247,29 @@ wireguard-edge-cloud-5g/
 ## 🔐 Tính Năng Chính
 
 - **Tự động Giao tiếp 5G QMI:** Định danh và kết nối tự động tới modem Quectel RM502Q-GL qua chế độ raw IP, hạn chế lỗi gán cứng `/dev/cdc-wdm0`.
-- **Đăng Ký VPN Tự Động (Zero-Touch):** Edge nodes tự định hình cặp khóa bảo mật và đăng ký xin phép truy cập lên trung tâm AWS bằng một REST API kết nối qua phương thức Token bảo mật.
+- **Đăng Ký VPN Tự Động (Zero-Touch):** Edge nodes có thể đăng ký bằng API dùng token, nhưng API ingress bị tắt mặc định và chỉ nên bật khi đã giới hạn CIDR tin cậy hoặc đặt sau TLS.
 - **Hạ tầng dưới dạng Mã (IaC):** Server rỗng được khởi tạo và cài cắm 100% tự động qua môi trường Terraform.
-- **Khả năng Quan sát (Observability):** Dashboard Grafana và trạm trung chuyển Prometheus tự động cào metrics (sức khoẻ phần cứng) bọc kín theo luồng đường hầm `10.8.0.x`.
+- **Khả năng Quan sát (Observability):** Dashboard Grafana và trạm trung chuyển Prometheus tự động cào metrics (sức khoẻ phần cứng) bọc kín theo luồng đường hầm `10.8.0.0/24`.
 - **Bảo Mật (Hardening):** Áp dụng hardening theo môi trường đích: `ufw` cho Armbian/Debian ở Edge, `firewalld` cho Amazon Linux 2023 ở Cloud, kết hợp Fail2Ban và chỉ cho phép SSH bằng khoá.
+
+## ⚙️ File Môi Trường
+
+Repo có sẵn file [`.env.example`](/home/hiengyen/CODE/wireguard-edge-cloud-5g/.env.example:1) để gom các biến triển khai và runtime.
+
+Các nhóm biến chính:
+- `TF_VAR_*`: đầu vào Terraform cho phần cloud
+- `GRAFANA_ADMIN_PASSWORD`: mật khẩu dùng cho `cloud/monitoring/docker-compose.yml`
+- `WIREGUARD_*`: mặc định runtime cho edge VPN client
+- `WWAN_APN`, `SSH_ADMIN_PORT`: tham số runtime cho WWAN và hardening
+
+Quy trình khuyên dùng:
+
+```bash
+cp .env.example .env
+set -a && . ./.env && set +a
+```
+
+Sau đó Terraform, Docker Compose và các shell script sẽ dùng chung được các biến này.
 
 ---
 
@@ -230,13 +280,20 @@ wireguard-edge-cloud-5g/
 Xây dựng Server Cloud qua Terraform:
 
 ```bash
+cp .env.example .env
+set -a && . ./.env && set +a
 cd cloud/terraform/ec2
 terraform init
 terraform plan -out=tfplan
 terraform apply "tfplan"
 ```
 
-_Lưu ý ghi chép lại các giá trị đầu ra (API token, Endpoint, Port Server, v.v)._
+_Hãy chuẩn bị `TF_VAR_wg_api_token` đủ mạnh trước khi chạy `terraform apply`. Terraform chỉ in endpoint, không in token._
+
+Ví dụ mặc định hiện tại dùng:
+- Overlay network: `10.8.0.0/24`
+- Sample edge client IP: `10.8.0.2/24`
+- Registration API: tắt mặc định
 
 ### 2. Kết nối Mạng phần cứng
 
@@ -264,7 +321,7 @@ Sau khi có kết nối Internet do SIM cấp, khởi chạy đường hầm ả
 sudo ./edge/vpn/setup-wg-client.sh
 ```
 
-_Gõ phím `Y` khi nhận được lời mời hỏi để hệ thống tiến hành giao tiếp nối kết chìa khoá tự động qua API._
+_Chỉ nên chọn `Y` khi bạn đã chủ động bật API ingress và giới hạn nó về CIDR tin cậy hoặc đặt sau TLS._
 
 ### 4. Phụ bản Quản trị (Bảo mật & Giám sát)
 
@@ -281,9 +338,10 @@ sudo ./shared/scripts/install-node-exporter.sh
 
 Nếu bạn dùng cổng WireGuard khác `51820`, hãy chạy với biến `WIREGUARD_PORT=<port>`.
 
-Trực tiếp kích hoạt giao diện trang điều khiển giám sát (chỉ chạy trên Cloud):
+Đặt mật khẩu Grafana không mặc định rồi mới khởi chạy giám sát trên Cloud:
 
 ```bash
+set -a && . ./.env && set +a
 cd cloud/monitoring
 sudo docker-compose up -d
 ```

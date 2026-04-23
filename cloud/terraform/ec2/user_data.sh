@@ -6,11 +6,15 @@
 set -euo pipefail
 exec > /var/log/user-data.log 2>&1
 
+WIREGUARD_NETWORK_CIDR="${wireguard_network}"
+WIREGUARD_SERVER_CIDR="${cidrhost(wireguard_network, 1)}/${split("/", wireguard_network)[1]}"
+WIREGUARD_SAMPLE_CLIENT_CIDR="${cidrhost(wireguard_network, 2)}/${split("/", wireguard_network)[1]}"
+
 echo "=== Starting WireGuard installation ==="
 
 # Update and install WireGuard
 dnf update -y
-dnf install -y wireguard-tools qrencode
+dnf install -y wireguard-tools qrencode python3 awscli iptables
 
 # Enable IP forwarding
 echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf
@@ -41,7 +45,7 @@ CLIENT1_PSK=$(cat client1_psk.key)
 # Write server config
 cat > /etc/wireguard/wg0.conf << EOF
 [Interface]
-Address = ${cidrhost(wireguard_network, 1)}/24
+Address = ${WIREGUARD_SERVER_CIDR}
 ListenPort = ${wireguard_port}
 PrivateKey = $SERVER_PRIVATE_KEY
 PostUp   = iptables -A FORWARD -i wg0 -j ACCEPT; iptables -t nat -A POSTROUTING -o $MAIN_IFACE -j MASQUERADE
@@ -51,7 +55,7 @@ PostDown = iptables -D FORWARD -i wg0 -j ACCEPT; iptables -t nat -D POSTROUTING 
 [Peer]
 PublicKey  = $CLIENT1_PUBLIC
 PresharedKey = $CLIENT1_PSK
-AllowedIPs = ${cidrhost(wireguard_network, 2)}/32
+AllowedIPs = ${WIREGUARD_SAMPLE_CLIENT_CIDR}
 EOF
 
 chmod 600 /etc/wireguard/wg0.conf
@@ -64,14 +68,14 @@ SERVER_PUBLIC_KEY=$(cat server_public.key)
 cat > /etc/wireguard/client1.conf << EOF
 [Interface]
 PrivateKey = $CLIENT1_PRIVATE
-Address    = ${cidrhost(wireguard_network, 2)}/32
+Address    = ${WIREGUARD_SAMPLE_CLIENT_CIDR}
 DNS        = 1.1.1.1, 8.8.8.8
 
 [Peer]
 PublicKey    = $SERVER_PUBLIC_KEY
 PresharedKey = $CLIENT1_PSK
 Endpoint     = $SERVER_PUBLIC_IP:${wireguard_port}
-AllowedIPs   = 0.0.0.0/0, ::/0
+AllowedIPs   = ${WIREGUARD_NETWORK_CIDR}
 PersistentKeepalive = 25
 EOF
 
@@ -114,25 +118,64 @@ echo "=== Installing Registration API ==="
 
 cat > /opt/wg-api.py << 'EOF'
 import json
+import ipaddress
+import logging
 import subprocess
-import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from socketserver import ThreadingMixIn
 
 # Token is read from a root-only file — never hardcoded or in environment
 with open('/etc/wireguard/.api_token', 'r') as _f:
     TOKEN = _f.read().strip()
 
+WG_NETWORK = ipaddress.ip_network('${wireguard_network}', strict=False)
+MAX_CONTENT_LENGTH = 4096
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(message)s'
+)
+
+def validate_pubkey(pubkey: str) -> None:
+    if len(pubkey) > 128:
+        raise ValueError("pubkey too long")
+    subprocess.run(["wg", "pubkey"], input=pubkey + "\n", text=True, capture_output=True, check=True)
+
+def validate_ip(ip_value: str) -> str:
+    interface = ipaddress.ip_interface(ip_value)
+    if interface.network.prefixlen != WG_NETWORK.prefixlen:
+        raise ValueError(f"Client addresses must use /{WG_NETWORK.prefixlen}")
+    if interface.ip not in WG_NETWORK:
+        raise ValueError("Client IP is outside the WireGuard network")
+    return str(interface)
+
+class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
+    daemon_threads = True
+
 class RegistrationHandler(BaseHTTPRequestHandler):
+    server_version = "wg-api/1.0"
+
+    def log_message(self, fmt, *args):
+        logging.info("%s - %s", self.client_address[0], fmt % args)
+
+    def _write(self, status: int, payload: str):
+        self.send_response(status)
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(payload.encode())
+
     def do_POST(self):
         if self.path == '/register':
             auth_header = self.headers.get('Authorization')
             if auth_header != f"Bearer {TOKEN}":
-                self.send_response(401)
-                self.end_headers()
-                self.wfile.write(b"Unauthorized")
+                self._write(401, "Unauthorized")
                 return
 
             content_length = int(self.headers.get('Content-Length', 0))
+            if content_length <= 0 or content_length > MAX_CONTENT_LENGTH:
+                self._write(413, "Invalid request size")
+                return
+
             post_data = self.rfile.read(content_length)
 
             try:
@@ -143,38 +186,63 @@ class RegistrationHandler(BaseHTTPRequestHandler):
                 if not pubkey or not ip:
                     raise ValueError("Missing pubkey or ip")
 
-                # Configure Wireguard
-                subprocess.run(["wg", "set", "wg0", "peer", pubkey, "allowed-ips", ip], check=True)
+                validate_pubkey(pubkey)
+                normalized_ip = validate_ip(ip)
+
+                current_dump = subprocess.run(
+                    ["wg", "show", "wg0", "dump"],
+                    text=True,
+                    capture_output=True,
+                    check=True
+                ).stdout.splitlines()[1:]
+
+                for line in current_dump:
+                    fields = line.split('\t')
+                    if len(fields) < 4:
+                        continue
+                    existing_pubkey = fields[0]
+                    existing_allowed_ips = fields[3]
+                    if existing_pubkey == pubkey and existing_allowed_ips == normalized_ip:
+                        self._write(200, "Peer already registered")
+                        return
+                    if existing_pubkey != pubkey and normalized_ip in [item.strip() for item in existing_allowed_ips.split(',') if item.strip()]:
+                        raise ValueError("Client IP already assigned to another peer")
+
+                # Configure WireGuard
+                subprocess.run(["wg", "set", "wg0", "peer", pubkey, "allowed-ips", normalized_ip], check=True)
                 subprocess.run(["wg-quick", "save", "wg0"], check=True)
 
-                self.send_response(200)
-                self.end_headers()
-                self.wfile.write(b"Registered successfully")
+                self._write(200, "Registered successfully")
 
             except Exception as e:
-                self.send_response(400)
-                self.end_headers()
-                self.wfile.write(str(e).encode())
+                logging.exception("Registration failed")
+                self._write(400, str(e))
         else:
-            self.send_response(404)
-            self.end_headers()
+            self._write(404, "Not found")
 
 if __name__ == '__main__':
-    server_address = ('', ${wg_api_port})
-    httpd = HTTPServer(server_address, RegistrationHandler)
-    print("Starting API Server...")
+    server_address = ('0.0.0.0', ${wg_api_port})
+    httpd = ThreadedHTTPServer(server_address, RegistrationHandler)
+    print("Starting API Server on trusted networks only...")
     httpd.serve_forever()
 EOF
 
 cat > /etc/systemd/system/wg-api.service << 'EOF'
 [Unit]
 Description=WireGuard Registration API
-After=network.target wg-quick@wg0.service
+After=network-online.target wg-quick@wg0.service
+Wants=network-online.target
 
 [Service]
 ExecStart=/usr/bin/python3 /opt/wg-api.py
 Restart=always
+RestartSec=5
 User=root
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/etc/wireguard
 
 [Install]
 WantedBy=multi-user.target
@@ -186,6 +254,6 @@ systemctl enable wg-api --now
 
 echo "=== Installation complete ==="
 echo "Endpoint: $SERVER_PUBLIC_IP:${wireguard_port}"
-echo "API Endpoint: http://$SERVER_PUBLIC_IP:${wg_api_port}/register"
+echo "API Endpoint: Enable access only from trusted CIDRs or behind TLS proxy"
 echo "Config client1: /etc/wireguard/client1.conf"
 echo "View QR: sudo qrencode -t ansiutf8 < /etc/wireguard/client1.conf"

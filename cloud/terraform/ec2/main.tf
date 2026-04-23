@@ -51,6 +51,8 @@ resource "aws_vpc_security_group_ingress_rule" "wireguard_udp" {
 
 # Registration API — TCP ingress
 resource "aws_vpc_security_group_ingress_rule" "wg_api" {
+  count = var.enable_registration_api ? 1 : 0
+
   security_group_id = aws_security_group.wireguard.id
   description       = "WireGuard Registration API"
   from_port         = var.wg_api_port
@@ -77,6 +79,15 @@ resource "aws_vpc_security_group_ingress_rule" "ssh" {
   tags = merge(var.common_tags, {
     Name = "${var.project_name}-ssh-ingress"
   })
+}
+
+resource "terraform_data" "validate_admin_ssh_cidr" {
+  lifecycle {
+    precondition {
+      condition     = length(var.admin_ssh_cidr) > 0
+      error_message = "admin_ssh_cidr must contain at least one trusted /32 or office CIDR."
+    }
+  }
 }
 
 # Allow all outbound traffic
@@ -219,4 +230,6 @@ resource "aws_instance" "wireguard" {
   tags = merge(var.common_tags, {
     Name = "${var.project_name}-wireguard-server"
   })
+
+  depends_on = [terraform_data.validate_admin_ssh_cidr]
 }

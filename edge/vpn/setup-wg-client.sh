@@ -21,14 +21,13 @@ header() { echo -e "\n${CYAN}===== $* =====${NC}"; }
 # ---------- Configuration ----------
 WG_INTERFACE="wg0"
 WG_PORT="${WIREGUARD_PORT:-51820}"
+WG_ALLOWED_IPS="${WIREGUARD_ALLOWED_IPS:-10.8.0.0/24}"
+API_SCHEME="${WIREGUARD_API_SCHEME:-https}"
 
 WG_CONFIG="/etc/wireguard/${WG_INTERFACE}.conf"
 WG_KEYS_DIR="/etc/wireguard/keys"
 
 UPLINK_PATTERN="ww*"
-
-ROUTE_TABLE="51820"
-FWMARK="0x30"
 
 # ---------- Check root ----------
 if [[ $EUID -ne 0 ]]; then
@@ -152,14 +151,20 @@ prompt_server() {
     exit 1
   fi
 
-  read -rp "Client IP (e.g. 10.8.0.2/32): " WG_CLIENT_IP
-  WG_CLIENT_IP=${WG_CLIENT_IP:-10.8.0.2/32}
+  read -rp "Client IP (e.g. 10.8.0.2/24): " WG_CLIENT_IP
+  WG_CLIENT_IP=${WG_CLIENT_IP:-10.8.0.2/24}
+
+  read -rp "Allowed IPs for peer [${WG_ALLOWED_IPS}]: " WG_ALLOWED_IPS_INPUT
+  WG_ALLOWED_IPS=${WG_ALLOWED_IPS_INPUT:-$WG_ALLOWED_IPS}
 
   read -rp "Auto-register via Server API? [y/N]: " AUTO_REGISTER
   if [[ "$AUTO_REGISTER" =~ ^[Yy]$ ]]; then
     read -rp "API Port [5000]: " API_PORT
     API_PORT=${API_PORT:-5000}
-    read -rp "API Token: " API_TOKEN
+    read -rp "API scheme [${API_SCHEME}]: " API_SCHEME_INPUT
+    API_SCHEME=${API_SCHEME_INPUT:-$API_SCHEME}
+    read -rsp "API Token: " API_TOKEN
+    echo
     if [[ -z "${API_TOKEN}" ]]; then
       error "API token must not be empty when auto-registration is enabled"
       exit 1
@@ -174,7 +179,11 @@ register_client() {
   fi
   
   header "Registering Public Key via API"
-  log "Endpoint: http://$WG_SERVER_ENDPOINT:$API_PORT/register"
+  log "Endpoint: ${API_SCHEME}://$WG_SERVER_ENDPOINT:$API_PORT/register"
+
+  if [[ "$API_SCHEME" != "https" ]]; then
+    warn "Using non-HTTPS registration API. Restrict access to trusted networks only."
+  fi
   
   if ! command -v curl &>/dev/null; then
     install_pkg curl
@@ -186,7 +195,7 @@ register_client() {
        -H "Content-Type: application/json" \
        -H "Authorization: Bearer $API_TOKEN" \
        -d "$JSON_PAYLOAD" \
-       "http://$WG_SERVER_ENDPOINT:$API_PORT/register"); then
+       "${API_SCHEME}://$WG_SERVER_ENDPOINT:$API_PORT/register"); then
       error "Failed to reach registration API"
       error "Response: $(cat /tmp/wg_api_response.txt 2>/dev/null)"
       rm -f /tmp/wg_api_response.txt
@@ -220,7 +229,7 @@ MTU = 1280
 [Peer]
 PublicKey = ${WG_SERVER_PUBKEY}
 Endpoint = ${WG_SERVER_ENDPOINT}:${WG_SERVER_PORT}
-AllowedIPs = 0.0.0.0/0
+AllowedIPs = ${WG_ALLOWED_IPS}
 PersistentKeepalive = 25
 EOF
 

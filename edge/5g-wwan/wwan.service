@@ -4,11 +4,8 @@ After=network.target network-online.target multi-user.target
 
 [Service]
 Type=oneshot
-ExecStart= /usr/local/bin/wwan-start.sh
+ExecStart=/usr/local/bin/wwan-start.sh
 RemainAfterExit=yes
-Restart=on-failure
-RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
-

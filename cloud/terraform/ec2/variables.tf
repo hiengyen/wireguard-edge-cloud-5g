@@ -43,6 +43,12 @@ variable "wireguard_network" {
   default     = "10.8.0.0/24"
 }
 
+variable "wireguard_client_cidr" {
+  description = "Default client IP/CIDR used in examples and monitoring targets"
+  type        = string
+  default     = "10.8.0.2/24"
+}
+
 variable "root_volume_size" {
   description = "Root volume size (GB)"
   type        = number
@@ -52,7 +58,7 @@ variable "root_volume_size" {
 variable "admin_ssh_cidr" {
   description = "List of allowed SSH CIDRs (should restrict to your IP)"
   type        = list(string)
-  default     = ["0.0.0.0/0"] # Replace with your actual IP!
+  default     = []
 }
 
 variable "common_tags" {
@@ -66,10 +72,15 @@ variable "common_tags" {
 }
 
 variable "wg_api_token" {
-  description = "Security token for WireGuard Client registration API. Use TF_VAR_wg_api_token env var instead of hardcoding in tfvars."
+  description = "Security token for WireGuard Client registration API. Must be provided via TF_VAR_wg_api_token or tfvars."
   type        = string
   sensitive   = true
-  default     = "wg-edge-secret-2026"
+  nullable    = false
+
+  validation {
+    condition     = length(var.wg_api_token) >= 32
+    error_message = "wg_api_token must be at least 32 characters."
+  }
 }
 
 variable "wg_api_port" {
@@ -79,7 +90,32 @@ variable "wg_api_port" {
 }
 
 variable "wg_api_cidr" {
-  description = "CIDR allowed to call the Registration API. Restrict to known IPs in production (e.g. your edge node egress IP)."
+  description = "CIDR allowed to call the Registration API. Must be restricted to a known source range."
   type        = string
-  default     = "0.0.0.0/0"
+  default     = "127.0.0.1/32"
+}
+
+variable "enable_registration_api" {
+  description = "Whether to expose the registration API through the instance security group"
+  type        = bool
+  default     = false
+}
+
+variable "grafana_admin_password" {
+  description = "Grafana admin password for the monitoring stack"
+  type        = string
+  sensitive   = true
+  default     = "CHANGE_ME_BEFORE_DEPLOYMENT"
+}
+
+variable "prometheus_version" {
+  description = "Pinned Prometheus image tag"
+  type        = string
+  default     = "v2.54.1"
+}
+
+variable "grafana_version" {
+  description = "Pinned Grafana image tag"
+  type        = string
+  default     = "11.2.0"
 }

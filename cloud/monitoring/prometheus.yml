@@ -9,5 +9,5 @@ scrape_configs:
   - job_name: 'edge-node'
     static_configs:
       # This targets the Edge node over the WireGuard VPN tunnel
-      # Assuming default wireguard_network from variables.tf
+      # Assuming default wireguard_client_cidr from variables.tf
       - targets: ['10.8.0.2:9100']

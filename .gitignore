@@ -8,6 +8,9 @@ tfplan
 
 # Variables
 *.tfvars
+.env
+.env.local
+.env.*.local
 
 # OS
 .DS_Store

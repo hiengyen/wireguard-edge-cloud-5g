@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+APN="${WWAN_APN:-internet}"
+
 echo "======================================"
 echo "   5G QMI Network Initialization"
 echo "======================================"
@@ -26,8 +28,6 @@ if [[ -z "${DEVICE:-}" ]]; then
 else
     echo "[INFO] Detected QMI device: ${DEVICE}"
 fi
-
-APN="internet"
 
 # 3. Ensure script is executed as root
 if [[ $EUID -ne 0 ]]; then
@@ -54,14 +54,8 @@ echo "[INFO] Starting QMI data session on device ${DEVICE}..."
 RESULT=$(qmicli -d "${DEVICE}" \
     --wds-start-network="apn=${APN},ip-type=4" \
     --client-no-release-cid)
-
-if [[ $? -eq 0 ]]; then
-    echo "[SUCCESS] QMI data session established successfully."
-    echo "$RESULT" | grep -i "CID" || true
-else
-    echo "[ERROR] Failed to start QMI data session."
-    exit 1
-fi
+echo "[SUCCESS] QMI data session established successfully."
+echo "$RESULT" | grep -i "CID" || true
 
 # 7. Request IP address via DHCP
 echo "[INFO] Requesting IP address via DHCP..."
@@ -74,4 +68,3 @@ echo "======================================"
 ping -c 3 8.8.8.8
 
 echo "[DONE] Network initialization process completed."
-

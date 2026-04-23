@@ -15,9 +15,8 @@ RUN apt-get update -yqq && \
 
 WORKDIR /opt/wwan
 
-# Add the bash script from the parent directory
-COPY ../wwan-start.sh .
-RUN chmod +x wwan-start.sh
+COPY wwan-start.sh .
+RUN chmod +x /opt/wwan/wwan-start.sh
 
 # Start the network natively within the container.
 # Then enter a heartbeat loop. If internet ping fails, 

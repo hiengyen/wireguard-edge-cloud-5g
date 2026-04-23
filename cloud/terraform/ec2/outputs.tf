@@ -25,7 +25,7 @@ output "wireguard_endpoint" {
 
 output "api_endpoint" {
   description = "WireGuard Registration API endpoint"
-  value       = "http://${aws_eip.wireguard.public_ip}:${var.wg_api_port}/register"
+  value       = var.enable_registration_api ? "http://${aws_eip.wireguard.public_ip}:${var.wg_api_port}/register" : "Registration API ingress disabled by default. Enable only behind trusted CIDR/TLS."
 }
 
 output "secret_arn" {

@@ -14,6 +14,7 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 VERSION="1.8.2"
+BASE_URL="https://github.com/prometheus/node_exporter/releases/download/v${VERSION}"
 ARCH=$(uname -m)
 
 if [[ "$ARCH" == "x86_64" ]]; then
@@ -27,6 +28,8 @@ else
     exit 1
 fi
 
+SHA_FILE="sha256sums.txt"
+
 echo "=== Installing Node Exporter ($ARCH) ==="
 
 # 2. Create user for Node Exporter
@@ -36,12 +39,14 @@ fi
 
 # 3. Download and extract
 cd /tmp
-wget -q "https://github.com/prometheus/node_exporter/releases/download/v${VERSION}/${TAR_FILE}"
+wget -q "${BASE_URL}/${TAR_FILE}"
+wget -q "${BASE_URL}/${SHA_FILE}"
+grep " ${TAR_FILE}\$" "${SHA_FILE}" | sha256sum -c -
 tar xvfz "${TAR_FILE}"
 mv "${DIR_NAME}/node_exporter" /usr/local/bin/
 
 chown node_exporter:node_exporter /usr/local/bin/node_exporter
-rm -rf "${TAR_FILE}" "${DIR_NAME}"
+rm -rf "${TAR_FILE}" "${DIR_NAME}" "${SHA_FILE}"
 
 # 4. Create systemd service
 cat > /etc/systemd/system/node_exporter.service << 'EOF'

@@ -11,6 +11,7 @@ set -euo pipefail
 WIREGUARD_PORT="${WIREGUARD_PORT:-51820}"
 SSHD_CONFIG="/etc/ssh/sshd_config"
 FAIL2BAN_JAIL="/etc/fail2ban/jail.d/sshd.local"
+SSH_ADMIN_PORT="${SSH_ADMIN_PORT:-22}"
 OS_FAMILY=""
 FIREWALL_NAME=""
 
@@ -95,8 +96,16 @@ restart_ssh_service() {
   systemctl restart ssh 2>/dev/null || systemctl restart sshd
 }
 
+ensure_authorized_keys_present() {
+  if ! find /root/.ssh /home -maxdepth 3 -type f -name authorized_keys 2>/dev/null | grep -q .; then
+    error "No authorized_keys file found. Refusing to disable password-based SSH access."
+    exit 1
+  fi
+}
+
 configure_ssh() {
   log "Hardening SSH configuration..."
+  ensure_authorized_keys_present
 
   if [[ ! -f "${SSHD_CONFIG}.bak" ]]; then
     cp "$SSHD_CONFIG" "${SSHD_CONFIG}.bak"
@@ -114,10 +123,9 @@ configure_ssh() {
 configure_firewall_debian() {
   log "Configuring UFW firewall..."
 
-  ufw --force reset
   ufw default deny incoming
   ufw default allow outgoing
-  ufw allow 22/tcp
+  ufw allow "${SSH_ADMIN_PORT}/tcp"
   ufw allow "${WIREGUARD_PORT}/udp"
   ufw --force enable
 }
@@ -126,7 +134,12 @@ configure_firewall_amzn2023() {
   log "Configuring firewalld..."
 
   systemctl enable --now firewalld
-  firewall-cmd --permanent --add-service=ssh
+  if [[ "$SSH_ADMIN_PORT" == "22" ]]; then
+    firewall-cmd --permanent --add-service=ssh
+  else
+    firewall-cmd --permanent --remove-service=ssh || true
+    firewall-cmd --permanent --add-port="${SSH_ADMIN_PORT}/tcp"
+  fi
   firewall-cmd --permanent --add-port="${WIREGUARD_PORT}/udp"
   firewall-cmd --reload
 }
@@ -183,6 +196,7 @@ print_summary() {
   echo "- SSH Root Login: Disabled"
   echo "- SSH Password Auth: Disabled"
   echo "- Firewall: ${FIREWALL_NAME} enabled (SSH & WireGuard allowed)"
+  echo "- SSH Port: ${SSH_ADMIN_PORT}/tcp"
   echo "- WireGuard Port: ${WIREGUARD_PORT}/udp"
   echo "- Fail2Ban: Enabled for SSH"
 }

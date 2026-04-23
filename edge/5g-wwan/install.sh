@@ -16,9 +16,16 @@ echo "=== Installing 5G WWAN Services ==="
 
 # 2. Install required dependencies
 echo "[INFO] Installing required dependencies (libqmi-utils, udhcpc)..."
-export DEBIAN_FRONTEND=noninteractive
-apt-get update -yqq
-apt-get install -yq libqmi-utils udhcpc iproute2 iputils-ping
+if command -v apt-get >/dev/null 2>&1; then
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update -yqq
+    apt-get install -yq libqmi-utils udhcpc iproute2 iputils-ping
+elif command -v dnf >/dev/null 2>&1; then
+    dnf install -y libqmi-utils busybox iproute iputils
+else
+    echo "[ERROR] Unsupported package manager. Expected apt-get or dnf."
+    exit 1
+fi
 
 SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
 
@@ -61,7 +68,7 @@ systemctl enable wwan-monitor.service
 
 # 7. Ask user if they want to start the services immediately
 echo ""
-read -p "Do you want to start the 5G connection now? [y/N]: " START_NOW
+read -r -p "Do you want to start the 5G connection now? [y/N]: " START_NOW
 if [[ "$START_NOW" =~ ^[Yy]$ ]]; then
     echo "[INFO] Starting wwan.service..."
     systemctl start wwan.service
