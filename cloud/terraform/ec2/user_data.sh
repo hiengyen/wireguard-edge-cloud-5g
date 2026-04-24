@@ -45,7 +45,7 @@ CLIENT1_PSK=$(cat client1_psk.key)
 # Write server config
 cat > /etc/wireguard/wg0.conf << EOF
 [Interface]
-Address = ${WIREGUARD_SERVER_CIDR}
+Address = $${WIREGUARD_SERVER_CIDR}
 ListenPort = ${wireguard_port}
 PrivateKey = $SERVER_PRIVATE_KEY
 PostUp   = iptables -A FORWARD -i wg0 -j ACCEPT; iptables -t nat -A POSTROUTING -o $MAIN_IFACE -j MASQUERADE
@@ -55,7 +55,7 @@ PostDown = iptables -D FORWARD -i wg0 -j ACCEPT; iptables -t nat -D POSTROUTING 
 [Peer]
 PublicKey  = $CLIENT1_PUBLIC
 PresharedKey = $CLIENT1_PSK
-AllowedIPs = ${WIREGUARD_SAMPLE_CLIENT_CIDR}
+AllowedIPs = $${WIREGUARD_SAMPLE_CLIENT_CIDR}
 EOF
 
 chmod 600 /etc/wireguard/wg0.conf
@@ -68,14 +68,14 @@ SERVER_PUBLIC_KEY=$(cat server_public.key)
 cat > /etc/wireguard/client1.conf << EOF
 [Interface]
 PrivateKey = $CLIENT1_PRIVATE
-Address    = ${WIREGUARD_SAMPLE_CLIENT_CIDR}
+Address    = $${WIREGUARD_SAMPLE_CLIENT_CIDR}
 DNS        = 1.1.1.1, 8.8.8.8
 
 [Peer]
 PublicKey    = $SERVER_PUBLIC_KEY
 PresharedKey = $CLIENT1_PSK
 Endpoint     = $SERVER_PUBLIC_IP:${wireguard_port}
-AllowedIPs   = ${WIREGUARD_NETWORK_CIDR}
+AllowedIPs   = $${WIREGUARD_NETWORK_CIDR}
 PersistentKeepalive = 25
 EOF
 
