@@ -82,11 +82,11 @@ wireguard-edge-cloud-5g/
 - **Infrastructure as Code (IaC):** Cloud environments are 100% automated using Terraform.
 - **Observability:** Prometheus and Grafana dashboards actively pull metrics via the private `10.8.0.0/24` tunnel.
 - **Hardening:** Best-practice security including OS-aware firewalling (`ufw` on Armbian/Debian, `firewalld` on Amazon Linux 2023), Fail2Ban, and key-only SSH.
-- **CI Validation:** GitHub Actions verifies shell syntax, ShellCheck, YAML, and Terraform formatting/validation on each push and pull request.
 
 ## ⚙️ Environment File
 
 The repository includes [`.env.example`](/home/hiengyen/CODE/wireguard-edge-cloud-5g/.env.example:1) to centralize deployment and runtime variables.
+For the full production-oriented rollout sequence, see [DEPLOYMENT.md](/home/hiengyen/CODE/wireguard-edge-cloud-5g/DEPLOYMENT.md:1).
 
 Important groups:
 - `TF_VAR_*`: Terraform inputs for cloud provisioning
@@ -185,17 +185,6 @@ cd cloud/monitoring
 sudo docker-compose up -d
 ```
 
-### 5. Continuous Integration
-
-The repository includes GitHub Actions CI in [ci.yml](/home/hiengyen/CODE/wireguard-edge-cloud-5g/.github/workflows/ci.yml:1).
-
-It runs:
-- `bash -n` for all shell scripts
-- `shellcheck`
-- `yamllint`
-- `terraform fmt -check -diff`
-- `terraform init -backend=false`
-- `terraform validate`
 
 ---
 
@@ -277,7 +266,6 @@ wireguard-edge-cloud-5g/
 - **Hạ tầng dưới dạng Mã (IaC):** Server rỗng được khởi tạo và cài cắm 100% tự động qua môi trường Terraform.
 - **Khả năng Quan sát (Observability):** Dashboard Grafana và trạm trung chuyển Prometheus tự động cào metrics (sức khoẻ phần cứng) bọc kín theo luồng đường hầm `10.8.0.0/24`.
 - **Bảo Mật (Hardening):** Áp dụng hardening theo môi trường đích: `ufw` cho Armbian/Debian ở Edge, `firewalld` cho Amazon Linux 2023 ở Cloud, kết hợp Fail2Ban và chỉ cho phép SSH bằng khoá.
-- **CI Tự Động:** GitHub Actions kiểm tra shell, YAML và Terraform cho mỗi push/pull request.
 
 ## ⚙️ File Môi Trường
 
@@ -382,17 +370,6 @@ cd cloud/monitoring
 sudo docker-compose up -d
 ```
 
-### 5. Kiểm tra CI Tự động
-
-Repo có GitHub Actions CI tại [ci.yml](/home/hiengyen/CODE/wireguard-edge-cloud-5g/.github/workflows/ci.yml:1).
-
-Workflow hiện chạy:
-- `bash -n` cho toàn bộ shell script
-- `shellcheck`
-- `yamllint`
-- `terraform fmt -check -diff`
-- `terraform init -backend=false`
-- `terraform validate`
 
 ---
 
