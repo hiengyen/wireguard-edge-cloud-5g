@@ -261,7 +261,7 @@ if [[ "${enable_registration_api}" == "true" ]]; then
     -keyout /etc/nginx/tls/wg-api.key \
     -out /etc/nginx/tls/wg-api.crt \
     -days 365 \
-    -subj "/CN=${registration_api_domain}"
+    -subj "/CN=${registration_api_host}"
 
   chmod 600 /etc/nginx/tls/wg-api.key
   chmod 644 /etc/nginx/tls/wg-api.crt
@@ -269,7 +269,7 @@ if [[ "${enable_registration_api}" == "true" ]]; then
   cat > /etc/nginx/conf.d/wg-api.conf << EOF
 server {
     listen ${registration_api_tls_port} ssl http2;
-    server_name ${registration_api_domain};
+    server_name ${registration_api_host};
 
     ssl_certificate     /etc/nginx/tls/wg-api.crt;
     ssl_certificate_key /etc/nginx/tls/wg-api.key;
@@ -299,7 +299,7 @@ fi
 echo "=== Installation complete ==="
 echo "Endpoint: $SERVER_PUBLIC_IP:${wireguard_port}"
 if [[ "${enable_registration_api}" == "true" ]]; then
-  echo "API Endpoint: https://${registration_api_domain}:${registration_api_tls_port}/register"
+  echo "API Endpoint: https://${registration_api_host}:${registration_api_tls_port}/register"
   echo "TLS Note: bootstrap uses a self-signed certificate; replace it with a trusted certificate before production use."
 else
   echo "API Endpoint: disabled"

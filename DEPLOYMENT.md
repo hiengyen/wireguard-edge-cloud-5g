@@ -14,7 +14,7 @@ Prepare the following before deployment:
 - An AWS account with permission to create EC2, IAM, EIP, Security Group, and Secrets Manager resources
 - An existing AWS EC2 key pair for SSH access
 - A public subnet and VPC where the EC2 instance will run
-- A DNS record for the registration API, for example `vpn-api.example.com`
+- Optionally, a DNS record for the registration API, for example `vpn-api.example.com`
 - An edge device with:
   - Linux
   - WireGuard support
@@ -46,6 +46,7 @@ Update `.env` with your real values:
 - `TF_VAR_enable_registration_api`
 - `TF_VAR_wg_api_cidr`
 - `TF_VAR_registration_api_domain`
+- `TF_VAR_wireguard_port`
 - `TF_VAR_wireguard_network`
 - `TF_VAR_wireguard_client_cidr`
 - `GRAFANA_ADMIN_PASSWORD`
@@ -53,9 +54,11 @@ Update `.env` with your real values:
 Recommended values:
 - `TF_VAR_wireguard_network=10.8.0.0/24`
 - `TF_VAR_wireguard_client_cidr=10.8.0.2/32`
+- `TF_VAR_wireguard_port=51820`
 - `TF_VAR_enable_registration_api=false` until DNS and access policy are ready
 - `TF_VAR_admin_ssh_cidr='["<your-public-ip>/32"]'`
 - `TF_VAR_wg_api_cidr=<trusted-edge-egress-ip>/32`
+- `TF_VAR_registration_api_domain=''` to use the EC2 Elastic IP automatically
 
 ## 3. Configure Terraform Inputs
 
@@ -96,13 +99,14 @@ What Terraform sets up:
 - registration API application bound to `127.0.0.1`
 - optional TLS reverse proxy with NGINX
 
-## 5. Configure DNS for the Registration API
+## 5. Configure Public Addressing for the Registration API
 
 If you want to use auto-registration:
 
 1. Set `TF_VAR_enable_registration_api=true`
-2. Set `TF_VAR_registration_api_domain` to your real DNS name
-3. Point that DNS record to the EC2 Elastic IP
+2. Set `TF_VAR_registration_api_domain` to either:
+   `vpn-api.example.com`, the EC2 Elastic IP directly, or leave it empty to use the Elastic IP automatically
+3. If you use a hostname, point that DNS record to the EC2 Elastic IP
 4. Restrict `TF_VAR_wg_api_cidr` to the known edge egress IP or another trusted CIDR
 5. Re-apply Terraform if needed
 
@@ -113,6 +117,7 @@ Current bootstrap behavior:
 
 Production note:
 - replace the bootstrap self-signed certificate with a trusted certificate before public use
+- using the Elastic IP directly is fine for lab or controlled deployments, but a hostname is still cleaner for long-term production operations
 
 ## 6. Verify the Cloud Node
 
@@ -217,7 +222,7 @@ If auto-registration is disabled:
 - add the peer manually on the server
 
 If auto-registration is enabled:
-- use the TLS domain, not the raw IP
+- use the configured TLS hostname or Elastic IP from `TF_VAR_registration_api_domain`
 - provide the registration token from your secure deployment inputs
 
 ## 10. Manual Peer Registration
@@ -273,7 +278,7 @@ Before running hardening:
 
 Verify all of the following:
 - EC2 has the expected Elastic IP
-- DNS for `registration_api_domain` resolves correctly
+- if `registration_api_domain` is a hostname, DNS resolves correctly
 - the registration API is disabled unless explicitly needed
 - if enabled, API access is restricted to trusted CIDRs
 - TLS is active on the public registration endpoint

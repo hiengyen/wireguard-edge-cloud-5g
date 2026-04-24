@@ -19,7 +19,8 @@ admin_ssh_cidr = ["<YOUR_PUBLIC_IP>/32"]
 enable_registration_api = false
 wg_api_cidr             = "<TRUSTED_EDGE_EGRESS_IP>/32"
 registration_api_tls_port = 443
-registration_api_domain   = "vpn-api.example.com"
+# Optional: leave empty to use the EC2 Elastic IP automatically
+# registration_api_domain = "vpn-api.example.com"
 
 common_tags = {
   Project     = "WireGuard-VPN"

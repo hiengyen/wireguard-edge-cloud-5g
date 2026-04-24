@@ -94,6 +94,8 @@ Important groups:
 - `WIREGUARD_*`: edge VPN client runtime defaults
 - `WWAN_APN`, `SSH_ADMIN_PORT`: edge WWAN and hardening runtime settings
 
+Set both `TF_VAR_wireguard_port` and `WIREGUARD_PORT` to the same value if you change the default WireGuard UDP port.
+
 Recommended workflow:
 
 ```bash
@@ -126,9 +128,13 @@ The default example uses:
 - Overlay network: `10.8.0.0/24`
 - Sample edge client IP: `10.8.0.2/32`
 - Registration API: disabled by default
-- Public registration API TLS endpoint: `https://vpn-api.example.com:443/register` when enabled
+- Public registration API TLS endpoint: automatically uses the EC2 Elastic IP when `registration_api_domain` is empty
 
-If you enable the registration API, point `registration_api_domain` to the EC2 Elastic IP with DNS before exposing it publicly.
+You can set `registration_api_domain` to either:
+- a public hostname such as `vpn-api.example.com`
+- or the EC2 Elastic IP directly
+
+If you leave `registration_api_domain` empty, Terraform will automatically use the EC2 Elastic IP.
 
 ### 2. Edge Physical Connection
 
@@ -309,9 +315,13 @@ Ví dụ mặc định hiện tại dùng:
 - Overlay network: `10.8.0.0/24`
 - Sample edge client IP: `10.8.0.2/32`
 - Registration API: tắt mặc định
-- Public registration API TLS endpoint: `https://vpn-api.example.com:443/register` khi được bật
+- Public registration API TLS endpoint: tự dùng Elastic IP của EC2 khi `registration_api_domain` để trống
 
-Khi bật registration API, hãy trỏ DNS của `registration_api_domain` về Elastic IP của EC2 trước khi public endpoint ra ngoài.
+Bạn có thể đặt `registration_api_domain` theo một trong hai cách:
+- hostname public như `vpn-api.example.com`
+- hoặc dùng trực tiếp Elastic IP của EC2
+
+Nếu để trống `registration_api_domain`, Terraform sẽ tự dùng Elastic IP của EC2.
 
 ### 2. Kết nối Mạng phần cứng
 

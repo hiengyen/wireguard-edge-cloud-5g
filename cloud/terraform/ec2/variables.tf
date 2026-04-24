@@ -113,9 +113,9 @@ variable "registration_api_tls_port" {
 }
 
 variable "registration_api_domain" {
-  description = "DNS name presented by the TLS reverse proxy certificate"
+  description = "Optional public hostname or Elastic IP presented by the TLS reverse proxy certificate bootstrap. Leave empty to use the EC2 Elastic IP automatically."
   type        = string
-  default     = "vpn-api.example.com"
+  default     = ""
 }
 
 variable "grafana_admin_password" {

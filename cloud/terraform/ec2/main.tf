@@ -89,8 +89,8 @@ resource "terraform_data" "validate_admin_ssh_cidr" {
     }
 
     precondition {
-      condition     = !var.enable_registration_api || trimspace(var.registration_api_domain) != ""
-      error_message = "registration_api_domain must be set when enable_registration_api is true."
+      condition     = !var.enable_registration_api || trimspace(local.registration_api_host) != ""
+      error_message = "Unable to determine a public host for the registration API."
     }
   }
 }
@@ -189,6 +189,10 @@ resource "aws_eip_association" "wireguard" {
   allocation_id = aws_eip.wireguard.id
 }
 
+locals {
+  registration_api_host = trimspace(var.registration_api_domain) != "" ? trimspace(var.registration_api_domain) : aws_eip.wireguard.public_ip
+}
+
 ###############################################################
 # EC2 Instance
 ###############################################################
@@ -223,7 +227,7 @@ resource "aws_instance" "wireguard" {
     wg_api_port               = var.wg_api_port
     enable_registration_api   = var.enable_registration_api
     registration_api_tls_port = var.registration_api_tls_port
-    registration_api_domain   = var.registration_api_domain
+    registration_api_host     = local.registration_api_host
     secret_id                 = aws_secretsmanager_secret.wg_api_token.name
   }))
 
