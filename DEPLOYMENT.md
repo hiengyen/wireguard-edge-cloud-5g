@@ -169,6 +169,7 @@ curl http://127.0.0.1:3000/api/health
 Notes:
 - Prometheus and Grafana bind to `127.0.0.1` by default in this repository
 - Use SSH tunnel or a separate reverse proxy if you need remote operator access
+- The repository currently pins Prometheus `v3.11.2` and Grafana `13.0.0`; review upstream release notes before upgrading an existing older deployment across major versions
 
 ## 8. Prepare the Edge Node
 

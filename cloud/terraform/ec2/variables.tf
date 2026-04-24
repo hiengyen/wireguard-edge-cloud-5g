@@ -128,11 +128,11 @@ variable "grafana_admin_password" {
 variable "prometheus_version" {
   description = "Pinned Prometheus image tag"
   type        = string
-  default     = "v2.54.1"
+  default     = "v3.11.2"
 }
 
 variable "grafana_version" {
   description = "Pinned Grafana image tag"
   type        = string
-  default     = "11.2.0"
+  default     = "13.0.0"
 }
