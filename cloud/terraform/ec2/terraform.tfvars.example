@@ -9,7 +9,7 @@ key_name      = "your-key-pair-name"
 
 wireguard_port    = 51820
 wireguard_network = "10.8.0.0/24"
-wireguard_client_cidr = "10.8.0.2/24"
+wireguard_client_cidr = "10.8.0.2/32"
 root_volume_size  = 20
 
 # CheckIP: https://checkip.amazonaws.com
@@ -18,6 +18,8 @@ admin_ssh_cidr = ["<YOUR_PUBLIC_IP>/32"]
 # Keep disabled unless the API is protected by TLS/reverse proxy and a restricted CIDR.
 enable_registration_api = false
 wg_api_cidr             = "<TRUSTED_EDGE_EGRESS_IP>/32"
+registration_api_tls_port = 443
+registration_api_domain   = "vpn-api.example.com"
 
 common_tags = {
   Project     = "WireGuard-VPN"

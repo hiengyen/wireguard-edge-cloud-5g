@@ -54,9 +54,9 @@ resource "aws_vpc_security_group_ingress_rule" "wg_api" {
   count = var.enable_registration_api ? 1 : 0
 
   security_group_id = aws_security_group.wireguard.id
-  description       = "WireGuard Registration API"
-  from_port         = var.wg_api_port
-  to_port           = var.wg_api_port
+  description       = "WireGuard Registration API TLS reverse proxy"
+  from_port         = var.registration_api_tls_port
+  to_port           = var.registration_api_tls_port
   ip_protocol       = "tcp"
   cidr_ipv4         = var.wg_api_cidr
 
@@ -86,6 +86,11 @@ resource "terraform_data" "validate_admin_ssh_cidr" {
     precondition {
       condition     = length(var.admin_ssh_cidr) > 0
       error_message = "admin_ssh_cidr must contain at least one trusted /32 or office CIDR."
+    }
+
+    precondition {
+      condition     = !var.enable_registration_api || trimspace(var.registration_api_domain) != ""
+      error_message = "registration_api_domain must be set when enable_registration_api is true."
     }
   }
 }
@@ -213,10 +218,13 @@ resource "aws_instance" "wireguard" {
   # User data — automatically install WireGuard on startup
   # Token is fetched at boot from Secrets Manager (NOT embedded in user_data)
   user_data_base64 = base64encode(templatefile("${path.module}/user_data.sh", {
-    wireguard_port    = var.wireguard_port
-    wireguard_network = var.wireguard_network
-    wg_api_port       = var.wg_api_port
-    secret_id         = aws_secretsmanager_secret.wg_api_token.name
+    wireguard_port            = var.wireguard_port
+    wireguard_network         = var.wireguard_network
+    wg_api_port               = var.wg_api_port
+    enable_registration_api   = var.enable_registration_api
+    registration_api_tls_port = var.registration_api_tls_port
+    registration_api_domain   = var.registration_api_domain
+    secret_id                 = aws_secretsmanager_secret.wg_api_token.name
   }))
 
   metadata_options {

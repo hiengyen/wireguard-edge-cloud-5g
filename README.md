@@ -24,6 +24,7 @@ The platform integrates:
 - Auto-Registration API for seamless Zero-touch VPN enrollment
 
 Default overlay network values in this repository are standardized to `10.8.0.0/24`.
+The multi-peer model used here assigns `/32` host routes to each edge peer while keeping the server interface on `10.8.0.1/24`.
 
 ---
 
@@ -77,9 +78,11 @@ wireguard-edge-cloud-5g/
 
 - **5G QMI Network Automation:** Dynamically locates and connects Quectel RM502Q-GL via raw IP.
 - **Zero-Touch VPN Registration:** Edge nodes can register through a token-secured API, but API ingress is disabled by default and should be exposed only behind trusted CIDRs or TLS.
+- **Multi-Peer Addressing:** The server owns `10.8.0.1/24`, while each edge peer gets a unique `/32` address such as `10.8.0.2/32`.
 - **Infrastructure as Code (IaC):** Cloud environments are 100% automated using Terraform.
 - **Observability:** Prometheus and Grafana dashboards actively pull metrics via the private `10.8.0.0/24` tunnel.
 - **Hardening:** Best-practice security including OS-aware firewalling (`ufw` on Armbian/Debian, `firewalld` on Amazon Linux 2023), Fail2Ban, and key-only SSH.
+- **CI Validation:** GitHub Actions verifies shell syntax, ShellCheck, YAML, and Terraform formatting/validation on each push and pull request.
 
 ## ⚙️ Environment File
 
@@ -121,8 +124,11 @@ _Prepare a strong `TF_VAR_wg_api_token` before `terraform apply`. Terraform will
 
 The default example uses:
 - Overlay network: `10.8.0.0/24`
-- Sample edge client IP: `10.8.0.2/24`
+- Sample edge client IP: `10.8.0.2/32`
 - Registration API: disabled by default
+- Public registration API TLS endpoint: `https://vpn-api.example.com:443/register` when enabled
+
+If you enable the registration API, point `registration_api_domain` to the EC2 Elastic IP with DNS before exposing it publicly.
 
 ### 2. Edge Physical Connection
 
@@ -150,6 +156,12 @@ sudo ./edge/vpn/setup-wg-client.sh
 
 _When prompted, use auto-registration only if you intentionally enabled API ingress and restricted it to trusted CIDRs or placed it behind TLS._
 
+The cloud bootstrap currently provisions a self-signed certificate for the reverse proxy so the API is encrypted immediately. Replace it with a trusted certificate before production rollout.
+
+The client should keep:
+- `Address = 10.8.0.x/32`
+- `AllowedIPs = 10.8.0.0/24` for overlay-only routing
+
 ### 4. Shared Operations (Hardening & Monitoring)
 
 On both environments, run:
@@ -173,6 +185,18 @@ cd cloud/monitoring
 sudo docker-compose up -d
 ```
 
+### 5. Continuous Integration
+
+The repository includes GitHub Actions CI in [ci.yml](/home/hiengyen/CODE/wireguard-edge-cloud-5g/.github/workflows/ci.yml:1).
+
+It runs:
+- `bash -n` for all shell scripts
+- `shellcheck`
+- `yamllint`
+- `terraform fmt -check -diff`
+- `terraform init -backend=false`
+- `terraform validate`
+
 ---
 
 ## 🇻🇳 Tiếng Việt
@@ -195,6 +219,7 @@ Nền tảng này tích hợp sẵn:
 - Auto-Registration API hỗ trợ tính năng gia nhập mạng VPN tự động (Zero-touch).
 
 Các giá trị overlay mặc định trong repo này đã được chuẩn hoá về `10.8.0.0/24`.
+Mô hình multi-peer trong repo dùng `10.8.0.1/24` cho server và cấp IP `/32` riêng cho từng edge peer.
 
 ---
 
@@ -248,9 +273,11 @@ wireguard-edge-cloud-5g/
 
 - **Tự động Giao tiếp 5G QMI:** Định danh và kết nối tự động tới modem Quectel RM502Q-GL qua chế độ raw IP, hạn chế lỗi gán cứng `/dev/cdc-wdm0`.
 - **Đăng Ký VPN Tự Động (Zero-Touch):** Edge nodes có thể đăng ký bằng API dùng token, nhưng API ingress bị tắt mặc định và chỉ nên bật khi đã giới hạn CIDR tin cậy hoặc đặt sau TLS.
+- **Mô Hình Multi-Peer:** Server dùng `10.8.0.1/24`, còn mỗi edge peer nhận một IP `/32` riêng như `10.8.0.2/32`.
 - **Hạ tầng dưới dạng Mã (IaC):** Server rỗng được khởi tạo và cài cắm 100% tự động qua môi trường Terraform.
 - **Khả năng Quan sát (Observability):** Dashboard Grafana và trạm trung chuyển Prometheus tự động cào metrics (sức khoẻ phần cứng) bọc kín theo luồng đường hầm `10.8.0.0/24`.
 - **Bảo Mật (Hardening):** Áp dụng hardening theo môi trường đích: `ufw` cho Armbian/Debian ở Edge, `firewalld` cho Amazon Linux 2023 ở Cloud, kết hợp Fail2Ban và chỉ cho phép SSH bằng khoá.
+- **CI Tự Động:** GitHub Actions kiểm tra shell, YAML và Terraform cho mỗi push/pull request.
 
 ## ⚙️ File Môi Trường
 
@@ -292,8 +319,11 @@ _Hãy chuẩn bị `TF_VAR_wg_api_token` đủ mạnh trước khi chạy `terra
 
 Ví dụ mặc định hiện tại dùng:
 - Overlay network: `10.8.0.0/24`
-- Sample edge client IP: `10.8.0.2/24`
+- Sample edge client IP: `10.8.0.2/32`
 - Registration API: tắt mặc định
+- Public registration API TLS endpoint: `https://vpn-api.example.com:443/register` khi được bật
+
+Khi bật registration API, hãy trỏ DNS của `registration_api_domain` về Elastic IP của EC2 trước khi public endpoint ra ngoài.
 
 ### 2. Kết nối Mạng phần cứng
 
@@ -323,6 +353,12 @@ sudo ./edge/vpn/setup-wg-client.sh
 
 _Chỉ nên chọn `Y` khi bạn đã chủ động bật API ingress và giới hạn nó về CIDR tin cậy hoặc đặt sau TLS._
 
+Bootstrap cloud hiện tạo sẵn chứng chỉ self-signed để reverse proxy có TLS ngay từ đầu. Trước khi đưa vào production thật, hãy thay bằng chứng chỉ đáng tin cậy.
+
+Client nên giữ:
+- `Address = 10.8.0.x/32`
+- `AllowedIPs = 10.8.0.0/24` nếu chỉ route trong overlay
+
 ### 4. Phụ bản Quản trị (Bảo mật & Giám sát)
 
 Hoạt động dùng chung ở cả 2 bề mặt của hệ thống:
@@ -345,6 +381,18 @@ set -a && . ./.env && set +a
 cd cloud/monitoring
 sudo docker-compose up -d
 ```
+
+### 5. Kiểm tra CI Tự động
+
+Repo có GitHub Actions CI tại [ci.yml](/home/hiengyen/CODE/wireguard-edge-cloud-5g/.github/workflows/ci.yml:1).
+
+Workflow hiện chạy:
+- `bash -n` cho toàn bộ shell script
+- `shellcheck`
+- `yamllint`
+- `terraform fmt -check -diff`
+- `terraform init -backend=false`
+- `terraform validate`
 
 ---
 

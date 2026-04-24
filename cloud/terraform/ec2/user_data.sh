@@ -8,13 +8,13 @@ exec > /var/log/user-data.log 2>&1
 
 WIREGUARD_NETWORK_CIDR="${wireguard_network}"
 WIREGUARD_SERVER_CIDR="${cidrhost(wireguard_network, 1)}/${split("/", wireguard_network)[1]}"
-WIREGUARD_SAMPLE_CLIENT_CIDR="${cidrhost(wireguard_network, 2)}/${split("/", wireguard_network)[1]}"
+WIREGUARD_SAMPLE_CLIENT_CIDR="${cidrhost(wireguard_network, 2)}/32"
 
 echo "=== Starting WireGuard installation ==="
 
 # Update and install WireGuard
 dnf update -y
-dnf install -y wireguard-tools qrencode python3 awscli iptables
+dnf install -y wireguard-tools qrencode python3 awscli iptables nginx openssl
 
 # Enable IP forwarding
 echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf
@@ -143,8 +143,8 @@ def validate_pubkey(pubkey: str) -> None:
 
 def validate_ip(ip_value: str) -> str:
     interface = ipaddress.ip_interface(ip_value)
-    if interface.network.prefixlen != WG_NETWORK.prefixlen:
-        raise ValueError(f"Client addresses must use /{WG_NETWORK.prefixlen}")
+    if interface.network.prefixlen != 32:
+        raise ValueError("Client addresses must use /32")
     if interface.ip not in WG_NETWORK:
         raise ValueError("Client IP is outside the WireGuard network")
     return str(interface)
@@ -221,9 +221,9 @@ class RegistrationHandler(BaseHTTPRequestHandler):
             self._write(404, "Not found")
 
 if __name__ == '__main__':
-    server_address = ('0.0.0.0', ${wg_api_port})
+    server_address = ('127.0.0.1', ${wg_api_port})
     httpd = ThreadedHTTPServer(server_address, RegistrationHandler)
-    print("Starting API Server on trusted networks only...")
+    print("Starting API Server on 127.0.0.1...")
     httpd.serve_forever()
 EOF
 
@@ -251,9 +251,58 @@ EOF
 systemctl daemon-reload
 systemctl enable wg-api --now
 
+if [[ "${enable_registration_api}" == "true" ]]; then
+  echo "=== Configuring TLS reverse proxy for Registration API ==="
+
+  mkdir -p /etc/nginx/tls
+  chmod 700 /etc/nginx/tls
+
+  openssl req -x509 -nodes -newkey rsa:4096 \
+    -keyout /etc/nginx/tls/wg-api.key \
+    -out /etc/nginx/tls/wg-api.crt \
+    -days 365 \
+    -subj "/CN=${registration_api_domain}"
+
+  chmod 600 /etc/nginx/tls/wg-api.key
+  chmod 644 /etc/nginx/tls/wg-api.crt
+
+  cat > /etc/nginx/conf.d/wg-api.conf << EOF
+server {
+    listen ${registration_api_tls_port} ssl http2;
+    server_name ${registration_api_domain};
+
+    ssl_certificate     /etc/nginx/tls/wg-api.crt;
+    ssl_certificate_key /etc/nginx/tls/wg-api.key;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_ciphers         HIGH:!aNULL:!MD5;
+    add_header Strict-Transport-Security "max-age=31536000" always;
+
+    location = /register {
+        proxy_pass http://127.0.0.1:${wg_api_port};
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+
+    location / {
+        return 404;
+    }
+}
+EOF
+
+  nginx -t
+  systemctl enable nginx --now
+fi
+
 
 echo "=== Installation complete ==="
 echo "Endpoint: $SERVER_PUBLIC_IP:${wireguard_port}"
-echo "API Endpoint: Enable access only from trusted CIDRs or behind TLS proxy"
+if [[ "${enable_registration_api}" == "true" ]]; then
+  echo "API Endpoint: https://${registration_api_domain}:${registration_api_tls_port}/register"
+  echo "TLS Note: bootstrap uses a self-signed certificate; replace it with a trusted certificate before production use."
+else
+  echo "API Endpoint: disabled"
+fi
 echo "Config client1: /etc/wireguard/client1.conf"
 echo "View QR: sudo qrencode -t ansiutf8 < /etc/wireguard/client1.conf"

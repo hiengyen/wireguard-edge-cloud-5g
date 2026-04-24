@@ -44,9 +44,14 @@ variable "wireguard_network" {
 }
 
 variable "wireguard_client_cidr" {
-  description = "Default client IP/CIDR used in examples and monitoring targets"
+  description = "Sample client host route used in examples, monitoring targets, and peer registration"
   type        = string
-  default     = "10.8.0.2/24"
+  default     = "10.8.0.2/32"
+
+  validation {
+    condition     = can(regex("/32$", var.wireguard_client_cidr))
+    error_message = "wireguard_client_cidr must be a /32 host route for multi-peer WireGuard."
+  }
 }
 
 variable "root_volume_size" {
@@ -84,13 +89,13 @@ variable "wg_api_token" {
 }
 
 variable "wg_api_port" {
-  description = "HTTP Port for client registration API"
+  description = "Internal localhost port for the registration API application"
   type        = number
   default     = 5000
 }
 
 variable "wg_api_cidr" {
-  description = "CIDR allowed to call the Registration API. Must be restricted to a known source range."
+  description = "CIDR allowed to call the TLS reverse proxy for the Registration API. Must be restricted to a known source range."
   type        = string
   default     = "127.0.0.1/32"
 }
@@ -99,6 +104,18 @@ variable "enable_registration_api" {
   description = "Whether to expose the registration API through the instance security group"
   type        = bool
   default     = false
+}
+
+variable "registration_api_tls_port" {
+  description = "Public TLS port exposed by the reverse proxy in front of the registration API"
+  type        = number
+  default     = 443
+}
+
+variable "registration_api_domain" {
+  description = "DNS name presented by the TLS reverse proxy certificate"
+  type        = string
+  default     = "vpn-api.example.com"
 }
 
 variable "grafana_admin_password" {

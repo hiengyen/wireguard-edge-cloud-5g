@@ -151,8 +151,8 @@ prompt_server() {
     exit 1
   fi
 
-  read -rp "Client IP (e.g. 10.8.0.2/24): " WG_CLIENT_IP
-  WG_CLIENT_IP=${WG_CLIENT_IP:-10.8.0.2/24}
+  read -rp "Client IP (e.g. 10.8.0.2/32): " WG_CLIENT_IP
+  WG_CLIENT_IP=${WG_CLIENT_IP:-10.8.0.2/32}
 
   read -rp "Allowed IPs for peer [${WG_ALLOWED_IPS}]: " WG_ALLOWED_IPS_INPUT
   WG_ALLOWED_IPS=${WG_ALLOWED_IPS_INPUT:-$WG_ALLOWED_IPS}
