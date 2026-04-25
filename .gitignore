@@ -5,6 +5,14 @@
 tfplan
 .terraform/
 .terraform.lock.hcl
+.terraform.tfstate.lock.info
+terraform.tfstate.d/
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
 
 # Variables
 *.tfvars
