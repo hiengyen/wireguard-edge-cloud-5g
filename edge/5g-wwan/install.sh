@@ -71,7 +71,13 @@ echo ""
 read -r -p "Do you want to start the 5G connection now? [y/N]: " START_NOW
 if [[ "$START_NOW" =~ ^[Yy]$ ]]; then
     echo "[INFO] Starting wwan.service..."
-    systemctl start wwan.service
+    if ! systemctl start wwan.service; then
+        echo "[ERROR] wwan.service failed to start."
+        echo "       Inspect the service with:"
+        echo "       systemctl status wwan.service"
+        echo "       journalctl -xeu wwan.service"
+        exit 1
+    fi
     echo "[INFO] Starting wwan-monitor.service..."
     systemctl start wwan-monitor.service
     echo "[SUCCESS] Services started. Use 'systemctl status wwan' to check."
