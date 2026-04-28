@@ -5,7 +5,7 @@
 # ==========================================================
 
 TARGETS=("8.8.8.8" "1.1.1.1" "8.8.4.4")
-MAX_STRIKES=3               # Consecutive ping failures needed to trigger software restart
+MAX_STRIKES=1               # Consecutive ping failures needed to trigger software restart
 HARD_RESET_LIMIT=3          # Consecutive soft-restart failures needed to trigger hardware reset
 
 strike_count=0
@@ -22,9 +22,48 @@ check_connection() {
   return 1
 }
 
+# Check if WWAN interface exists
+find_wwan_interface() {
+  for path in /sys/class/net/ww*; do
+    [[ -e "$path" ]] && basename "$path" && return 0
+  done
+  return 1
+}
+
+# Check if QMI device exists
+find_qmi_device() {
+  for path in /dev/cdc-wdm*; do
+    [[ -c "$path" ]] && echo "$path" && return 0
+  done
+  return 1
+}
+
+wait_for_device() {
+  echo "[INFO] Entering wait loop for WWAN device/interface..."
+  while true; do
+    if find_wwan_interface >/dev/null && find_qmi_device >/dev/null; then
+      echo "[INFO] WWAN device and interface detected!"
+      return 0
+    fi
+    sleep 5
+  done
+}
+
 echo "[INFO] Watchdog active. Targets: ${TARGETS[*]}"
 
 while true; do
+  # 1. Check if hardware is present
+  if ! find_wwan_interface >/dev/null || ! find_qmi_device >/dev/null; then
+    echo "[ERROR] WWAN hardware missing (interface or /dev/cdc-wdm* not found)."
+    wait_for_device
+    echo "[ACTION] Hardware restored. Restarting wwan.service immediately..."
+    systemctl restart wwan.service
+    sleep 30
+    strike_count=0
+    continue
+  fi
+
+  # 2. Check connection
   if check_connection; then
     # SCENARIO: NETWORK IS UP
     
@@ -51,9 +90,9 @@ while true; do
       # If software restarts have failed repeatedly -> USB module firmware might be frozen!
       if [[ $software_restart_count -ge $HARD_RESET_LIMIT ]]; then
         echo "[CRITICAL] Software restarts failed $HARD_RESET_LIMIT times."
-        MODEM_DEV=$(find /dev -maxdepth 1 -name "cdc-wdm*" | head -n 1)
+        MODEM_DEV=$(find_qmi_device)
         
-        if [[ -n "$MODEM_DEV" && -c "$MODEM_DEV" ]]; then
+        if [[ -n "$MODEM_DEV" ]]; then
           echo "[ACTION] Triggering HARDWARE RESET on Quectel Modem ($MODEM_DEV)!"
           
           # Stop the software service to release the /dev interface bindings
@@ -79,5 +118,5 @@ while true; do
       sleep 30
     fi
   fi
-  sleep 15
+  sleep 5
 done

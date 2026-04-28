@@ -1,6 +1,6 @@
 [Unit]
 Description=WWAN Connection Watchdog
-Requires=wwan.service
+Wants=wwan.service
 After=wwan.service
 # Bind lifecycle: if wwan.service is manually stopped, also stop this monitor.
 PartOf=wwan.service
