@@ -2,8 +2,7 @@
 Description=WWAN Connection Watchdog
 Wants=wwan.service
 After=wwan.service
-# Bind lifecycle: if wwan.service is manually stopped, also stop this monitor.
-PartOf=wwan.service
+
 # Rate limiting: Prevent infinity loops that crash CPU
 StartLimitBurst=3
 StartLimitIntervalSec=60
