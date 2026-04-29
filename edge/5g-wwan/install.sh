@@ -15,13 +15,13 @@ fi
 echo "=== Installing 5G WWAN Services ==="
 
 # 2. Install required dependencies
-echo "[INFO] Installing required dependencies (libqmi-utils, udhcpc)..."
+echo "[INFO] Installing required dependencies (libqmi-utils, udhcpc, build tools)..."
 if command -v apt-get >/dev/null 2>&1; then
     export DEBIAN_FRONTEND=noninteractive
     apt-get update -yqq
-    apt-get install -yq libqmi-utils udhcpc iproute2 iputils-ping
+    apt-get install -yq libqmi-utils udhcpc iproute2 iputils-ping build-essential
 elif command -v dnf >/dev/null 2>&1; then
-    dnf install -y libqmi-utils busybox iproute iputils
+    dnf install -y libqmi-utils busybox iproute iputils gcc make
 else
     echo "[ERROR] Unsupported package manager. Expected apt-get or dnf."
     exit 1
@@ -30,7 +30,7 @@ fi
 SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
 
 # 3. Check if required files exist
-REQUIRED_FILES=("wwan-start.sh" "wwan-stop.sh" "wwan-monitor.sh" "wwan.service" "wwan-monitor.service")
+REQUIRED_FILES=("wwan-stop.sh" "wwan-monitor.sh" "wwan.service" "wwan-monitor.service")
 for file in "${REQUIRED_FILES[@]}"; do
     if [[ ! -f "$SCRIPT_DIR/$file" ]]; then
         echo "[ERROR] Critical file missing: $file"
@@ -38,14 +38,21 @@ for file in "${REQUIRED_FILES[@]}"; do
     fi
 done
 
+# 3.5. Compile quectel-CM
+PROJECT_ROOT=$(readlink -f "$SCRIPT_DIR/../../")
+echo "[INFO] Compiling quectel-CM..."
+cd "$PROJECT_ROOT/quectel-CM"
+make clean && make
+cp quectel-CM /usr/local/bin/
+chmod +x /usr/local/bin/quectel-CM
+cd "$SCRIPT_DIR"
+
 # 4. Copy scripts to /usr/local/bin
 echo "[INFO] Copying executable scripts to /usr/local/bin..."
-cp "$SCRIPT_DIR"/wwan-start.sh /usr/local/bin/
 cp "$SCRIPT_DIR"/wwan-stop.sh /usr/local/bin/
 cp "$SCRIPT_DIR"/wwan-monitor.sh /usr/local/bin/
 
 # Make them executable
-chmod +x /usr/local/bin/wwan-start.sh
 chmod +x /usr/local/bin/wwan-stop.sh
 chmod +x /usr/local/bin/wwan-monitor.sh
 

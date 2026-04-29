@@ -6,12 +6,11 @@ StartLimitIntervalSec=120
 StartLimitBurst=5
 
 [Service]
-Type=oneshot
+Type=simple
 EnvironmentFile=-/etc/default/wwan
-ExecStart=/usr/local/bin/wwan-start.sh
+ExecStart=/usr/local/bin/quectel-CM -s ${WWAN_APN}
 ExecStop=/usr/local/bin/wwan-stop.sh
-RemainAfterExit=yes
-Restart=on-failure
+Restart=always
 RestartSec=10
 TimeoutStartSec=180
 

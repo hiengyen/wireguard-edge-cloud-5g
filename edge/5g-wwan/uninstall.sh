@@ -35,7 +35,7 @@ systemctl daemon-reload
 
 # 6. Remove scripts from /usr/local/bin
 echo "[INFO] Removing executable scripts..."
-rm -f /usr/local/bin/wwan-start.sh
+rm -f /usr/local/bin/quectel-CM
 rm -f /usr/local/bin/wwan-stop.sh
 rm -f /usr/local/bin/wwan-monitor.sh
 
