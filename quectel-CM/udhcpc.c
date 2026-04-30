@@ -88,13 +88,13 @@ static int ql_raw_ip_mode_check(const char *ifname) {
     read(fd, mode, 2);
     if (mode[0] == '0' || mode[0] == 'N') {
         dbg_time("File:%s Line:%d udhcpc fail to get ip address, try next:", __func__, __LINE__);
-        snprintf(shell_cmd, sizeof(shell_cmd), "ifconfig %s down", ifname);
+        snprintf(shell_cmd, sizeof(shell_cmd), "ip link set %s down", ifname);
         ql_system(shell_cmd);
         dbg_time("echo Y > /sys/class/net/%s/qmi/raw_ip", ifname);
         mode[0] = 'Y';
         write(fd, mode, 2);
         mode_change = 1;
-        snprintf(shell_cmd, sizeof(shell_cmd), "ifconfig %s up", ifname);
+        snprintf(shell_cmd, sizeof(shell_cmd), "ip link set %s up", ifname);
         ql_system(shell_cmd);
     }
 
@@ -163,7 +163,7 @@ static void ql_set_driver_link_state(PROFILE_T *profile, int link_state) {
         lseek(fd, 0, SEEK_SET);
         rc = read(fd, link_file, sizeof(link_file));
         if (rc > 1 && (!strcasecmp(link_file, "0\n") || !strcasecmp(link_file, "0x0\n"))) {
-            snprintf(link_file, sizeof(link_file), "ifconfig %s down", profile->usbnet_adapter);
+            snprintf(link_file, sizeof(link_file), "ip link set %s down", profile->usbnet_adapter);
             ql_system(link_file);
         }
     }
@@ -186,11 +186,11 @@ void udhcpc_start(PROFILE_T *profile) {
     }
 
     if (strcmp(ifname, profile->usbnet_adapter)) {
-        snprintf(shell_cmd, sizeof(shell_cmd), "ifconfig %s up", profile->usbnet_adapter);
+        snprintf(shell_cmd, sizeof(shell_cmd), "ip link set %s up", profile->usbnet_adapter);
         ql_system(shell_cmd);
     }
 
-    snprintf(shell_cmd, sizeof(shell_cmd), "ifconfig %s up", ifname);
+    snprintf(shell_cmd, sizeof(shell_cmd), "ip link set %s up", ifname);
     ql_system(shell_cmd);
 
 #if 1 //for bridge mode, only one public IP, so do udhcpc manually
@@ -409,8 +409,8 @@ void udhcpc_stop(PROFILE_T *profile) {
         dibbler_client_alive = 0;
     }
 
-    snprintf(shell_cmd, sizeof(shell_cmd), "ifconfig %s down", ifname);
+    snprintf(shell_cmd, sizeof(shell_cmd), "ip link set %s down", ifname);
     ql_system(shell_cmd);
-    snprintf(shell_cmd, sizeof(shell_cmd), "ifconfig %s 0.0.0.0", ifname);
+    snprintf(shell_cmd, sizeof(shell_cmd), "ip addr flush dev %s", ifname);
     ql_system(shell_cmd);
 }
