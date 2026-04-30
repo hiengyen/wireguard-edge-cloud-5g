@@ -19,7 +19,7 @@ echo "[INFO] Installing required dependencies (libqmi-utils, udhcpc, build tools
 if command -v apt-get >/dev/null 2>&1; then
     export DEBIAN_FRONTEND=noninteractive
     apt-get update -yqq
-    apt-get install -yq libqmi-utils udhcpc iproute2 iputils-ping build-essential
+    apt-get install -yq libqmi-utils udhcpc iproute2 iputils-ping build-essential net-tools
 elif command -v dnf >/dev/null 2>&1; then
     dnf install -y libqmi-utils busybox iproute iputils gcc make
 else
