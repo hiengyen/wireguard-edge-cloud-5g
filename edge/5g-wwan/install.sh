@@ -65,7 +65,17 @@ cp "$SCRIPT_DIR"/wwan-monitor.service /etc/systemd/system/
 chmod 644 /etc/systemd/system/wwan.service
 chmod 644 /etc/systemd/system/wwan-monitor.service
 
-# 6. Reload daemon and enable services
+# 6. Setup default environment file
+if [[ ! -f /etc/default/wwan ]]; then
+    echo "[INFO] Creating default configuration at /etc/default/wwan..."
+    cat <<EOF > /etc/default/wwan
+# WWAN Configuration
+WWAN_APN=internet
+WWAN_DEVICE_WAIT_TIMEOUT=45
+EOF
+fi
+
+# 7. Reload daemon and enable services
 echo "[INFO] Reloading systemd daemon..."
 systemctl daemon-reload
 
@@ -73,7 +83,7 @@ echo "[INFO] Enabling services to start on boot..."
 systemctl enable wwan.service
 systemctl enable wwan-monitor.service
 
-# 7. Ask user if they want to start the services immediately
+# 8. Ask user if they want to start the services immediately
 echo ""
 read -r -p "Do you want to start the 5G connection now? [y/N]: " START_NOW
 if [[ "$START_NOW" =~ ^[Yy]$ ]]; then
