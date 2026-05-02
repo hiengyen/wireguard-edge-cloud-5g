@@ -13,7 +13,7 @@ services:
       - '--storage.tsdb.path=/prometheus'
 
   grafana:
-    image: grafana/grafana:13.0.0
+    image: grafana/grafana:13.0.1
     container_name: grafana
     volumes:
       - grafana_data:/var/lib/grafana

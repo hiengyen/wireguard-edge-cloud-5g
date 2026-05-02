@@ -134,5 +134,5 @@ variable "prometheus_version" {
 variable "grafana_version" {
   description = "Pinned Grafana image tag"
   type        = string
-  default     = "13.0.0"
+  default     = "13.0.1"
 }

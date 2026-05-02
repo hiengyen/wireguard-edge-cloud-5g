@@ -6,7 +6,11 @@ The repository assumes:
 - WireGuard overlay network: `10.8.0.0/24`
 - WireGuard server interface: `10.8.0.1/24`
 - Each edge node uses a unique `/32` client address, for example `10.8.0.2/32`
-- Registration API is disabled by default and should only be exposed behind TLS and restricted CIDR rules
+- The Registration API is installed on the cloud node, but public ingress is disabled by default
+
+There are two supported rollout paths:
+1. Manual peer registration without exposing the Registration API
+2. Auto-registration through the Registration API exposed behind TLS and restricted CIDR rules
 
 ## 1. Prerequisites
 
@@ -14,7 +18,7 @@ Prepare the following before deployment:
 - An AWS account with permission to create EC2, IAM, EIP, Security Group, and Secrets Manager resources
 - An existing AWS EC2 key pair for SSH access
 - A public subnet and VPC where the EC2 instance will run
-- Optionally, a DNS record for the registration API, for example `vpn-api.example.com`
+- Optionally, a DNS record for the Registration API, for example `vpn-api.example.com`
 - An edge device with:
   - Linux
   - WireGuard support
@@ -41,7 +45,6 @@ set -a && . ./.env && set +a
 
 Update `.env` with your real values:
 - `TF_VAR_wg_api_token`
-- `TF_VAR_grafana_admin_password`
 - `TF_VAR_admin_ssh_cidr`
 - `TF_VAR_enable_registration_api`
 - `TF_VAR_wg_api_cidr`
@@ -50,15 +53,26 @@ Update `.env` with your real values:
 - `TF_VAR_wireguard_network`
 - `TF_VAR_wireguard_client_cidr`
 - `GRAFANA_ADMIN_PASSWORD`
+- `WIREGUARD_PORT`
+- `WIREGUARD_ALLOWED_IPS`
+- `WIREGUARD_API_SCHEME`
 
-Recommended values:
+Recommended base values:
 - `TF_VAR_wireguard_network=10.8.0.0/24`
 - `TF_VAR_wireguard_client_cidr=10.8.0.2/32`
 - `TF_VAR_wireguard_port=51820`
-- `TF_VAR_enable_registration_api=false` until DNS and access policy are ready
+- `WIREGUARD_PORT=51820`
+- `WIREGUARD_ALLOWED_IPS=10.8.0.0/24`
+- `WIREGUARD_API_SCHEME=https`
 - `TF_VAR_admin_ssh_cidr='["<your-public-ip>/32"]'`
-- `TF_VAR_wg_api_cidr=<trusted-edge-egress-ip>/32`
-- `TF_VAR_registration_api_domain=''` to use the EC2 Elastic IP automatically
+
+Path-specific values:
+- Manual peer path:
+  `TF_VAR_enable_registration_api=false`
+- Registration API path:
+  `TF_VAR_enable_registration_api=true`
+  `TF_VAR_wg_api_cidr=<trusted-edge-egress-ip>/32`
+  `TF_VAR_registration_api_domain=''` to use the EC2 Elastic IP automatically, or set a DNS name
 
 ## 3. Configure Terraform Inputs
 
@@ -80,6 +94,7 @@ Run:
 set -a && . ./.env && set +a
 cd cloud/terraform/ec2
 terraform init
+terraform validate
 terraform plan -out=tfplan
 terraform apply tfplan
 ```
@@ -88,7 +103,15 @@ Capture the outputs:
 - EC2 public IP
 - WireGuard endpoint
 - Security group ID
-- registration API endpoint, if enabled
+- Registration API endpoint, if enabled
+
+Useful commands:
+
+```bash
+terraform output public_ip
+terraform output wireguard_endpoint
+terraform output api_endpoint
+```
 
 What Terraform sets up:
 - Amazon Linux 2023 EC2 instance
@@ -96,30 +119,10 @@ What Terraform sets up:
 - Elastic IP
 - IAM role for Secrets Manager access
 - WireGuard server bootstrap
-- registration API application bound to `127.0.0.1`
-- optional TLS reverse proxy with NGINX
+- Registration API application bound to `127.0.0.1:5000`
+- optional TLS reverse proxy with NGINX on the public TLS port, default `443`
 
-## 5. Configure Public Addressing for the Registration API
-
-If you want to use auto-registration:
-
-1. Set `TF_VAR_enable_registration_api=true`
-2. Set `TF_VAR_registration_api_domain` to either:
-   `vpn-api.example.com`, the EC2 Elastic IP directly, or leave it empty to use the Elastic IP automatically
-3. If you use a hostname, point that DNS record to the EC2 Elastic IP
-4. Restrict `TF_VAR_wg_api_cidr` to the known edge egress IP or another trusted CIDR
-5. Re-apply Terraform if needed
-
-Current bootstrap behavior:
-- NGINX terminates TLS on the public port
-- the backend registration API listens only on `127.0.0.1:${TF_VAR_wg_api_port:-5000}`
-- the generated certificate is self-signed
-
-Production note:
-- replace the bootstrap self-signed certificate with a trusted certificate before public use
-- using the Elastic IP directly is fine for lab or controlled deployments, but a hostname is still cleaner for long-term production operations
-
-## 6. Verify the Cloud Node
+## 5. Verify the Cloud Node
 
 SSH to the instance:
 
@@ -140,9 +143,10 @@ Check WireGuard:
 ```bash
 sudo wg show
 sudo cat /etc/wireguard/wg0.conf
+sudo cat /etc/wireguard/server_public.key
 ```
 
-Check the API listener:
+Check listeners:
 
 ```bash
 sudo ss -lntp | grep -E '5000|443'
@@ -150,17 +154,21 @@ sudo ss -lntp | grep -E '5000|443'
 
 Expected behavior:
 - `wg0` is active
-- `wg-api` is active and bound to localhost
-- `nginx` is active only if registration API exposure is enabled
+- `wg-api` is active and bound to `127.0.0.1:5000`
+- `nginx` is active only if `TF_VAR_enable_registration_api=true`
 
-## 7. Start Monitoring on the Cloud Node
+Important note:
+- The bootstrap `user_data.sh` creates a sample peer using `10.8.0.2/32`
+- If your first real edge node also uses `10.8.0.2/32`, remove or replace that sample peer before registering a different client key
+
+## 6. Start Monitoring on the Cloud Node
 
 On the cloud host:
 
 ```bash
 set -a && . ./.env && set +a
 cd cloud/monitoring
-sudo docker-compose up -d
+sudo docker compose up -d
 ```
 
 Verify:
@@ -174,9 +182,9 @@ curl http://127.0.0.1:3000/api/health
 Notes:
 - Prometheus and Grafana bind to `127.0.0.1` by default in this repository
 - Use SSH tunnel or a separate reverse proxy if you need remote operator access
-- The repository currently pins Prometheus `v3.11.2` and Grafana `13.0.0`; review upstream release notes before upgrading an existing older deployment across major versions
+- The repository currently pins Prometheus `v3.11.2` and Grafana `13.0.1`
 
-## 8. Prepare the Edge Node
+## 7. Prepare the Edge Node
 
 On the edge device:
 
@@ -191,7 +199,7 @@ If you use the Docker-based WWAN mode:
 ```bash
 set -a && . ./.env && set +a
 cd edge/5g-wwan/docker
-sudo docker-compose up -d
+sudo docker compose up -d
 ```
 
 Check WWAN state:
@@ -202,114 +210,153 @@ systemctl status wwan.service
 systemctl status wwan-monitor.service
 ```
 
-## 9. Join the Edge Node to WireGuard
+## 8. Choose the Join Method
 
-Run the client setup:
+At this point the deployment splits into two paths.
+
+### Path A. Manual Peer Registration Without the Registration API
+
+Use this path when you do not want to expose any registration endpoint on the public internet.
+
+Requirements:
+- `TF_VAR_enable_registration_api=false`
+- You can SSH to the cloud node
+- You have the cloud server public key from `/etc/wireguard/server_public.key`
+
+Run the client setup on the edge node:
 
 ```bash
 set -a && . ./.env && set +a
 sudo ./edge/vpn/setup-wg-client.sh
 ```
 
-Recommended client values:
-- Client IP: `10.8.0.2/32`
-- Allowed IPs: `10.8.0.0/24`
-- API scheme: `https`
+Recommended answers:
+- `Server endpoint IP/Domain`: the EC2 Elastic IP or public DNS name
+- `Server port`: `51820`
+- `Server public key`: output of `sudo cat /etc/wireguard/server_public.key`
+- `Client IP`: a unique `/32`, for example `10.8.0.3/32` if `10.8.0.2/32` is already occupied by the bootstrap sample peer
+- `Allowed IPs`: `10.8.0.0/24`
+- `Auto-register via Server API?`: `N`
 
-If auto-registration is disabled:
-- enter the server public key manually
-- configure the client
-- add the peer manually on the server
-
-If auto-registration is enabled:
-- use the configured TLS hostname or Elastic IP from `TF_VAR_registration_api_domain`
-- provide the registration token from your secure deployment inputs
-
-## 10. Manual Peer Registration
-
-If you do not use the registration API, add a peer manually on the server:
+The client script will print the client public key. Add that peer manually on the cloud node:
 
 ```bash
-sudo wg set wg0 peer <client-public-key> allowed-ips 10.8.0.2/32
+sudo wg set wg0 peer <client-public-key> allowed-ips 10.8.0.3/32
 sudo wg-quick save wg0
 ```
 
-The server-side peer must use a unique `/32` address for each edge node.
+Verify from the cloud node:
 
-## 11. Validate End-to-End Connectivity
+```bash
+sudo wg show
+```
+
+### Path B. Auto-Registration Through the Registration API
+
+Use this path when you want zero-touch enrollment and can safely restrict API access.
+
+Requirements:
+- `TF_VAR_enable_registration_api=true`
+- `TF_VAR_wg_api_cidr` restricted to the known edge egress IP or another trusted CIDR
+- `TF_VAR_registration_api_domain` set to a DNS name or left empty to use the Elastic IP
+- Terraform applied again after enabling API ingress
+
+Current API exposure model:
+- The registration service itself listens only on `127.0.0.1:5000`
+- Public clients must connect to NGINX over TLS, default `443`
+- The bootstrap certificate is self-signed until you replace it
+
+Before running the edge client:
+- Confirm `terraform output api_endpoint`
+- Confirm `sudo systemctl status nginx`
+- Replace the self-signed certificate before production use, or expect TLS validation issues from standard `curl`
+
+Run the client setup on the edge node:
+
+```bash
+set -a && . ./.env && set +a
+sudo ./edge/vpn/setup-wg-client.sh
+```
+
+Recommended answers:
+- `Server endpoint IP/Domain`: the public API host or Elastic IP
+- `Server port`: `51820`
+- `Server public key`: output of `sudo cat /etc/wireguard/server_public.key`
+- `Client IP`: a unique `/32`, for example `10.8.0.3/32`
+- `Allowed IPs`: `10.8.0.0/24`
+- `Auto-register via Server API?`: `Y`
+- `API Port`: `443`
+- `API scheme`: `https`
+- `API Token`: the secure token you provided as `TF_VAR_wg_api_token`
+
+Important note:
+- `setup-wg-client.sh` prompts `API Port [5000]`, but that is the private backend port on the cloud node
+- For public auto-registration through NGINX, enter the public TLS port, usually `443`
+
+If the API returns an IP conflict, inspect the current peers:
+
+```bash
+sudo wg show wg0
+sudo cat /etc/wireguard/wg0.conf
+```
+
+## 9. Validate End-to-End Connectivity
 
 From the edge node:
 
 ```bash
 sudo wg show
 ping -c 3 10.8.0.1
+ssh ec2-user@10.8.0.1
 ```
 
 From the cloud node:
 
 ```bash
 sudo wg show
-ping -c 3 10.8.0.2
-curl http://10.8.0.2:9100/metrics
+ping -c 3 10.8.0.3
+curl http://10.8.0.3:9100/metrics
 ```
 
 Expected results:
 - WireGuard handshake is present on both sides
-- the cloud node reaches the edge node via `10.8.0.2`
+- The cloud node reaches the edge node over the overlay address
 - Prometheus can scrape Node Exporter over the overlay network
 
-## 12. Apply Shared Hardening
+## 10. Shared Hardening and Monitoring Agents
 
-Run on both cloud and edge nodes:
+Run the shared scripts on both environments as needed:
 
 ```bash
-set -a && . ./.env && set +a
 sudo ./shared/scripts/hardening.sh
 sudo ./shared/scripts/install-node-exporter.sh
 ```
 
-Use `SSH_ADMIN_PORT` or `WIREGUARD_PORT` from `.env` if you need non-default ports.
+Operational notes:
+- `hardening.sh` opens `WIREGUARD_PORT/udp`, but it does not open the Registration API TLS port automatically
+- If you expose the Registration API and also run `hardening.sh` on the cloud host, add access for `443/tcp` in `firewalld`
+- If you run `hardening.sh` on the edge host and want the cloud node to scrape Node Exporter over WireGuard, also allow `9100/tcp`
 
-Before running hardening:
-- confirm that SSH key-based access works
-- confirm that your admin CIDR is correct
+## 11. Quick Troubleshooting
 
-## 13. Post-Deployment Checklist
+Useful checks on the cloud node:
 
-Verify all of the following:
-- EC2 has the expected Elastic IP
-- if `registration_api_domain` is a hostname, DNS resolves correctly
-- the registration API is disabled unless explicitly needed
-- if enabled, API access is restricted to trusted CIDRs
-- TLS is active on the public registration endpoint
-- the self-signed TLS bootstrap certificate has been replaced for production
-- `wg0` is active on server and edge
-- each peer has a unique `/32` address
-- Grafana admin password is not default
-- monitoring is only reachable through trusted access paths
-
-## 14. Scaling to More Edge Nodes
-
-For each additional node:
-- assign a new `/32` client address
-- example: `10.8.0.3/32`, `10.8.0.4/32`, `10.8.0.5/32`
-- keep client-side `AllowedIPs = 10.8.0.0/24` unless you want full-tunnel routing
-- register or add peers on the server with unique `/32` `AllowedIPs`
-
-Example:
-
-```ini
-[Peer]
-PublicKey = <edge-2-pubkey>
-AllowedIPs = 10.8.0.3/32
+```bash
+sudo journalctl -u wg-quick@wg0 -u wg-api -u nginx -f
+sudo wg show
+sudo ss -lntp | grep -E '5000|443'
 ```
 
-Do not assign the same `/32` to multiple peers.
+Useful checks on the edge node:
 
-## 15. Operational Recommendations
+```bash
+sudo journalctl -u wwan.service -u wwan-monitor.service -f
+sudo wg show
+ip addr
+```
 
-Recommended next steps for a real production rollout:
-- replace the self-signed NGINX certificate with a trusted certificate
-- put the registration API behind an audited DNS/TLS setup
-- rotate the registration token and WireGuard keys on a schedule
-- maintain an inventory of edge node names mapped to peer IPs
+Common causes of failure:
+- Reusing `10.8.0.2/32` while the bootstrap sample peer still exists
+- Entering API port `5000` from the client even though the public endpoint is `443`
+- Using HTTPS against the bootstrap self-signed certificate without replacing or trusting that certificate
+- Forgetting to re-run `terraform apply` after enabling Registration API ingress
