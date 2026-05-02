@@ -6,6 +6,38 @@
 
 set -euo pipefail
 
+apt_package_exists() {
+    apt-cache show "$1" >/dev/null 2>&1
+}
+
+dnf_package_exists() {
+    dnf -q list available "$1" >/dev/null 2>&1
+}
+
+install_docker_compose_plugin_manual() {
+    local plugin_dir="/usr/local/lib/docker/cli-plugins"
+    echo "[INFO] Installing Docker Compose plugin manually..."
+    mkdir -p "$plugin_dir"
+    curl -fsSL "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)" \
+        -o "${plugin_dir}/docker-compose"
+    chmod +x "${plugin_dir}/docker-compose"
+}
+
+enable_docker_if_installed() {
+    if systemctl list-unit-files | grep -q '^docker\.service'; then
+        echo "[INFO] Enabling Docker service..."
+        systemctl enable --now docker
+    fi
+}
+
+ensure_docker_compose_v2() {
+    if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+        return 0
+    fi
+
+    install_docker_compose_plugin_manual
+}
+
 # 1. Check for root privileges
 if [[ $EUID -ne 0 ]]; then
     echo "[ERROR] This script must be run as root. Please use sudo."
@@ -15,17 +47,71 @@ fi
 echo "=== Installing 5G WWAN Services ==="
 
 # 2. Install required dependencies
-echo "[INFO] Installing required dependencies (libqmi-utils, udhcpc, build tools)..."
+echo "[INFO] Installing required dependencies and operator tooling..."
 if command -v apt-get >/dev/null 2>&1; then
     export DEBIAN_FRONTEND=noninteractive
     apt-get update -yqq
-    apt-get install -yq libqmi-utils udhcpc iproute2 iputils-ping build-essential
+    APT_PACKAGES=(
+        build-essential
+        curl
+        docker.io
+        git
+        iperf3
+        iproute2
+        iputils-ping
+        libqmi-utils
+        rsync
+        stow
+        tmux
+        udhcpc
+        ufw
+        vim
+    )
+
+    if apt_package_exists docker-compose-plugin; then
+        APT_PACKAGES+=(docker-compose-plugin)
+    elif apt_package_exists docker-compose-v2; then
+        APT_PACKAGES+=(docker-compose-v2)
+    else
+        echo "[WARN] Docker Compose v2 package not found in apt repositories. Will install plugin manually."
+    fi
+
+    apt-get install -yq "${APT_PACKAGES[@]}"
 elif command -v dnf >/dev/null 2>&1; then
-    dnf install -y libqmi-utils busybox iproute iputils gcc make
+    dnf install -y \
+        busybox \
+        curl \
+        docker \
+        gcc \
+        git \
+        iperf3 \
+        iproute \
+        iputils \
+        libqmi-utils \
+        make \
+        rsync \
+        stow \
+        tmux \
+        vim
+
+    if dnf_package_exists docker-compose-plugin; then
+        dnf install -y docker-compose-plugin
+    else
+        echo "[WARN] docker-compose-plugin package not found in dnf repositories. Will install plugin manually."
+    fi
+
+    if dnf_package_exists ufw; then
+        dnf install -y ufw
+    else
+        echo "[WARN] ufw package not found in dnf repositories. Skipping ufw installation on this edge host."
+    fi
 else
     echo "[ERROR] Unsupported package manager. Expected apt-get or dnf."
     exit 1
 fi
+
+enable_docker_if_installed
+ensure_docker_compose_v2
 
 SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
 

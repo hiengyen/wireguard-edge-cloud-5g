@@ -146,6 +146,10 @@ cd edge/5g-wwan
 sudo ./install.sh
 ```
 
+The edge installer also provisions the common operator toolset:
+- `rsync`, `iperf3`, `git`, `tmux`, `stow`, `vim`, `docker`, and Docker Compose v2
+- `ufw` on apt-based edge systems, and on dnf-based edge systems when the package exists in the enabled repositories
+
 **Option B: Docker Containerized (Alternative)**
 ```bash
 cd edge/5g-wwan/docker
@@ -167,6 +171,9 @@ The cloud bootstrap currently provisions a self-signed certificate for the rever
 The client should keep:
 - `Address = 10.8.0.x/32`
 - `AllowedIPs = 10.8.0.0/24` for overlay-only routing
+
+The cloud bootstrap also installs the common operator toolset on Amazon Linux 2023:
+- `rsync`, `iperf3`, `git`, `tmux`, `stow`, `vim`, `docker`, and Docker Compose v2
 
 ### 4. Shared Operations (Hardening & Monitoring)
 

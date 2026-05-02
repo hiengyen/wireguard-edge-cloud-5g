@@ -121,6 +121,7 @@ What Terraform sets up:
 - WireGuard server bootstrap
 - Registration API application bound to `127.0.0.1:5000`
 - optional TLS reverse proxy with NGINX on the public TLS port, default `443`
+- Base operator packages on the cloud node: `rsync`, `iperf3`, `git`, `tmux`, `stow`, `vim`, `docker`, and Docker Compose v2
 
 ## 5. Verify the Cloud Node
 
@@ -211,6 +212,10 @@ ip addr
 systemctl status wwan.service
 systemctl status wwan-monitor.service
 ```
+
+The edge installer also provisions:
+- `rsync`, `iperf3`, `git`, `tmux`, `stow`, `vim`, `docker`, and Docker Compose v2
+- `ufw` on apt-based edge systems, and on dnf-based edge systems when the package exists in the enabled repositories
 
 ## 8. Choose the Join Method
 

@@ -9,12 +9,47 @@ exec > /var/log/user-data.log 2>&1
 WIREGUARD_NETWORK_CIDR="${wireguard_network}"
 WIREGUARD_SERVER_CIDR="${cidrhost(wireguard_network, 1)}/${split("/", wireguard_network)[1]}"
 WIREGUARD_SAMPLE_CLIENT_CIDR="${cidrhost(wireguard_network, 2)}/32"
+DOCKER_CLI_PLUGIN_DIR="/usr/local/lib/docker/cli-plugins"
+
+install_docker_compose_plugin() {
+  if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+    return 0
+  fi
+
+  if dnf -q list available docker-compose-plugin >/dev/null 2>&1; then
+    dnf install -y docker-compose-plugin
+  else
+    mkdir -p "${DOCKER_CLI_PLUGIN_DIR}"
+    curl -fsSL "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)" \
+      -o "${DOCKER_CLI_PLUGIN_DIR}/docker-compose"
+    chmod +x "${DOCKER_CLI_PLUGIN_DIR}/docker-compose"
+  fi
+}
 
 echo "=== Starting WireGuard installation ==="
 
-# Update and install WireGuard
+# Update and install base tooling, Docker, and WireGuard dependencies
 dnf update -y
-dnf install -y wireguard-tools qrencode python3 awscli iptables nginx openssl
+dnf install -y \
+  awscli \
+  curl \
+  docker \
+  git \
+  iperf3 \
+  iptables \
+  nginx \
+  openssl \
+  python3 \
+  qrencode \
+  rsync \
+  stow \
+  tmux \
+  vim \
+  wireguard-tools
+
+systemctl enable --now docker
+usermod -aG docker ec2-user || true
+install_docker_compose_plugin
 
 # Enable IP forwarding
 echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf
