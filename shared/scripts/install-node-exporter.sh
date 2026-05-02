@@ -13,7 +13,7 @@ if [[ $EUID -ne 0 ]]; then
     exit 1
 fi
 
-VERSION="1.11."
+VERSION="${NODE_EXPORTER_VERSION:-1.11.1}"
 BASE_URL="https://github.com/prometheus/node_exporter/releases/download/v${VERSION}"
 ARCH=$(uname -m)
 
