@@ -45,6 +45,7 @@ dnf install -y \
   stow \
   tmux \
   vim \
+  wget \
   wireguard-tools
 
 systemctl enable --now docker

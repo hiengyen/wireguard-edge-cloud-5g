@@ -66,6 +66,7 @@ if command -v apt-get >/dev/null 2>&1; then
         udhcpc
         ufw
         vim
+        wget
     )
 
     if apt_package_exists docker-compose-plugin; then
@@ -92,7 +93,8 @@ elif command -v dnf >/dev/null 2>&1; then
         rsync \
         stow \
         tmux \
-        vim
+        vim \
+        wget
 
     if dnf_package_exists docker-compose-plugin; then
         dnf install -y docker-compose-plugin
