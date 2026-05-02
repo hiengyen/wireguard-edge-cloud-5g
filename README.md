@@ -56,6 +56,9 @@ The multi-peer model used here assigns `/32` host routes to each edge peer while
 ```text
 wireguard-edge-cloud-5g/
 ├── README.md                 # You are here!
+├── docs/                     # Deployment and operations documentation
+│   ├── DEPLOYMENT.md         # End-to-end rollout guide
+│   └── COMMANDS.md           # Common command reference
 ├── cloud/                    # Cloud Gateway components
 │   ├── terraform/ec2/        # AWS IaC (AWS Provider v6, EC2, SG, Auto-install WG & API)
 │   ├── monitoring/           # Prometheus & Grafana docker infrastructure
@@ -86,8 +89,8 @@ wireguard-edge-cloud-5g/
 ## ⚙️ Environment File
 
 The repository includes [`.env.example`](/home/hiengyen/CODE/wireguard-edge-cloud-5g/.env.example:1) to centralize deployment and runtime variables.
-For the full production-oriented rollout sequence, see [DEPLOYMENT.md](/home/hiengyen/CODE/wireguard-edge-cloud-5g/DEPLOYMENT.md:1).
-For a compact command cheat sheet, see [COMMANDS.md](/home/hiengyen/CODE/wireguard-edge-cloud-5g/COMMANDS.md:1).
+For the full production-oriented rollout sequence, see [DEPLOYMENT.md](/home/hiengyen/CODE/wireguard-edge-cloud-5g/docs/DEPLOYMENT.md:1).
+For a compact command cheat sheet, see [COMMANDS.md](/home/hiengyen/CODE/wireguard-edge-cloud-5g/docs/COMMANDS.md:1).
 
 Important groups:
 - `TF_VAR_*`: Terraform inputs for cloud provisioning
@@ -302,6 +305,9 @@ Mô hình multi-peer trong repo dùng `10.8.0.1/24` cho server và cấp IP `/32
 ```text
 wireguard-edge-cloud-5g/
 ├── README.md                 # Chính là tài liệu này (Song ngữ)
+├── docs/                     # Tài liệu triển khai và vận hành
+│   ├── DEPLOYMENT.md         # Hướng dẫn triển khai đầy đủ
+│   └── COMMANDS.md           # Tổng hợp lệnh hay dùng
 ├── cloud/                    # Phân hệ Máy chủ Cổng kết nối
 │   ├── terraform/ec2/        # Triển khai tự động AWS (Provider v6, EC2, tự động tải WG & API)
 │   ├── monitoring/           # Cụm Docker cho Prometheus & Grafana
@@ -332,7 +338,7 @@ wireguard-edge-cloud-5g/
 ## ⚙️ File Môi Trường
 
 Repo có sẵn file [`.env.example`](/home/hiengyen/CODE/wireguard-edge-cloud-5g/.env.example:1) để gom các biến triển khai và runtime.
-Danh sách lệnh dùng thường xuyên được gom trong [COMMANDS.md](/home/hiengyen/CODE/wireguard-edge-cloud-5g/COMMANDS.md:1).
+Danh sách lệnh dùng thường xuyên được gom trong [COMMANDS.md](/home/hiengyen/CODE/wireguard-edge-cloud-5g/docs/COMMANDS.md:1).
 
 Các nhóm biến chính:
 - `TF_VAR_*`: đầu vào Terraform cho phần cloud
