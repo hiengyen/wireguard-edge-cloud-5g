@@ -9,9 +9,14 @@
 set -euo pipefail
 
 WIREGUARD_PORT="${WIREGUARD_PORT:-51820}"
+WIREGUARD_NETWORK="${WIREGUARD_NETWORK:-10.8.0.0/24}"
 SSHD_CONFIG="/etc/ssh/sshd_config"
 FAIL2BAN_JAIL="/etc/fail2ban/jail.d/sshd.local"
 SSH_ADMIN_PORT="${SSH_ADMIN_PORT:-22}"
+ALLOW_MONITORING_OVER_WIREGUARD="${ALLOW_MONITORING_OVER_WIREGUARD:-false}"
+GRAFANA_PORT="${GRAFANA_PORT:-3000}"
+PROMETHEUS_PORT="${PROMETHEUS_PORT:-9090}"
+RESTART_DOCKER_IF_ACTIVE="${RESTART_DOCKER_IF_ACTIVE:-true}"
 OS_FAMILY=""
 FIREWALL_NAME=""
 
@@ -127,6 +132,10 @@ configure_firewall_debian() {
   ufw default allow outgoing
   ufw allow "${SSH_ADMIN_PORT}/tcp"
   ufw allow "${WIREGUARD_PORT}/udp"
+  if [[ "${ALLOW_MONITORING_OVER_WIREGUARD}" == "true" ]]; then
+    ufw allow in on wg0 to any port "${GRAFANA_PORT}" proto tcp
+    ufw allow in on wg0 to any port "${PROMETHEUS_PORT}" proto tcp
+  fi
   ufw --force enable
 }
 
@@ -141,7 +150,19 @@ configure_firewall_amzn2023() {
     firewall-cmd --permanent --add-port="${SSH_ADMIN_PORT}/tcp"
   fi
   firewall-cmd --permanent --add-port="${WIREGUARD_PORT}/udp"
+  if [[ "${ALLOW_MONITORING_OVER_WIREGUARD}" == "true" ]]; then
+    firewall-cmd --permanent --add-rich-rule="rule family=\"ipv4\" source address=\"${WIREGUARD_NETWORK}\" port protocol=\"tcp\" port=\"${GRAFANA_PORT}\" accept"
+    firewall-cmd --permanent --add-rich-rule="rule family=\"ipv4\" source address=\"${WIREGUARD_NETWORK}\" port protocol=\"tcp\" port=\"${PROMETHEUS_PORT}\" accept"
+  fi
   firewall-cmd --reload
+
+  # Docker bridge networking depends on its own iptables chains.
+  # If firewalld was enabled or reloaded after dockerd started, those chains
+  # may be missing until Docker is restarted.
+  if [[ "${RESTART_DOCKER_IF_ACTIVE}" == "true" ]] && systemctl is-active --quiet docker; then
+    log "Restarting Docker so it can recreate its iptables chains after firewalld changes..."
+    systemctl restart docker
+  fi
 }
 
 configure_firewall() {
@@ -198,6 +219,14 @@ print_summary() {
   echo "- Firewall: ${FIREWALL_NAME} enabled (SSH & WireGuard allowed)"
   echo "- SSH Port: ${SSH_ADMIN_PORT}/tcp"
   echo "- WireGuard Port: ${WIREGUARD_PORT}/udp"
+  if [[ "${ALLOW_MONITORING_OVER_WIREGUARD}" == "true" ]]; then
+    echo "- Monitoring over WireGuard: Enabled for ${WIREGUARD_NETWORK} on ${GRAFANA_PORT}/tcp and ${PROMETHEUS_PORT}/tcp"
+  else
+    echo "- Monitoring over WireGuard: Disabled"
+  fi
+  if [[ "${OS_FAMILY}" == "amzn2023" ]]; then
+    echo "- Restart Docker If Active: ${RESTART_DOCKER_IF_ACTIVE}"
+  fi
   echo "- Fail2Ban: Enabled for SSH"
 }
 

@@ -191,6 +191,23 @@ cd cloud/monitoring
 sudo docker-compose up -d
 ```
 
+If you want to reach Grafana and Prometheus through the WireGuard overlay instead of SSH tunneling, set:
+
+```bash
+MONITORING_BIND_ADDRESS=10.8.0.1
+ALLOW_MONITORING_OVER_WIREGUARD=true
+```
+
+Then re-run:
+
+```bash
+sudo ./shared/scripts/hardening.sh
+cd cloud/monitoring
+sudo docker compose up -d
+```
+
+You do not need extra AWS Security Group ingress for `3000/tcp` or `9090/tcp` in that model. Only the WireGuard UDP port is exposed publicly; Grafana and Prometheus are reached after traffic is decrypted on the EC2 instance.
+
 
 ---
 
@@ -379,6 +396,23 @@ set -a && . ./.env && set +a
 cd cloud/monitoring
 sudo docker-compose up -d
 ```
+
+Nếu muốn truy cập Grafana và Prometheus qua đường hầm WireGuard thay vì SSH tunnel, hãy đặt:
+
+```bash
+MONITORING_BIND_ADDRESS=10.8.0.1
+ALLOW_MONITORING_OVER_WIREGUARD=true
+```
+
+Sau đó chạy lại:
+
+```bash
+sudo ./shared/scripts/hardening.sh
+cd cloud/monitoring
+sudo docker compose up -d
+```
+
+Mô hình này không cần mở thêm AWS Security Group cho `3000/tcp` hoặc `9090/tcp`. Bên ngoài chỉ mở cổng UDP của WireGuard; Grafana và Prometheus chỉ được truy cập sau khi gói tin được giải mã trên chính EC2.
 
 
 ---

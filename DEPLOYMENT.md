@@ -181,8 +181,10 @@ curl http://127.0.0.1:3000/api/health
 
 Notes:
 - Prometheus and Grafana bind to `127.0.0.1` by default in this repository
+- To reach them through WireGuard, set `MONITORING_BIND_ADDRESS=10.8.0.1` before starting the stack
 - Use SSH tunnel or a separate reverse proxy if you need remote operator access
 - The repository currently pins Prometheus `v3.11.2` and Grafana `13.0.1`
+- AWS Security Groups do not need additional `3000/tcp` or `9090/tcp` ingress for WireGuard-only access, because the traffic arrives as encrypted UDP on the WireGuard port and is decrypted locally on the EC2 instance
 
 ## 7. Prepare the Edge Node
 
@@ -334,6 +336,7 @@ sudo ./shared/scripts/install-node-exporter.sh
 
 Operational notes:
 - `hardening.sh` opens `WIREGUARD_PORT/udp`, but it does not open the Registration API TLS port automatically
+- To expose Grafana and Prometheus only through the overlay, set `ALLOW_MONITORING_OVER_WIREGUARD=true` and `WIREGUARD_NETWORK=10.8.0.0/24` before running `hardening.sh`
 - If you expose the Registration API and also run `hardening.sh` on the cloud host, add access for `443/tcp` in `firewalld`
 - If you run `hardening.sh` on the edge host and want the cloud node to scrape Node Exporter over WireGuard, also allow `9100/tcp`
 
