@@ -1,6 +1,7 @@
 # Deployment Guide
 
 This document describes the recommended deployment workflow for the `wireguard-edge-cloud-5g` project in a production-oriented setup.
+For a compact command reference, see [COMMANDS.md](/home/hiengyen/CODE/wireguard-edge-cloud-5g/COMMANDS.md:1).
 
 The repository assumes:
 - WireGuard overlay network: `10.8.0.0/24`
@@ -26,7 +27,7 @@ Prepare the following before deployment:
 
 Install locally:
 - `terraform >= 1.9`
-- `docker` and `docker compose` or `docker-compose`
+- `docker` and Docker Compose v2
 - `bash`
 
 ## 2. Prepare Environment Variables
@@ -53,6 +54,8 @@ Update `.env` with your real values:
 - `TF_VAR_wireguard_network`
 - `TF_VAR_wireguard_client_cidr`
 - `GRAFANA_ADMIN_PASSWORD`
+- `MONITORING_BIND_ADDRESS`
+- `ALLOW_MONITORING_OVER_WIREGUARD`
 - `WIREGUARD_PORT`
 - `WIREGUARD_ALLOWED_IPS`
 - `WIREGUARD_API_SCHEME`
@@ -64,6 +67,8 @@ Recommended base values:
 - `WIREGUARD_PORT=51820`
 - `WIREGUARD_ALLOWED_IPS=10.8.0.0/24`
 - `WIREGUARD_API_SCHEME=https`
+- `MONITORING_BIND_ADDRESS=127.0.0.1`
+- `ALLOW_MONITORING_OVER_WIREGUARD=false`
 - `TF_VAR_admin_ssh_cidr='["<your-public-ip>/32"]'`
 
 Path-specific values:
@@ -121,7 +126,7 @@ What Terraform sets up:
 - WireGuard server bootstrap
 - Registration API application bound to `127.0.0.1:5000`
 - optional TLS reverse proxy with NGINX on the public TLS port, default `443`
-- Base operator packages on the cloud node: `rsync`, `iperf3`, `git`, `tmux`, `stow`, `vim`, `docker`, and Docker Compose v2
+- Base operator packages on the cloud node: `curl`, `rsync`, `iperf3`, `git`, `tmux`, `stow`, `vim`, `wget`, `docker`, and Docker Compose v2
 
 ## 5. Verify the Cloud Node
 
@@ -187,6 +192,21 @@ Notes:
 - The repository currently pins Prometheus `v3.11.2` and Grafana `13.0.1`
 - AWS Security Groups do not need additional `3000/tcp` or `9090/tcp` ingress for WireGuard-only access, because the traffic arrives as encrypted UDP on the WireGuard port and is decrypted locally on the EC2 instance
 
+To access the web UIs through SSH tunneling from your local machine:
+
+```bash
+ssh -i <your-key.pem> \
+  -L 3000:127.0.0.1:3000 \
+  -L 9090:127.0.0.1:9090 \
+  -L 9100:127.0.0.1:9100 \
+  ec2-user@<elastic-ip>
+```
+
+Then open:
+- Grafana: `http://127.0.0.1:3000`
+- Prometheus: `http://127.0.0.1:9090`
+- Node Exporter metrics: `http://127.0.0.1:9100/metrics`
+
 ## 7. Prepare the Edge Node
 
 On the edge device:
@@ -214,7 +234,7 @@ systemctl status wwan-monitor.service
 ```
 
 The edge installer also provisions:
-- `rsync`, `iperf3`, `git`, `tmux`, `stow`, `vim`, `docker`, and Docker Compose v2
+- `curl`, `rsync`, `iperf3`, `git`, `tmux`, `stow`, `vim`, `wget`, `docker`, and Docker Compose v2
 - `ufw` on apt-based edge systems, and on dnf-based edge systems when the package exists in the enabled repositories
 
 ## 8. Choose the Join Method
@@ -339,6 +359,20 @@ sudo ./shared/scripts/hardening.sh
 sudo ./shared/scripts/install-node-exporter.sh
 ```
 
+To pin or override the Node Exporter version during installation:
+
+```bash
+sudo NODE_EXPORTER_VERSION=1.11.1 ./shared/scripts/install-node-exporter.sh
+```
+
+Verify Node Exporter on the target host:
+
+```bash
+sudo systemctl status node_exporter --no-pager
+ss -lntp | grep 9100
+curl http://127.0.0.1:9100/metrics | head
+```
+
 Operational notes:
 - `hardening.sh` opens `WIREGUARD_PORT/udp`, but it does not open the Registration API TLS port automatically
 - To expose Grafana and Prometheus only through the overlay, set `ALLOW_MONITORING_OVER_WIREGUARD=true` and `WIREGUARD_NETWORK=10.8.0.0/24` before running `hardening.sh`
@@ -353,6 +387,10 @@ Useful checks on the cloud node:
 sudo journalctl -u wg-quick@wg0 -u wg-api -u nginx -f
 sudo wg show
 sudo ss -lntp | grep -E '5000|443'
+sudo systemctl status docker --no-pager
+sudo docker ps
+sudo systemctl status node_exporter --no-pager
+curl http://127.0.0.1:9100/metrics | head
 ```
 
 Useful checks on the edge node:

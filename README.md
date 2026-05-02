@@ -87,10 +87,12 @@ wireguard-edge-cloud-5g/
 
 The repository includes [`.env.example`](/home/hiengyen/CODE/wireguard-edge-cloud-5g/.env.example:1) to centralize deployment and runtime variables.
 For the full production-oriented rollout sequence, see [DEPLOYMENT.md](/home/hiengyen/CODE/wireguard-edge-cloud-5g/DEPLOYMENT.md:1).
+For a compact command cheat sheet, see [COMMANDS.md](/home/hiengyen/CODE/wireguard-edge-cloud-5g/COMMANDS.md:1).
 
 Important groups:
 - `TF_VAR_*`: Terraform inputs for cloud provisioning
 - `GRAFANA_ADMIN_PASSWORD`: password used by `cloud/monitoring/docker-compose.yml`
+- `MONITORING_BIND_ADDRESS`, `ALLOW_MONITORING_OVER_WIREGUARD`: monitoring access mode
 - `WIREGUARD_*`: edge VPN client runtime defaults
 - `WWAN_APN`, `SSH_ADMIN_PORT`: edge WWAN and hardening runtime settings
 
@@ -147,13 +149,13 @@ sudo ./install.sh
 ```
 
 The edge installer also provisions the common operator toolset:
-- `rsync`, `iperf3`, `git`, `tmux`, `stow`, `vim`, `docker`, and Docker Compose v2
+- `curl`, `rsync`, `iperf3`, `git`, `tmux`, `stow`, `vim`, `wget`, `docker`, and Docker Compose v2
 - `ufw` on apt-based edge systems, and on dnf-based edge systems when the package exists in the enabled repositories
 
 **Option B: Docker Containerized (Alternative)**
 ```bash
 cd edge/5g-wwan/docker
-sudo docker-compose up -d
+sudo docker compose up -d
 ```
 
 ### 3. Edge VPN Auto-Registration
@@ -173,7 +175,7 @@ The client should keep:
 - `AllowedIPs = 10.8.0.0/24` for overlay-only routing
 
 The cloud bootstrap also installs the common operator toolset on Amazon Linux 2023:
-- `rsync`, `iperf3`, `git`, `tmux`, `stow`, `vim`, `docker`, and Docker Compose v2
+- `curl`, `rsync`, `iperf3`, `git`, `tmux`, `stow`, `vim`, `wget`, `docker`, and Docker Compose v2
 
 ### 4. Shared Operations (Hardening & Monitoring)
 
@@ -195,7 +197,7 @@ For Grafana, set a non-default password first, then start the monitoring stack:
 ```bash
 set -a && . ./.env && set +a
 cd cloud/monitoring
-sudo docker-compose up -d
+sudo docker compose up -d
 ```
 
 If you want to reach Grafana and Prometheus through the WireGuard overlay instead of SSH tunneling, set:
@@ -214,6 +216,35 @@ sudo docker compose up -d
 ```
 
 You do not need extra AWS Security Group ingress for `3000/tcp` or `9090/tcp` in that model. Only the WireGuard UDP port is exposed publicly; Grafana and Prometheus are reached after traffic is decrypted on the EC2 instance.
+
+To access the monitoring web UIs through SSH tunneling from your local machine:
+
+```bash
+ssh -i <your-key.pem> \
+  -L 3000:127.0.0.1:3000 \
+  -L 9090:127.0.0.1:9090 \
+  -L 9100:127.0.0.1:9100 \
+  ec2-user@<EC2_PUBLIC_IP>
+```
+
+Then open:
+- Grafana: `http://127.0.0.1:3000`
+- Prometheus: `http://127.0.0.1:9090`
+- Node Exporter metrics: `http://127.0.0.1:9100/metrics`
+
+To verify Node Exporter after installation:
+
+```bash
+sudo systemctl status node_exporter --no-pager
+ss -lntp | grep 9100
+curl http://127.0.0.1:9100/metrics | head
+```
+
+The repository currently installs Node Exporter `1.11.1` by default. Override it with:
+
+```bash
+sudo NODE_EXPORTER_VERSION=<version> ./shared/scripts/install-node-exporter.sh
+```
 
 
 ---
@@ -300,10 +331,12 @@ wireguard-edge-cloud-5g/
 ## ⚙️ File Môi Trường
 
 Repo có sẵn file [`.env.example`](/home/hiengyen/CODE/wireguard-edge-cloud-5g/.env.example:1) để gom các biến triển khai và runtime.
+Danh sách lệnh dùng thường xuyên được gom trong [COMMANDS.md](/home/hiengyen/CODE/wireguard-edge-cloud-5g/COMMANDS.md:1).
 
 Các nhóm biến chính:
 - `TF_VAR_*`: đầu vào Terraform cho phần cloud
 - `GRAFANA_ADMIN_PASSWORD`: mật khẩu dùng cho `cloud/monitoring/docker-compose.yml`
+- `MONITORING_BIND_ADDRESS`, `ALLOW_MONITORING_OVER_WIREGUARD`: chế độ truy cập monitoring
 - `WIREGUARD_*`: mặc định runtime cho edge VPN client
 - `WWAN_APN`, `SSH_ADMIN_PORT`: tham số runtime cho WWAN và hardening
 
@@ -359,10 +392,14 @@ cd edge/5g-wwan
 sudo ./install.sh
 ```
 
+Trình cài đặt edge cũng cài sẵn bộ công cụ vận hành:
+- `curl`, `rsync`, `iperf3`, `git`, `tmux`, `stow`, `vim`, `wget`, `docker`, và Docker Compose v2
+- `ufw` trên edge dùng `apt`, và trên edge dùng `dnf` nếu package tồn tại trong repo đã bật
+
 **Cách 2: Đóng gói siêu sạch qua Docker (Alternative)**
 ```bash
 cd edge/5g-wwan/docker
-sudo docker-compose up -d
+sudo docker compose up -d
 ```
 
 ### 3. Đăng ký Tự động Cấu Hình VPN
@@ -380,6 +417,9 @@ Bootstrap cloud hiện tạo sẵn chứng chỉ self-signed để reverse proxy
 Client nên giữ:
 - `Address = 10.8.0.x/32`
 - `AllowedIPs = 10.8.0.0/24` nếu chỉ route trong overlay
+
+Bootstrap cloud cũng cài sẵn bộ công cụ vận hành trên Amazon Linux 2023:
+- `curl`, `rsync`, `iperf3`, `git`, `tmux`, `stow`, `vim`, `wget`, `docker`, và Docker Compose v2
 
 ### 4. Phụ bản Quản trị (Bảo mật & Giám sát)
 
@@ -401,7 +441,7 @@ Nếu bạn dùng cổng WireGuard khác `51820`, hãy chạy với biến `WIRE
 ```bash
 set -a && . ./.env && set +a
 cd cloud/monitoring
-sudo docker-compose up -d
+sudo docker compose up -d
 ```
 
 Nếu muốn truy cập Grafana và Prometheus qua đường hầm WireGuard thay vì SSH tunnel, hãy đặt:
@@ -420,6 +460,35 @@ sudo docker compose up -d
 ```
 
 Mô hình này không cần mở thêm AWS Security Group cho `3000/tcp` hoặc `9090/tcp`. Bên ngoài chỉ mở cổng UDP của WireGuard; Grafana và Prometheus chỉ được truy cập sau khi gói tin được giải mã trên chính EC2.
+
+Nếu muốn truy cập Web UI của monitoring qua SSH tunnel từ máy local:
+
+```bash
+ssh -i <your-key.pem> \
+  -L 3000:127.0.0.1:3000 \
+  -L 9090:127.0.0.1:9090 \
+  -L 9100:127.0.0.1:9100 \
+  ec2-user@<EC2_PUBLIC_IP>
+```
+
+Sau đó mở:
+- Grafana: `http://127.0.0.1:3000`
+- Prometheus: `http://127.0.0.1:9090`
+- Node Exporter metrics: `http://127.0.0.1:9100/metrics`
+
+Kiểm tra Node Exporter sau khi cài:
+
+```bash
+sudo systemctl status node_exporter --no-pager
+ss -lntp | grep 9100
+curl http://127.0.0.1:9100/metrics | head
+```
+
+Repo hiện cài Node Exporter mặc định ở phiên bản `1.11.1`. Có thể đổi bằng:
+
+```bash
+sudo NODE_EXPORTER_VERSION=<version> ./shared/scripts/install-node-exporter.sh
+```
 
 
 ---
