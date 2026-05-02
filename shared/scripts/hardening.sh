@@ -13,12 +13,22 @@ WIREGUARD_NETWORK="${WIREGUARD_NETWORK:-10.8.0.0/24}"
 SSHD_CONFIG="/etc/ssh/sshd_config"
 FAIL2BAN_JAIL="/etc/fail2ban/jail.d/sshd.local"
 SSH_ADMIN_PORT="${SSH_ADMIN_PORT:-22}"
+EDGE_EXTRA_TCP_PORTS="${EDGE_EXTRA_TCP_PORTS:-443 5201}"
 ALLOW_MONITORING_OVER_WIREGUARD="${ALLOW_MONITORING_OVER_WIREGUARD:-false}"
 GRAFANA_PORT="${GRAFANA_PORT:-3000}"
 PROMETHEUS_PORT="${PROMETHEUS_PORT:-9090}"
 RESTART_DOCKER_IF_ACTIVE="${RESTART_DOCKER_IF_ACTIVE:-true}"
 OS_FAMILY=""
 FIREWALL_NAME=""
+
+allow_edge_extra_tcp_ports_ufw() {
+  local port
+
+  for port in ${EDGE_EXTRA_TCP_PORTS}; do
+    [[ -n "${port}" ]] || continue
+    ufw allow "${port}/tcp"
+  done
+}
 
 log() {
   echo "[INFO] $*"
@@ -132,6 +142,7 @@ configure_firewall_debian() {
   ufw default allow outgoing
   ufw allow "${SSH_ADMIN_PORT}/tcp"
   ufw allow "${WIREGUARD_PORT}/udp"
+  allow_edge_extra_tcp_ports_ufw
   if [[ "${ALLOW_MONITORING_OVER_WIREGUARD}" == "true" ]]; then
     ufw allow in on wg0 to any port "${GRAFANA_PORT}" proto tcp
     ufw allow in on wg0 to any port "${PROMETHEUS_PORT}" proto tcp
@@ -219,6 +230,9 @@ print_summary() {
   echo "- Firewall: ${FIREWALL_NAME} enabled (SSH & WireGuard allowed)"
   echo "- SSH Port: ${SSH_ADMIN_PORT}/tcp"
   echo "- WireGuard Port: ${WIREGUARD_PORT}/udp"
+  if [[ "${OS_FAMILY}" == "debian" ]]; then
+    echo "- Edge Extra TCP Ports: ${EDGE_EXTRA_TCP_PORTS}"
+  fi
   if [[ "${ALLOW_MONITORING_OVER_WIREGUARD}" == "true" ]]; then
     echo "- Monitoring over WireGuard: Enabled for ${WIREGUARD_NETWORK} on ${GRAFANA_PORT}/tcp and ${PROMETHEUS_PORT}/tcp"
   else

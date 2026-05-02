@@ -152,6 +152,12 @@ With monitoring access over WireGuard:
 sudo ALLOW_MONITORING_OVER_WIREGUARD=true WIREGUARD_NETWORK=10.8.0.0/24 ./shared/scripts/hardening.sh
 ```
 
+With custom extra edge TCP ports:
+
+```bash
+sudo EDGE_EXTRA_TCP_PORTS='443 5201' ./shared/scripts/hardening.sh
+```
+
 ## File Transfer Tests
 
 Create a sample dataset:

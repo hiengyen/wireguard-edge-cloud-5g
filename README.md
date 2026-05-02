@@ -94,7 +94,7 @@ Important groups:
 - `GRAFANA_ADMIN_PASSWORD`: password used by `cloud/monitoring/docker-compose.yml`
 - `MONITORING_BIND_ADDRESS`, `ALLOW_MONITORING_OVER_WIREGUARD`: monitoring access mode
 - `WIREGUARD_*`: edge VPN client runtime defaults
-- `WWAN_APN`, `SSH_ADMIN_PORT`: edge WWAN and hardening runtime settings
+- `WWAN_APN`, `SSH_ADMIN_PORT`, `EDGE_EXTRA_TCP_PORTS`: edge WWAN and hardening runtime settings
 
 Set both `TF_VAR_wireguard_port` and `WIREGUARD_PORT` to the same value if you change the default WireGuard UDP port.
 
@@ -191,6 +191,7 @@ sudo ./shared/scripts/install-node-exporter.sh
 - Cloud Gateway on Amazon Linux 2023: configures `firewalld`
 
 If you use a non-default WireGuard port, run `hardening.sh` with `WIREGUARD_PORT=<port>`.
+On the edge node, the default extra inbound TCP rules are `443` and `5201` through `EDGE_EXTRA_TCP_PORTS`. This repository does not add `8006` or `64203`.
 
 For Grafana, set a non-default password first, then start the monitoring stack:
 
@@ -338,7 +339,7 @@ Các nhóm biến chính:
 - `GRAFANA_ADMIN_PASSWORD`: mật khẩu dùng cho `cloud/monitoring/docker-compose.yml`
 - `MONITORING_BIND_ADDRESS`, `ALLOW_MONITORING_OVER_WIREGUARD`: chế độ truy cập monitoring
 - `WIREGUARD_*`: mặc định runtime cho edge VPN client
-- `WWAN_APN`, `SSH_ADMIN_PORT`: tham số runtime cho WWAN và hardening
+- `WWAN_APN`, `SSH_ADMIN_PORT`, `EDGE_EXTRA_TCP_PORTS`: tham số runtime cho WWAN và hardening
 
 Quy trình khuyên dùng:
 
@@ -435,6 +436,7 @@ sudo ./shared/scripts/install-node-exporter.sh
 - Cloud Gateway chạy Amazon Linux 2023: cấu hình `firewalld`
 
 Nếu bạn dùng cổng WireGuard khác `51820`, hãy chạy với biến `WIREGUARD_PORT=<port>`.
+Trên edge node, rule TCP vào mặc định bổ sung là `443` và `5201` qua biến `EDGE_EXTRA_TCP_PORTS`. Repo này không tự thêm `8006` hoặc `64203`.
 
 Đặt mật khẩu Grafana không mặc định rồi mới khởi chạy giám sát trên Cloud:
 
