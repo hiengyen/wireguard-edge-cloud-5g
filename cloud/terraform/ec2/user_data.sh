@@ -19,10 +19,10 @@ install_docker_compose_plugin() {
   if dnf -q list available docker-compose-plugin >/dev/null 2>&1; then
     dnf install -y docker-compose-plugin
   else
-    mkdir -p "${DOCKER_CLI_PLUGIN_DIR}"
+    mkdir -p "$${DOCKER_CLI_PLUGIN_DIR}"
     curl -fsSL "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)" \
-      -o "${DOCKER_CLI_PLUGIN_DIR}/docker-compose"
-    chmod +x "${DOCKER_CLI_PLUGIN_DIR}/docker-compose"
+      -o "$${DOCKER_CLI_PLUGIN_DIR}/docker-compose"
+    chmod +x "$${DOCKER_CLI_PLUGIN_DIR}/docker-compose"
   fi
 }
 
