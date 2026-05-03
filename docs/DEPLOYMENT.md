@@ -93,6 +93,10 @@ Required infrastructure values:
 - `key_name`
 - optionally `instance_type`
 
+Current repository default:
+- `instance_type=t3.medium`
+- Use a larger type if you expect Prometheus, Grafana, Docker, and WireGuard to run together under sustained load
+
 ## 4. Provision the Cloud Node
 
 Run:
@@ -105,6 +109,8 @@ terraform validate
 terraform plan -out=tfplan
 terraform apply tfplan
 ```
+
+If you are increasing RAM on an existing deployment, review the plan carefully because changing `instance_type` updates the EC2 instance shape.
 
 Capture the outputs:
 - EC2 public IP
