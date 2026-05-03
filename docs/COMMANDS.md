@@ -61,6 +61,18 @@ sudo wg-quick save wg0
 sudo wg show
 ```
 
+Remove the local WireGuard client setup from the edge node:
+
+```bash
+sudo ./edge/vpn/uninstall-wg-client.sh
+```
+
+Remove the local key pair too:
+
+```bash
+sudo REMOVE_WG_KEYS=true ./edge/vpn/uninstall-wg-client.sh
+```
+
 ## Monitoring Stack
 
 Start monitoring on the cloud node:

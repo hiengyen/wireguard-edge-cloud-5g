@@ -70,7 +70,8 @@ wireguard-edge-cloud-5g/
 │   │   ├── install.sh        # Systemd installation script
 │   │   └── uninstall.sh      # Cleanup automation
 │   └── vpn/                  # VPN Overlay network layer
-│       └── setup-wg-client.sh# Key generation & Zero-Touch cloud auto-registration
+│       ├── setup-wg-client.sh    # Key generation & Zero-Touch cloud auto-registration
+│       └── uninstall-wg-client.sh# Remove the local edge WireGuard client setup
 └── shared/                   # Cross-platform utilities
     └── scripts/
         ├── hardening.sh      # Distro-aware SSH/Firewall/Fail2Ban hardening
@@ -176,6 +177,20 @@ The cloud bootstrap currently provisions a self-signed certificate for the rever
 The client should keep:
 - `Address = 10.8.0.x/32`
 - `AllowedIPs = 10.8.0.0/24` for overlay-only routing
+
+If you need to remove the local WireGuard client setup from the edge node later:
+
+```bash
+sudo ./edge/vpn/uninstall-wg-client.sh
+```
+
+To remove the local key pair too:
+
+```bash
+sudo REMOVE_WG_KEYS=true ./edge/vpn/uninstall-wg-client.sh
+```
+
+This only removes the local edge client. If you also need to remove the peer from the cloud server, delete that peer separately on the server with `wg set ... peer ... remove` and `wg-quick save`.
 
 The cloud bootstrap also installs the common operator toolset on Amazon Linux 2023:
 - `curl`, `rsync`, `iperf3`, `git`, `tmux`, `stow`, `vim`, `wget`, `docker`, and Docker Compose v2
@@ -319,7 +334,8 @@ wireguard-edge-cloud-5g/
 │   │   ├── install.sh        # Tiện ích tự động cài đặt Systemd Service
 │   │   └── uninstall.sh      # Tiện ích dọn dẹp hệ thống
 │   └── vpn/                  # Tầng mạng ảo (Overlay network)
-│       └── setup-wg-client.sh# Sinh khóa mã hóa & Gia nhập mạng tự động không chạm
+│       ├── setup-wg-client.sh    # Sinh khóa mã hóa & Gia nhập mạng tự động không chạm
+│       └── uninstall-wg-client.sh# Gỡ cấu hình WireGuard client cục bộ trên edge
 └── shared/                   # Các thư viện dùng chung cho cả Cloud và Edge
     └── scripts/
         ├── hardening.sh      # Hardening SSH/Firewall/Fail2Ban theo từng distro
@@ -424,6 +440,20 @@ Bootstrap cloud hiện tạo sẵn chứng chỉ self-signed để reverse proxy
 Client nên giữ:
 - `Address = 10.8.0.x/32`
 - `AllowedIPs = 10.8.0.0/24` nếu chỉ route trong overlay
+
+Nếu cần gỡ cấu hình WireGuard client cục bộ trên edge sau này:
+
+```bash
+sudo ./edge/vpn/uninstall-wg-client.sh
+```
+
+Nếu muốn xóa cả key local:
+
+```bash
+sudo REMOVE_WG_KEYS=true ./edge/vpn/uninstall-wg-client.sh
+```
+
+Script này chỉ gỡ phía edge local. Nếu cần xóa peer trên cloud server thì phải thực hiện riêng bằng `wg set ... peer ... remove` và `wg-quick save`.
 
 Bootstrap cloud cũng cài sẵn bộ công cụ vận hành trên Amazon Linux 2023:
 - `curl`, `rsync`, `iperf3`, `git`, `tmux`, `stow`, `vim`, `wget`, `docker`, và Docker Compose v2

@@ -286,6 +286,20 @@ Verify from the cloud node:
 sudo wg show
 ```
 
+If you need to remove the local WireGuard client setup from the edge node later:
+
+```bash
+sudo ./edge/vpn/uninstall-wg-client.sh
+```
+
+To remove the local key pair too:
+
+```bash
+sudo REMOVE_WG_KEYS=true ./edge/vpn/uninstall-wg-client.sh
+```
+
+This only removes the local edge setup. Remove the peer on the cloud server separately if it was previously registered.
+
 ### Path B. Auto-Registration Through the Registration API
 
 Use this path when you want zero-touch enrollment and can safely restrict API access.
@@ -334,6 +348,20 @@ If the API returns an IP conflict, inspect the current peers:
 sudo wg show wg0
 sudo cat /etc/wireguard/wg0.conf
 ```
+
+If you need to remove the local WireGuard client setup from the edge node later:
+
+```bash
+sudo ./edge/vpn/uninstall-wg-client.sh
+```
+
+To remove the local key pair too:
+
+```bash
+sudo REMOVE_WG_KEYS=true ./edge/vpn/uninstall-wg-client.sh
+```
+
+This only removes the local edge setup. Remove the peer on the cloud server separately if it was previously registered.
 
 ## 9. Validate End-to-End Connectivity
 
