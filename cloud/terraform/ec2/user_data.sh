@@ -32,7 +32,6 @@ echo "=== Starting WireGuard installation ==="
 dnf update -y
 dnf install -y \
   awscli \
-  curl \
   docker \
   git \
   iperf3 \
@@ -42,11 +41,10 @@ dnf install -y \
   python3 \
   qrencode \
   rsync \
-  stow \
   tmux \
   vim \
   wget \
-  wireguard-tools
+  wireguard-tools 
 
 systemctl enable --now docker
 usermod -aG docker ec2-user || true
