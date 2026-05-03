@@ -81,6 +81,20 @@ resource "aws_vpc_security_group_ingress_rule" "ssh" {
   })
 }
 
+# ICMPv4 ingress for reachability tests such as ping
+resource "aws_vpc_security_group_ingress_rule" "icmp_v4" {
+  security_group_id = aws_security_group.wireguard.id
+  description       = "ICMPv4"
+  from_port         = -1
+  to_port           = -1
+  ip_protocol       = "icmp"
+  cidr_ipv4         = "0.0.0.0/0"
+
+  tags = merge(var.common_tags, {
+    Name = "${var.project_name}-icmpv4-ingress"
+  })
+}
+
 resource "terraform_data" "validate_admin_ssh_cidr" {
   lifecycle {
     precondition {

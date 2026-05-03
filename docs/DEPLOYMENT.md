@@ -384,9 +384,9 @@ curl http://127.0.0.1:9100/metrics | head
 Operational notes:
 - `hardening.sh` opens `WIREGUARD_PORT/udp`, but it does not open the Registration API TLS port automatically
 - On edge hosts using `ufw`, `hardening.sh` also opens the extra inbound TCP ports listed in `EDGE_EXTRA_TCP_PORTS`, default `443 5201`
-- To expose Grafana and Prometheus only through the overlay, set `ALLOW_MONITORING_OVER_WIREGUARD=true` and `WIREGUARD_NETWORK=10.8.0.0/24` before running `hardening.sh`
+- To expose Grafana, Prometheus, and Node Exporter only through the overlay, set `ALLOW_MONITORING_OVER_WIREGUARD=true` and `WIREGUARD_NETWORK=10.8.0.0/24` before running `hardening.sh`
 - If you expose the Registration API and also run `hardening.sh` on the cloud host, add access for `443/tcp` in `firewalld`
-- If you run `hardening.sh` on the edge host and want the cloud node to scrape Node Exporter over WireGuard, also allow `9100/tcp`
+- The cloud Security Group also allows `ICMPv4` so you can test reachability with `ping`
 
 ## 11. Quick Troubleshooting
 

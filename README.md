@@ -219,7 +219,7 @@ cd cloud/monitoring
 sudo docker compose up -d
 ```
 
-You do not need extra AWS Security Group ingress for `3000/tcp` or `9090/tcp` in that model. Only the WireGuard UDP port is exposed publicly; Grafana and Prometheus are reached after traffic is decrypted on the EC2 instance.
+You do not need extra AWS Security Group ingress for `3000/tcp`, `9090/tcp`, or `9100/tcp` in that model. Only the WireGuard UDP port is exposed publicly; Grafana, Prometheus, and Node Exporter are reached after traffic is decrypted on the EC2 instance.
 
 To access the monitoring web UIs through SSH tunneling from your local machine:
 
@@ -467,7 +467,7 @@ cd cloud/monitoring
 sudo docker compose up -d
 ```
 
-Mô hình này không cần mở thêm AWS Security Group cho `3000/tcp` hoặc `9090/tcp`. Bên ngoài chỉ mở cổng UDP của WireGuard; Grafana và Prometheus chỉ được truy cập sau khi gói tin được giải mã trên chính EC2.
+Mô hình này không cần mở thêm AWS Security Group cho `3000/tcp`, `9090/tcp`, hoặc `9100/tcp`. Bên ngoài chỉ mở cổng UDP của WireGuard; Grafana, Prometheus và Node Exporter chỉ được truy cập sau khi gói tin được giải mã trên chính EC2.
 
 Nếu muốn truy cập Web UI của monitoring qua SSH tunnel từ máy local:
 
