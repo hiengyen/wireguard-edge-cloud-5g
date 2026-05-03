@@ -1,9 +1,10 @@
 # Deployment Guide
 
 This document describes the recommended deployment workflow for the `wireguard-edge-cloud-5g` project in a production-oriented setup.
-For a compact command reference, see [COMMANDS.md](/home/hiengyen/CODE/wireguard-edge-cloud-5g/COMMANDS.md:1).
+For a compact command reference, see [COMMANDS.md](./COMMANDS.md).
 
 The repository assumes:
+
 - WireGuard overlay network: `10.8.0.0/24`
 - WireGuard server interface: `10.8.0.1/24`
 - Each edge node uses a unique `/32` client address, for example `10.8.0.2/32`
@@ -12,6 +13,7 @@ The repository assumes:
 ## 1. Prerequisites
 
 Prepare the following before deployment:
+
 - An AWS account with permission to create EC2, IAM, EIP, Security Group, and Secrets Manager resources
 - An existing AWS EC2 key pair for SSH access
 - A public subnet and VPC where the EC2 instance will run
@@ -22,6 +24,7 @@ Prepare the following before deployment:
   - Quectel-compatible WWAN/QMI stack if using the 5G automation scripts
 
 Install locally:
+
 - `terraform >= 1.9`
 - `docker` and Docker Compose v2
 - `bash`
@@ -41,6 +44,7 @@ set -a && . ./.env && set +a
 ```
 
 Update `.env` with your real values:
+
 - `TF_VAR_admin_ssh_cidr`
 - `TF_VAR_wireguard_port`
 - `TF_VAR_wireguard_network`
@@ -59,6 +63,7 @@ Update `.env` with your real values:
 - `EDGE_EXTRA_TCP_PORTS`
 
 Recommended base values:
+
 - `TF_VAR_wireguard_network=10.8.0.0/24`
 - `TF_VAR_wireguard_client_cidr=10.8.0.2/32`
 - `TF_VAR_wireguard_port=51820`
@@ -72,21 +77,22 @@ Recommended base values:
 - `EDGE_EXTRA_TCP_PORTS='443 5201'`
 - `TF_VAR_admin_ssh_cidr='["<your-public-ip>/32"]'`
 
-
-
 ## 3. Configure Terraform Inputs
 
 Review [cloud/terraform/ec2/terraform.tfvars.example](/home/hiengyen/CODE/wireguard-edge-cloud-5g/cloud/terraform/ec2/terraform.tfvars.example:1) and provide the required values either through:
+
 - exported `TF_VAR_*` environment variables from `.env`
 - or a local non-committed `terraform.tfvars`
 
 Required infrastructure values:
+
 - `vpc_id`
 - `subnet_id`
 - `key_name`
 - optionally `instance_type`
 
 Current repository default:
+
 - `instance_type=t3.medium`
 - Use a larger type if you expect Prometheus, Grafana, Docker, and WireGuard to run together under sustained load
 
@@ -106,10 +112,10 @@ terraform apply tfplan
 If you are increasing RAM on an existing deployment, review the plan carefully because changing `instance_type` updates the EC2 instance shape.
 
 Capture the outputs:
+
 - EC2 public IP
 - WireGuard endpoint
 - Security group ID
-
 
 Useful commands:
 
@@ -120,6 +126,7 @@ terraform output wireguard_endpoint
 ```
 
 What Terraform sets up:
+
 - Amazon Linux 2023 EC2 instance
 - encrypted root volume
 - Elastic IP
@@ -158,13 +165,32 @@ sudo ss -lntp | grep 51820
 ```
 
 Expected behavior:
+
 - `wg0` is active
 
 Important note:
+
 - The bootstrap `user_data.sh` creates a sample peer using `10.8.0.2/32`
 - If your first real edge node also uses `10.8.0.2/32`, remove or replace that sample peer before registering a different client key
 
-## 6. Start Monitoring on the Cloud Node
+## 6. Harden the Cloud Node
+
+Before starting the monitoring stack, secure the cloud node and install the metrics exporter:
+
+```bash
+set -a && . ./.env && set +a
+sudo -E ./shared/scripts/hardening.sh
+sudo -E ./shared/scripts/install-node-exporter.sh
+```
+
+Verify Node Exporter on the cloud host:
+
+```bash
+sudo systemctl status node_exporter --no-pager
+curl http://127.0.0.1:9100/metrics | head
+```
+
+## 7. Start Monitoring on the Cloud Node
 
 On the cloud host:
 
@@ -184,16 +210,14 @@ curl http://127.0.0.1:3000/api/health
 ```
 
 Notes:
-- Prometheus, Loki, and Grafana bind to `127.0.0.1` by default in this repository
-- To reach them through WireGuard, set `MONITORING_BIND_ADDRESS=10.8.0.1` before starting the stack
-- Use SSH tunnel or a separate reverse proxy if you need remote operator access
-- Grafana provisions the Prometheus and Loki data sources from `cloud/monitoring/grafana/provisioning/datasources/datasources.yml`
-- The repository currently pins Prometheus `v3.11.2`, Grafana `13.0.1`, and Loki `3.7.0`
-- AWS Security Groups do not need additional `3000/tcp`, `9090/tcp`, or `3100/tcp` ingress for WireGuard-only access, because the traffic arrives as encrypted UDP on the WireGuard port and is decrypted locally on the EC2 instance
+
+- Prometheus, Loki, and Grafana bind to `127.0.0.1` by default. To reach them through WireGuard instead of SSH tunneling, set `MONITORING_BIND_ADDRESS=10.8.0.1` and `ALLOW_MONITORING_OVER_WIREGUARD=true` in `.env` before running `hardening.sh` and starting the stack.
+- Grafana provisions the Prometheus and Loki data sources from `cloud/monitoring/grafana/provisioning/datasources/datasources.yml`.
 
 To access the web UIs through SSH tunneling from your local machine:
 
 ```bash
+# If MONITORING_BIND_ADDRESS is 10.8.0.1, change 127.0.0.1 below to 10.8.0.1
 ssh -i <your-key.pem> \
   -L 3000:127.0.0.1:3000 \
   -L 9090:127.0.0.1:9090 \
@@ -203,12 +227,13 @@ ssh -i <your-key.pem> \
 ```
 
 Then open:
+
 - Grafana: `http://127.0.0.1:3000`
 - Prometheus: `http://127.0.0.1:9090`
 - Loki readiness: `http://127.0.0.1:3100/ready`
 - Node Exporter metrics: `http://127.0.0.1:9100/metrics`
 
-## 7. Prepare the Edge Node
+## 8. Prepare the Edge Node
 
 On the edge device:
 
@@ -235,12 +260,14 @@ systemctl status wwan-monitor.service
 ```
 
 The edge installer also provisions:
+
 - `curl`, `rsync`, `iperf3`, `git`, `tmux`, `stow`, `vim`, `wget`, `docker`, and Docker Compose v2
 - `ufw` on apt-based edge systems, and on dnf-based edge systems when the package exists in the enabled repositories
 
-## 8. Join the VPN Network
+## 9. Join the VPN Network
 
 Requirements:
+
 - You can SSH to the cloud node
 - You have the cloud server public key from `/etc/wireguard/server_public.key`
 
@@ -252,6 +279,7 @@ sudo ./edge/vpn/setup-wg-client.sh
 ```
 
 Recommended answers:
+
 - `Server endpoint IP/Domain`: the EC2 Elastic IP or public DNS name
 - `Server port`: `51820`
 - `Server public key`: output of `sudo cat /etc/wireguard/server_public.key`
@@ -285,36 +313,28 @@ sudo REMOVE_WG_KEYS=true ./edge/vpn/uninstall-wg-client.sh
 
 This only removes the local edge setup. Remove the peer on the cloud server separately if it was previously registered.
 
+## 10. Harden the Edge Node
 
-
-## 9. Validate End-to-End Connectivity
-
-From the edge node:
+Now that the edge node is connected to the VPN, secure it and install Node Exporter:
 
 ```bash
-sudo wg show
-ping -c 3 10.8.0.1
-ssh ec2-user@10.8.0.1
+set -a && . ./.env && set +a
+sudo -E ./shared/scripts/hardening.sh
+sudo -E ./shared/scripts/install-node-exporter.sh
 ```
 
-From the cloud node:
+Verify Node Exporter on the edge host:
 
 ```bash
-sudo wg show
-ping -c 3 10.8.0.3
-curl http://10.8.0.3:9100/metrics
+sudo systemctl status node_exporter --no-pager
+curl http://127.0.0.1:9100/metrics | head
 ```
 
-Expected results:
-- WireGuard handshake is present on both sides
-- The cloud node reaches the edge node over the overlay address
-- Prometheus can scrape Node Exporter over the overlay network
-
-## 10. Edge Log Forwarding with Alloy
+## 11. Edge Log Forwarding with Alloy
 
 Run Alloy on the edge node after the WireGuard tunnel can reach the cloud overlay address.
 The default Alloy config reads journald and pushes logs to Loki at `http://10.8.0.1:3100/loki/api/v1/push`.
-For this default endpoint to work, start the cloud monitoring stack with `MONITORING_BIND_ADDRESS=10.8.0.1` and allow monitoring over WireGuard in `hardening.sh`.
+For this default endpoint to work, you must have started the cloud monitoring stack with `MONITORING_BIND_ADDRESS=10.8.0.1` and allowed monitoring over WireGuard in `hardening.sh`.
 
 ```bash
 set -a && . ./.env && set +a
@@ -341,35 +361,31 @@ A useful first query is:
 {job="edge-journal"}
 ```
 
-## 11. Shared Hardening and Monitoring Agents
+## 12. Validate End-to-End Connectivity
 
-Run the shared scripts on both environments as needed:
-
-```bash
-sudo ./shared/scripts/hardening.sh
-sudo ./shared/scripts/install-node-exporter.sh
-```
-
-To pin or override the Node Exporter version during installation:
+From the edge node:
 
 ```bash
-sudo NODE_EXPORTER_VERSION=1.11.1 ./shared/scripts/install-node-exporter.sh
+sudo wg show
+ping -c 3 10.8.0.1
+ssh ec2-user@10.8.0.1
 ```
 
-Verify Node Exporter on the target host:
+From the cloud node:
 
 ```bash
-sudo systemctl status node_exporter --no-pager
-ss -lntp | grep 9100
-curl http://127.0.0.1:9100/metrics | head
+sudo wg show
+ping -c 3 10.8.0.3
+curl http://10.8.0.3:9100/metrics
 ```
 
-Operational notes:
-- On edge hosts using `ufw`, `hardening.sh` also opens the extra inbound TCP ports listed in `EDGE_EXTRA_TCP_PORTS`, default `443 5201`
-- To expose Grafana, Prometheus, Loki, and Node Exporter only through the overlay, set `ALLOW_MONITORING_OVER_WIREGUARD=true` and `WIREGUARD_NETWORK=10.8.0.0/24` before running `hardening.sh`
-- The cloud Security Group also allows `ICMPv4` so you can test reachability with `ping`
+Expected results:
 
-## 12. Quick Troubleshooting
+- WireGuard handshake is present on both sides
+- The cloud node reaches the edge node over the overlay address
+- Prometheus can scrape Node Exporter from the edge node over the overlay network
+
+## 13. Quick Troubleshooting
 
 Useful checks on the cloud node:
 
@@ -393,5 +409,6 @@ ip addr
 ```
 
 Common causes of failure:
+
 - Reusing `10.8.0.2/32` while the bootstrap sample peer still exists
 - Starting Alloy before Loki is reachable at `ALLOY_LOKI_URL`

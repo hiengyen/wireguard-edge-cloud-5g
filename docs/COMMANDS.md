@@ -107,6 +107,7 @@ sudo -E docker compose up -d
 Grafana, Prometheus, Loki, and Node Exporter:
 
 ```bash
+# If MONITORING_BIND_ADDRESS is 10.8.0.1, change 127.0.0.1 below to 10.8.0.1
 ssh -i <your-key.pem> \
   -L 3000:127.0.0.1:3000 \
   -L 9090:127.0.0.1:9090 \

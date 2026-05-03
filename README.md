@@ -230,6 +230,7 @@ You do not need extra AWS Security Group ingress for `3000/tcp`, `9090/tcp`, `31
 To access the monitoring web UIs through SSH tunneling from your local machine:
 
 ```bash
+# If MONITORING_BIND_ADDRESS is 10.8.0.1, change 127.0.0.1 below to 10.8.0.1
 ssh -i <your-key.pem> \
   -L 3000:127.0.0.1:3000 \
   -L 9090:127.0.0.1:9090 \
@@ -495,6 +496,7 @@ Mô hình này không cần mở thêm AWS Security Group cho `3000/tcp`, `9090/
 Nếu muốn truy cập Web UI của monitoring qua SSH tunnel từ máy local:
 
 ```bash
+# Nếu MONITORING_BIND_ADDRESS là 10.8.0.1, hãy đổi 127.0.0.1 bên dưới thành 10.8.0.1
 ssh -i <your-key.pem> \
   -L 3000:127.0.0.1:3000 \
   -L 9090:127.0.0.1:9090 \
