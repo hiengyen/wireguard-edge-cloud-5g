@@ -95,6 +95,34 @@ resource "aws_vpc_security_group_ingress_rule" "icmp_v4" {
   })
 }
 
+# iperf3 TCP ingress
+resource "aws_vpc_security_group_ingress_rule" "iperf3_tcp" {
+  security_group_id = aws_security_group.wireguard.id
+  description       = "iperf3 TCP"
+  from_port         = 5201
+  to_port           = 5201
+  ip_protocol       = "tcp"
+  cidr_ipv4         = "0.0.0.0/0"
+
+  tags = merge(var.common_tags, {
+    Name = "${var.project_name}-iperf3-tcp-ingress"
+  })
+}
+
+# iperf3 UDP ingress
+resource "aws_vpc_security_group_ingress_rule" "iperf3_udp" {
+  security_group_id = aws_security_group.wireguard.id
+  description       = "iperf3 UDP"
+  from_port         = 5201
+  to_port           = 5201
+  ip_protocol       = "udp"
+  cidr_ipv4         = "0.0.0.0/0"
+
+  tags = merge(var.common_tags, {
+    Name = "${var.project_name}-iperf3-udp-ingress"
+  })
+}
+
 resource "terraform_data" "validate_admin_ssh_cidr" {
   lifecycle {
     precondition {
