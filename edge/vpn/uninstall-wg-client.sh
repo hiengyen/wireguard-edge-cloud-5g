@@ -29,6 +29,20 @@ fi
 
 header "WireGuard Client Uninstall"
 
+bring_interface_down() {
+  if ! command -v ip >/dev/null 2>&1; then
+    warn "'ip' command not found. Skipping direct interface removal."
+    return
+  fi
+
+  if ip link show "${WG_INTERFACE}" >/dev/null 2>&1; then
+    log "Removing live interface ${WG_INTERFACE}..."
+    ip link delete dev "${WG_INTERFACE}" 2>/dev/null || true
+  else
+    warn "Interface ${WG_INTERFACE} is not present."
+  fi
+}
+
 if systemctl list-unit-files | grep -q "^wg-quick@${WG_INTERFACE}\.service"; then
   log "Stopping wg-quick@${WG_INTERFACE} if it is active..."
   systemctl stop "wg-quick@${WG_INTERFACE}" 2>/dev/null || true
@@ -38,6 +52,8 @@ if systemctl list-unit-files | grep -q "^wg-quick@${WG_INTERFACE}\.service"; the
 else
   warn "wg-quick@${WG_INTERFACE}.service is not installed."
 fi
+
+bring_interface_down
 
 if [[ -f "${WG_CONFIG}" ]]; then
   log "Removing client config ${WG_CONFIG}..."
