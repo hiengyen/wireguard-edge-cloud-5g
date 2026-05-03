@@ -7,11 +7,7 @@ The repository assumes:
 - WireGuard overlay network: `10.8.0.0/24`
 - WireGuard server interface: `10.8.0.1/24`
 - Each edge node uses a unique `/32` client address, for example `10.8.0.2/32`
-- The Registration API is installed on the cloud node, but public ingress is disabled by default
-
-There are two supported rollout paths:
-1. Manual peer registration without exposing the Registration API
-2. Auto-registration through the Registration API exposed behind TLS and restricted CIDR rules
+- Peer registration is done manually for maximum security.
 
 ## 1. Prerequisites
 
@@ -45,11 +41,7 @@ set -a && . ./.env && set +a
 ```
 
 Update `.env` with your real values:
-- `TF_VAR_wg_api_token`
 - `TF_VAR_admin_ssh_cidr`
-- `TF_VAR_enable_registration_api`
-- `TF_VAR_wg_api_cidr`
-- `TF_VAR_registration_api_domain`
 - `TF_VAR_wireguard_port`
 - `TF_VAR_wireguard_network`
 - `TF_VAR_wireguard_client_cidr`
@@ -63,7 +55,7 @@ Update `.env` with your real values:
 - `ALLOW_MONITORING_OVER_WIREGUARD`
 - `WIREGUARD_PORT`
 - `WIREGUARD_ALLOWED_IPS`
-- `WIREGUARD_API_SCHEME`
+
 - `EDGE_EXTRA_TCP_PORTS`
 
 Recommended base values:
@@ -72,7 +64,7 @@ Recommended base values:
 - `TF_VAR_wireguard_port=51820`
 - `WIREGUARD_PORT=51820`
 - `WIREGUARD_ALLOWED_IPS=10.8.0.0/24`
-- `WIREGUARD_API_SCHEME=https`
+
 - `MONITORING_BIND_ADDRESS=127.0.0.1`
 - `LOKI_PORT=3100`
 - `ALLOY_LOKI_URL=http://10.8.0.1:3100/loki/api/v1/push`
@@ -80,13 +72,7 @@ Recommended base values:
 - `EDGE_EXTRA_TCP_PORTS='443 5201'`
 - `TF_VAR_admin_ssh_cidr='["<your-public-ip>/32"]'`
 
-Path-specific values:
-- Manual peer path:
-  `TF_VAR_enable_registration_api=false`
-- Registration API path:
-  `TF_VAR_enable_registration_api=true`
-  `TF_VAR_wg_api_cidr=<trusted-edge-egress-ip>/32`
-  `TF_VAR_registration_api_domain=''` to use the EC2 Elastic IP automatically, or set a DNS name
+
 
 ## 3. Configure Terraform Inputs
 
@@ -123,14 +109,14 @@ Capture the outputs:
 - EC2 public IP
 - WireGuard endpoint
 - Security group ID
-- Registration API endpoint, if enabled
+
 
 Useful commands:
 
 ```bash
 terraform output public_ip
 terraform output wireguard_endpoint
-terraform output api_endpoint
+
 ```
 
 What Terraform sets up:
@@ -139,8 +125,7 @@ What Terraform sets up:
 - Elastic IP
 - IAM role for Secrets Manager access
 - WireGuard server bootstrap
-- Registration API application bound to `127.0.0.1:5000`
-- optional TLS reverse proxy with NGINX on the public TLS port, default `443`
+
 - Base operator packages on the cloud node: `curl`, `rsync`, `iperf3`, `git`, `tmux`, `stow`, `vim`, `wget`, `docker`, and Docker Compose v2
 
 ## 5. Verify the Cloud Node
@@ -155,8 +140,7 @@ Check services:
 
 ```bash
 sudo systemctl status wg-quick@wg0
-sudo systemctl status wg-api
-sudo systemctl status nginx
+
 ```
 
 Check WireGuard:
@@ -170,13 +154,11 @@ sudo cat /etc/wireguard/server_public.key
 Check listeners:
 
 ```bash
-sudo ss -lntp | grep -E '5000|443'
+sudo ss -lntp | grep 51820
 ```
 
 Expected behavior:
 - `wg0` is active
-- `wg-api` is active and bound to `127.0.0.1:5000`
-- `nginx` is active only if `TF_VAR_enable_registration_api=true`
 
 Important note:
 - The bootstrap `user_data.sh` creates a sample peer using `10.8.0.2/32`
@@ -256,16 +238,9 @@ The edge installer also provisions:
 - `curl`, `rsync`, `iperf3`, `git`, `tmux`, `stow`, `vim`, `wget`, `docker`, and Docker Compose v2
 - `ufw` on apt-based edge systems, and on dnf-based edge systems when the package exists in the enabled repositories
 
-## 8. Choose the Join Method
-
-At this point the deployment splits into two paths.
-
-### Path A. Manual Peer Registration Without the Registration API
-
-Use this path when you do not want to expose any registration endpoint on the public internet.
+## 8. Join the VPN Network
 
 Requirements:
-- `TF_VAR_enable_registration_api=false`
 - You can SSH to the cloud node
 - You have the cloud server public key from `/etc/wireguard/server_public.key`
 
@@ -282,7 +257,6 @@ Recommended answers:
 - `Server public key`: output of `sudo cat /etc/wireguard/server_public.key`
 - `Client IP`: a unique `/32`, for example `10.8.0.3/32` if `10.8.0.2/32` is already occupied by the bootstrap sample peer
 - `Allowed IPs`: `10.8.0.0/24`
-- `Auto-register via Server API?`: `N`
 
 The client script will print the client public key. Add that peer manually on the cloud node:
 
@@ -311,68 +285,7 @@ sudo REMOVE_WG_KEYS=true ./edge/vpn/uninstall-wg-client.sh
 
 This only removes the local edge setup. Remove the peer on the cloud server separately if it was previously registered.
 
-### Path B. Auto-Registration Through the Registration API
 
-Use this path when you want zero-touch enrollment and can safely restrict API access.
-
-Requirements:
-- `TF_VAR_enable_registration_api=true`
-- `TF_VAR_wg_api_cidr` restricted to the known edge egress IP or another trusted CIDR
-- `TF_VAR_registration_api_domain` set to a DNS name or left empty to use the Elastic IP
-- Terraform applied again after enabling API ingress
-
-Current API exposure model:
-- The registration service itself listens only on `127.0.0.1:5000`
-- Public clients must connect to NGINX over TLS, default `443`
-- The bootstrap certificate is self-signed until you replace it
-
-Before running the edge client:
-- Confirm `terraform output api_endpoint`
-- Confirm `sudo systemctl status nginx`
-- Replace the self-signed certificate before production use, or expect TLS validation issues from standard `curl`
-
-Run the client setup on the edge node:
-
-```bash
-set -a && . ./.env && set +a
-sudo ./edge/vpn/setup-wg-client.sh
-```
-
-Recommended answers:
-- `Server endpoint IP/Domain`: the public API host or Elastic IP
-- `Server port`: `51820`
-- `Server public key`: output of `sudo cat /etc/wireguard/server_public.key`
-- `Client IP`: a unique `/32`, for example `10.8.0.3/32`
-- `Allowed IPs`: `10.8.0.0/24`
-- `Auto-register via Server API?`: `Y`
-- `API Port`: `443`
-- `API scheme`: `https`
-- `API Token`: the secure token you provided as `TF_VAR_wg_api_token`
-
-Important note:
-- `setup-wg-client.sh` prompts `API Port [5000]`, but that is the private backend port on the cloud node
-- For public auto-registration through NGINX, enter the public TLS port, usually `443`
-
-If the API returns an IP conflict, inspect the current peers:
-
-```bash
-sudo wg show wg0
-sudo cat /etc/wireguard/wg0.conf
-```
-
-If you need to remove the local WireGuard client setup from the edge node later:
-
-```bash
-sudo ./edge/vpn/uninstall-wg-client.sh
-```
-
-To remove the local key pair too:
-
-```bash
-sudo REMOVE_WG_KEYS=true ./edge/vpn/uninstall-wg-client.sh
-```
-
-This only removes the local edge setup. Remove the peer on the cloud server separately if it was previously registered.
 
 ## 9. Validate End-to-End Connectivity
 
@@ -452,10 +365,8 @@ curl http://127.0.0.1:9100/metrics | head
 ```
 
 Operational notes:
-- `hardening.sh` opens `WIREGUARD_PORT/udp`, but it does not open the Registration API TLS port automatically
 - On edge hosts using `ufw`, `hardening.sh` also opens the extra inbound TCP ports listed in `EDGE_EXTRA_TCP_PORTS`, default `443 5201`
 - To expose Grafana, Prometheus, Loki, and Node Exporter only through the overlay, set `ALLOW_MONITORING_OVER_WIREGUARD=true` and `WIREGUARD_NETWORK=10.8.0.0/24` before running `hardening.sh`
-- If you expose the Registration API and also run `hardening.sh` on the cloud host, add access for `443/tcp` in `firewalld`
 - The cloud Security Group also allows `ICMPv4` so you can test reachability with `ping`
 
 ## 12. Quick Troubleshooting
@@ -463,9 +374,8 @@ Operational notes:
 Useful checks on the cloud node:
 
 ```bash
-sudo journalctl -u wg-quick@wg0 -u wg-api -u nginx -f
+sudo journalctl -u wg-quick@wg0 -f
 sudo wg show
-sudo ss -lntp | grep -E '5000|443'
 sudo systemctl status docker --no-pager
 sudo docker ps
 sudo systemctl status node_exporter --no-pager
@@ -484,7 +394,4 @@ ip addr
 
 Common causes of failure:
 - Reusing `10.8.0.2/32` while the bootstrap sample peer still exists
-- Entering API port `5000` from the client even though the public endpoint is `443`
-- Using HTTPS against the bootstrap self-signed certificate without replacing or trusting that certificate
-- Forgetting to re-run `terraform apply` after enabling Registration API ingress
 - Starting Alloy before Loki is reachable at `ALLOY_LOKI_URL`

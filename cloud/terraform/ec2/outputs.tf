@@ -23,13 +23,3 @@ output "wireguard_endpoint" {
   value       = "${aws_eip.wireguard.public_ip}:${var.wireguard_port}"
 }
 
-output "api_endpoint" {
-  description = "WireGuard Registration API endpoint"
-  value       = var.enable_registration_api ? "https://${local.registration_api_host}:${var.registration_api_tls_port}/register" : "Registration API ingress disabled by default."
-}
-
-output "secret_arn" {
-  description = "ARN of the Secrets Manager secret storing the API token"
-  value       = aws_secretsmanager_secret.wg_api_token.arn
-  sensitive   = true
-}

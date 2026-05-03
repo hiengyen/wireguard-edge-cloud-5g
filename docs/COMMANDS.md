@@ -19,7 +19,7 @@ terraform plan -out=tfplan
 terraform apply tfplan
 terraform output public_ip
 terraform output wireguard_endpoint
-terraform output api_endpoint
+
 ```
 
 ## Cloud Access
@@ -233,9 +233,8 @@ ssh ec2-user@10.8.0.1 'cat /tmp/wg-test.txt'
 Cloud:
 
 ```bash
-sudo journalctl -u wg-quick@wg0 -u wg-api -u nginx -f
+sudo journalctl -u wg-quick@wg0 -f
 sudo wg show
-sudo ss -lntp | grep -E '5000|443'
 sudo systemctl status docker --no-pager
 sudo docker ps
 sudo systemctl status node_exporter --no-pager

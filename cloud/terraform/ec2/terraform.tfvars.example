@@ -15,22 +15,12 @@ root_volume_size  = 20
 # CheckIP: https://checkip.amazonaws.com
 admin_ssh_cidr = ["<YOUR_PUBLIC_IP>/32"]
 
-# Keep disabled unless the API is protected by TLS/reverse proxy and a restricted CIDR.
-enable_registration_api = false
-wg_api_cidr             = "<TRUSTED_EDGE_EGRESS_IP>/32"
-registration_api_tls_port = 443
-# Optional: leave empty to use the EC2 Elastic IP automatically
-# registration_api_domain = "vpn-api.example.com"
 
 common_tags = {
   Project     = "WireGuard-VPN"
   ManagedBy   = "Terraform"
   Environment = "production"
 }
-
-# API Token — DO NOT hardcode here. Use environment variable instead:
-#   export TF_VAR_wg_api_token="$(openssl rand -base64 48)"
-# wg_api_token = "..."
 
 # Monitoring stack examples
 #   export TF_VAR_grafana_admin_password="change-this-before-exposing-grafana"

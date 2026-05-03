@@ -22,7 +22,6 @@ header() { echo -e "\n${CYAN}===== $* =====${NC}"; }
 WG_INTERFACE="wg0"
 WG_PORT="${WIREGUARD_PORT:-51820}"
 WG_ALLOWED_IPS="${WIREGUARD_ALLOWED_IPS:-10.8.0.0/24}"
-API_SCHEME="${WIREGUARD_API_SCHEME:-https}"
 
 WG_CONFIG="/etc/wireguard/${WG_INTERFACE}.conf"
 WG_KEYS_DIR="/etc/wireguard/keys"
@@ -157,61 +156,10 @@ prompt_server() {
   read -rp "Allowed IPs for peer [${WG_ALLOWED_IPS}]: " WG_ALLOWED_IPS_INPUT
   WG_ALLOWED_IPS=${WG_ALLOWED_IPS_INPUT:-$WG_ALLOWED_IPS}
 
-  read -rp "Auto-register via Server API? [y/N]: " AUTO_REGISTER
-  if [[ "$AUTO_REGISTER" =~ ^[Yy]$ ]]; then
-    read -rp "API Port [5000]: " API_PORT
-    API_PORT=${API_PORT:-5000}
-    read -rp "API scheme [${API_SCHEME}]: " API_SCHEME_INPUT
-    API_SCHEME=${API_SCHEME_INPUT:-$API_SCHEME}
-    read -rsp "API Token: " API_TOKEN
-    echo
-    if [[ -z "${API_TOKEN}" ]]; then
-      error "API token must not be empty when auto-registration is enabled"
-      exit 1
-    fi
-  fi
+  echo "Note: Manual registration is now the only supported method. Make sure to add this client's public key to the server before enabling the connection."
 }
 
-# ---------- Register client ----------
-register_client() {
-  if [[ ! "${AUTO_REGISTER:-}" =~ ^[Yy]$ ]]; then
-    return
-  fi
-  
-  header "Registering Public Key via API"
-  log "Endpoint: ${API_SCHEME}://$WG_SERVER_ENDPOINT:$API_PORT/register"
 
-  if [[ "$API_SCHEME" != "https" ]]; then
-    warn "Using non-HTTPS registration API. Restrict access to trusted networks only."
-  fi
-  
-  if ! command -v curl &>/dev/null; then
-    install_pkg curl
-  fi
-
-  JSON_PAYLOAD="{\"pubkey\":\"$PUBLIC_KEY\", \"ip\":\"$WG_CLIENT_IP\"}"
-  
-  if ! HTTP_STATUS=$(curl -s -o /tmp/wg_api_response.txt -w "%{http_code}" -X POST \
-       -H "Content-Type: application/json" \
-       -H "Authorization: Bearer $API_TOKEN" \
-       -d "$JSON_PAYLOAD" \
-       "${API_SCHEME}://$WG_SERVER_ENDPOINT:$API_PORT/register"); then
-      error "Failed to reach registration API"
-      error "Response: $(cat /tmp/wg_api_response.txt 2>/dev/null)"
-      rm -f /tmp/wg_api_response.txt
-      exit 1
-  fi
-
-  if [[ "$HTTP_STATUS" == "200" ]]; then
-      log "Registered successfully on Server!"
-  else
-      error "Failed to register. HTTP Status: $HTTP_STATUS"
-      error "Response: $(cat /tmp/wg_api_response.txt 2>/dev/null)"
-      rm -f /tmp/wg_api_response.txt
-      exit 1
-  fi
-  rm -f /tmp/wg_api_response.txt
-}
 # ---------- Write config ----------
 write_config() {
   uplink="$1"
@@ -272,7 +220,7 @@ UPLINK=$(find_5g_uplink)
 install_wireguard
 generate_keys
 prompt_server
-register_client
+
 write_config "$UPLINK"
 enable_wg
 summary

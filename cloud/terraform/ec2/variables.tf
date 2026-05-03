@@ -76,47 +76,6 @@ variable "common_tags" {
   }
 }
 
-variable "wg_api_token" {
-  description = "Security token for WireGuard Client registration API. Must be provided via TF_VAR_wg_api_token or tfvars."
-  type        = string
-  sensitive   = true
-  nullable    = false
-
-  validation {
-    condition     = length(var.wg_api_token) >= 32
-    error_message = "wg_api_token must be at least 32 characters."
-  }
-}
-
-variable "wg_api_port" {
-  description = "Internal localhost port for the registration API application"
-  type        = number
-  default     = 5000
-}
-
-variable "wg_api_cidr" {
-  description = "CIDR allowed to call the TLS reverse proxy for the Registration API. Must be restricted to a known source range."
-  type        = string
-  default     = "127.0.0.1/32"
-}
-
-variable "enable_registration_api" {
-  description = "Whether to expose the registration API through the instance security group"
-  type        = bool
-  default     = false
-}
-
-variable "registration_api_tls_port" {
-  description = "Public TLS port exposed by the reverse proxy in front of the registration API"
-  type        = number
-  default     = 443
-}
-
-variable "registration_api_domain" {
-  description = "Optional public hostname or Elastic IP presented by the TLS reverse proxy certificate bootstrap. Leave empty to use the EC2 Elastic IP automatically."
-  type        = string
-  default     = ""
-}
 
 variable "grafana_admin_password" {
   description = "Grafana admin password for the monitoring stack"

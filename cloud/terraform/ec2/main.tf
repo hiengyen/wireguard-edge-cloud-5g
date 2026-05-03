@@ -49,22 +49,6 @@ resource "aws_vpc_security_group_ingress_rule" "wireguard_udp" {
   })
 }
 
-# Registration API — TCP ingress
-resource "aws_vpc_security_group_ingress_rule" "wg_api" {
-  count = var.enable_registration_api ? 1 : 0
-
-  security_group_id = aws_security_group.wireguard.id
-  description       = "WireGuard Registration API TLS reverse proxy"
-  from_port         = var.registration_api_tls_port
-  to_port           = var.registration_api_tls_port
-  ip_protocol       = "tcp"
-  cidr_ipv4         = var.wg_api_cidr
-
-  tags = merge(var.common_tags, {
-    Name = "${var.project_name}-wg-api-ingress"
-  })
-}
-
 # SSH — limit by admin IP
 resource "aws_vpc_security_group_ingress_rule" "ssh" {
   for_each = toset(var.admin_ssh_cidr)
@@ -130,10 +114,6 @@ resource "terraform_data" "validate_admin_ssh_cidr" {
       error_message = "admin_ssh_cidr must contain at least one trusted /32 or office CIDR."
     }
 
-    precondition {
-      condition     = !var.enable_registration_api || trimspace(local.registration_api_host) != ""
-      error_message = "Unable to determine a public host for the registration API."
-    }
   }
 }
 
@@ -146,70 +126,6 @@ resource "aws_vpc_security_group_egress_rule" "all_outbound" {
 
   tags = merge(var.common_tags, {
     Name = "${var.project_name}-all-egress"
-  })
-}
-
-###############################################################
-# Secrets Manager — API Token (never stored in user_data)
-###############################################################
-
-resource "aws_secretsmanager_secret" "wg_api_token" {
-  name                    = "${var.project_name}/wg-api-token"
-  description             = "WireGuard Registration API authentication token"
-  recovery_window_in_days = 0 # Allow immediate deletion on terraform destroy
-
-  tags = merge(var.common_tags, {
-    Name = "${var.project_name}-wg-api-token"
-  })
-}
-
-resource "aws_secretsmanager_secret_version" "wg_api_token" {
-  secret_id     = aws_secretsmanager_secret.wg_api_token.id
-  secret_string = var.wg_api_token
-}
-
-###############################################################
-# IAM Role — EC2 reads from Secrets Manager only
-###############################################################
-
-resource "aws_iam_role" "wireguard_ec2" {
-  name = "${var.project_name}-wireguard-ec2-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect    = "Allow"
-      Principal = { Service = "ec2.amazonaws.com" }
-      Action    = "sts:AssumeRole"
-    }]
-  })
-
-  tags = merge(var.common_tags, {
-    Name = "${var.project_name}-wireguard-ec2-role"
-  })
-}
-
-resource "aws_iam_role_policy" "read_wg_api_secret" {
-  name = "${var.project_name}-read-wg-api-secret"
-  role = aws_iam_role.wireguard_ec2.id
-
-  # Least-privilege: only GetSecretValue on this specific secret
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect   = "Allow"
-      Action   = ["secretsmanager:GetSecretValue"]
-      Resource = aws_secretsmanager_secret.wg_api_token.arn
-    }]
-  })
-}
-
-resource "aws_iam_instance_profile" "wireguard_ec2" {
-  name = "${var.project_name}-wireguard-ec2-profile"
-  role = aws_iam_role.wireguard_ec2.name
-
-  tags = merge(var.common_tags, {
-    Name = "${var.project_name}-wireguard-ec2-profile"
   })
 }
 
@@ -231,10 +147,6 @@ resource "aws_eip_association" "wireguard" {
   allocation_id = aws_eip.wireguard.id
 }
 
-locals {
-  registration_api_host = trimspace(var.registration_api_domain) != "" ? trimspace(var.registration_api_domain) : aws_eip.wireguard.public_ip
-}
-
 ###############################################################
 # EC2 Instance
 ###############################################################
@@ -245,7 +157,6 @@ resource "aws_instance" "wireguard" {
   key_name               = var.key_name
   subnet_id              = var.subnet_id
   vpc_security_group_ids = [aws_security_group.wireguard.id]
-  iam_instance_profile   = aws_iam_instance_profile.wireguard_ec2.name
 
   # Enable temporary public IP (before assigning EIP)
   associate_public_ip_address = true
@@ -262,15 +173,9 @@ resource "aws_instance" "wireguard" {
   }
 
   # User data — automatically install WireGuard on startup
-  # Token is fetched at boot from Secrets Manager (NOT embedded in user_data)
   user_data_base64 = base64encode(templatefile("${path.module}/user_data.sh", {
     wireguard_port            = var.wireguard_port
     wireguard_network         = var.wireguard_network
-    wg_api_port               = var.wg_api_port
-    enable_registration_api   = var.enable_registration_api
-    registration_api_tls_port = var.registration_api_tls_port
-    registration_api_host     = local.registration_api_host
-    secret_id                 = aws_secretsmanager_secret.wg_api_token.name
   }))
 
   metadata_options {

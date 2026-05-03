@@ -8,7 +8,7 @@
 
 Secure Edge–Cloud connectivity using **WireGuard VPN over 5G** for distributed systems.
 
-This project demonstrates a lightweight, secure, and scalable networking architecture connecting **Edge devices and Cloud infrastructure** through a **5G private overlay network**, utilizing Zero-touch auto-registration, infrastructure monitoring, and system hardening.
+This project demonstrates a lightweight, secure, and scalable networking architecture connecting **Edge devices and Cloud infrastructure** through a **5G private overlay network**, utilizing manual peer registration, infrastructure monitoring, and system hardening.
 
 ---
 
@@ -21,7 +21,7 @@ The platform integrates:
 
 - Infrastructure observability (Prometheus + Loki + Grafana, with Edge Alloy log forwarding)
 - System hardening and security best practices
-- Auto-Registration API for seamless Zero-touch VPN enrollment
+- Secure manual VPN peer registration
 
 Default overlay network values in this repository are standardized to `10.8.0.0/24`.
 The multi-peer model used here assigns `/32` host routes to each edge peer while keeping the server interface on `10.8.0.1/24`.
@@ -34,7 +34,6 @@ The multi-peer model used here assigns `/32` host routes to each edge peer while
                 │     Cloud Gateway      │
                 │ (Amazon Linux 2023 EC2)│
                 │ - WireGuard Server     │
-                │ - Registration API     │
                 │ - Prometheus/Loki      │
                 │ - Grafana              │
                 └──────────┬─────────────┘
@@ -84,7 +83,7 @@ wireguard-edge-cloud-5g/
 ## 🔐 Key Features
 
 - **5G QMI Network Automation:** Dynamically locates and connects Quectel RM502Q-GL via raw IP.
-- **Zero-Touch VPN Registration:** Edge nodes can register through a token-secured API, but API ingress is disabled by default and should be exposed only behind trusted CIDRs or TLS.
+- **Secure Manual Registration:** Edge nodes are registered securely by explicitly adding their public keys to the cloud gateway.
 - **Multi-Peer Addressing:** The server owns `10.8.0.1/24`, while each edge peer gets a unique `/32` address such as `10.8.0.2/32`.
 - **Infrastructure as Code (IaC):** Cloud environments are 100% automated using Terraform.
 - **Observability:** Prometheus pulls metrics, Alloy forwards edge journald logs to Loki, and Grafana provisions Prometheus/Loki data sources from YAML.
@@ -132,19 +131,9 @@ terraform plan -out=tfplan
 terraform apply "tfplan"
 ```
 
-_Prepare a strong `TF_VAR_wg_api_token` before `terraform apply`. Terraform will output the server endpoint, but not the token._
-
 The default example uses:
 - Overlay network: `10.8.0.0/24`
 - Sample edge client IP: `10.8.0.2/32`
-- Registration API: disabled by default
-- Public registration API TLS endpoint: automatically uses the EC2 Elastic IP when `registration_api_domain` is empty
-
-You can set `registration_api_domain` to either:
-- a public hostname such as `vpn-api.example.com`
-- or the EC2 Elastic IP directly
-
-If you leave `registration_api_domain` empty, Terraform will automatically use the EC2 Elastic IP.
 
 ### 2. Edge Physical Connection
 
@@ -166,17 +155,15 @@ cd edge/5g-wwan/docker
 sudo docker compose up -d
 ```
 
-### 3. Edge VPN Auto-Registration
+### 3. Edge VPN Manual Registration
 
-Once connected to the internet, join the VPN overlay:
+Once connected to the internet, join the VPN overlay by running the client setup script:
 
 ```bash
 sudo ./edge/vpn/setup-wg-client.sh
 ```
 
-_When prompted, use auto-registration only if you intentionally enabled API ingress and restricted it to trusted CIDRs or placed it behind TLS._
-
-The cloud bootstrap currently provisions a self-signed certificate for the reverse proxy so the API is encrypted immediately. Replace it with a trusted certificate before production rollout.
+Follow the prompts to generate a client public key. Then, SSH into your cloud gateway and add the peer manually using `sudo wg set wg0 peer <client-public-key> allowed-ips 10.8.0.x/32` and `sudo wg-quick save wg0`.
 
 The client should keep:
 - `Address = 10.8.0.x/32`
@@ -287,7 +274,7 @@ sudo NODE_EXPORTER_VERSION=<version> ./shared/scripts/install-node-exporter.sh
 
 Kết nối bảo mật an toàn giữa Edge và Cloud thông qua **WireGuard VPN trên sóng mạng 5G** dành cho các hệ thống phân tán.
 
-Dự án này là minh chứng về việc xây dựng kiến trúc mạng nhẹ, bảo mật và dễ mở rộng kết nối giữa các **Thiết bị biên (Edge)** và **Máy chủ đám mây (Cloud)** thông qua **mạng ảo nội bộ trên nền tảng 5G**, tích hợp khả năng tự động đăng ký (Zero-touch), giám sát cơ sở hạ tầng và làm cứng (hardening) hệ thống.
+Dự án này là minh chứng về việc xây dựng kiến trúc mạng nhẹ, bảo mật và dễ mở rộng kết nối giữa các **Thiết bị biên (Edge)** và **Máy chủ đám mây (Cloud)** thông qua **mạng ảo nội bộ trên nền tảng 5G**, tích hợp quản lý peer thủ công an toàn, giám sát cơ sở hạ tầng và làm cứng (hardening) hệ thống.
 
 ---
 
@@ -300,7 +287,7 @@ Nền tảng này tích hợp sẵn:
 
 - Phân hệ quan sát hạ tầng và log (Prometheus + Loki + Grafana, Edge dùng Alloy đẩy log).
 - Áp dụng các tiêu chuẩn Làm cứng hệ thống/Bảo mật lõi (System Hardening).
-- Auto-Registration API hỗ trợ tính năng gia nhập mạng VPN tự động (Zero-touch).
+- Đăng ký VPN thủ công đảm bảo mô hình Zero-Trust.
 
 Các giá trị overlay mặc định trong repo này đã được chuẩn hoá về `10.8.0.0/24`.
 Mô hình multi-peer trong repo dùng `10.8.0.1/24` cho server và cấp IP `/32` riêng cho từng edge peer.
@@ -313,7 +300,6 @@ Mô hình multi-peer trong repo dùng `10.8.0.1/24` cho server và cấp IP `/32
                 │     Cloud Gateway      │
                 │ (Amazon Linux 2023 EC2)│
                 │ - Dịch vụ WireGuard    │
-                │ - Registration API     │
                 │ - Prometheus/Loki      │
                 │ - Grafana              │
                 └──────────┬─────────────┘
@@ -363,7 +349,7 @@ wireguard-edge-cloud-5g/
 ## 🔐 Tính Năng Chính
 
 - **Tự động Giao tiếp 5G QMI:** Định danh và kết nối tự động tới modem Quectel RM502Q-GL qua chế độ raw IP, hạn chế lỗi gán cứng `/dev/cdc-wdm0`.
-- **Đăng Ký VPN Tự Động (Zero-Touch):** Edge nodes có thể đăng ký bằng API dùng token, nhưng API ingress bị tắt mặc định và chỉ nên bật khi đã giới hạn CIDR tin cậy hoặc đặt sau TLS.
+- **Đăng Ký VPN Thủ Công:** Việc thêm các Edge node phải được thực hiện thông qua khai báo Public Key trên Cloud Gateway, đảm bảo tính bảo mật tối đa.
 - **Mô Hình Multi-Peer:** Server dùng `10.8.0.1/24`, còn mỗi edge peer nhận một IP `/32` riêng như `10.8.0.2/32`.
 - **Hạ tầng dưới dạng Mã (IaC):** Server rỗng được khởi tạo và cài cắm 100% tự động qua môi trường Terraform.
 - **Khả năng Quan sát (Observability):** Prometheus thu metrics, Alloy đẩy journald log từ edge về Loki, và Grafana tự provision datasource Prometheus/Loki bằng YAML.
@@ -408,19 +394,9 @@ terraform plan -out=tfplan
 terraform apply "tfplan"
 ```
 
-_Hãy chuẩn bị `TF_VAR_wg_api_token` đủ mạnh trước khi chạy `terraform apply`. Terraform chỉ in endpoint, không in token._
-
 Ví dụ mặc định hiện tại dùng:
 - Overlay network: `10.8.0.0/24`
 - Sample edge client IP: `10.8.0.2/32`
-- Registration API: tắt mặc định
-- Public registration API TLS endpoint: tự dùng Elastic IP của EC2 khi `registration_api_domain` để trống
-
-Bạn có thể đặt `registration_api_domain` theo một trong hai cách:
-- hostname public như `vpn-api.example.com`
-- hoặc dùng trực tiếp Elastic IP của EC2
-
-Nếu để trống `registration_api_domain`, Terraform sẽ tự dùng Elastic IP của EC2.
 
 ### 2. Kết nối Mạng phần cứng
 
@@ -444,17 +420,15 @@ cd edge/5g-wwan/docker
 sudo docker compose up -d
 ```
 
-### 3. Đăng ký Tự động Cấu Hình VPN
+### 3. Đăng ký Cấu Hình VPN Thủ Công
 
-Sau khi có kết nối Internet do SIM cấp, khởi chạy đường hầm ảo vào hệ thống:
+Sau khi có kết nối Internet do SIM cấp, tạo cấu hình và tham gia vào mạng:
 
 ```bash
 sudo ./edge/vpn/setup-wg-client.sh
 ```
 
-_Chỉ nên chọn `Y` khi bạn đã chủ động bật API ingress và giới hạn nó về CIDR tin cậy hoặc đặt sau TLS._
-
-Bootstrap cloud hiện tạo sẵn chứng chỉ self-signed để reverse proxy có TLS ngay từ đầu. Trước khi đưa vào production thật, hãy thay bằng chứng chỉ đáng tin cậy.
+Thực hiện theo các bước trên màn hình để tạo Client Public Key. Sau đó, SSH lên Cloud Gateway và thêm Peer thủ công bằng lệnh `sudo wg set wg0 peer <client-public-key> allowed-ips 10.8.0.x/32` và lưu lại bằng `sudo wg-quick save wg0`.
 
 Client nên giữ:
 - `Address = 10.8.0.x/32`
