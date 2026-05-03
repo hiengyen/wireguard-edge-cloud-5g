@@ -1,17 +1,14 @@
-FROM debian:bullseye-slim
-
-ENV DEBIAN_FRONTEND=noninteractive
+FROM alpine:latest
 
 # Install core networking dependencies for QMI, DHCP, and Ping
-RUN apt-get update -yqq && \
-    apt-get install -yq --no-install-recommends \
+# udhcpc is provided by busybox natively in Alpine
+RUN apk add --no-cache \
+    bash \
     libqmi-utils \
-    udhcpc \
     iproute2 \
-    iputils-ping \
-    udev \
-    kmod \
-    && rm -rf /var/lib/apt/lists/*
+    iputils \
+    eudev \
+    kmod
 
 WORKDIR /opt/wwan
 
