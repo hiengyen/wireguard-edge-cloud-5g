@@ -54,6 +54,11 @@ Update `.env` with your real values:
 - `TF_VAR_wireguard_network`
 - `TF_VAR_wireguard_client_cidr`
 - `GRAFANA_ADMIN_PASSWORD`
+- `PROMETHEUS_VERSION`
+- `GRAFANA_VERSION`
+- `LOKI_VERSION`
+- `LOKI_PORT`
+- `ALLOY_LOKI_URL`
 - `MONITORING_BIND_ADDRESS`
 - `ALLOW_MONITORING_OVER_WIREGUARD`
 - `WIREGUARD_PORT`
@@ -69,6 +74,8 @@ Recommended base values:
 - `WIREGUARD_ALLOWED_IPS=10.8.0.0/24`
 - `WIREGUARD_API_SCHEME=https`
 - `MONITORING_BIND_ADDRESS=127.0.0.1`
+- `LOKI_PORT=3100`
+- `ALLOY_LOKI_URL=http://10.8.0.1:3100/loki/api/v1/push`
 - `ALLOW_MONITORING_OVER_WIREGUARD=false`
 - `EDGE_EXTRA_TCP_PORTS='443 5201'`
 - `TF_VAR_admin_ssh_cidr='["<your-public-ip>/32"]'`
@@ -190,15 +197,17 @@ Verify:
 ```bash
 sudo docker ps
 curl http://127.0.0.1:9090/-/healthy
+curl http://127.0.0.1:3100/ready
 curl http://127.0.0.1:3000/api/health
 ```
 
 Notes:
-- Prometheus and Grafana bind to `127.0.0.1` by default in this repository
+- Prometheus, Loki, and Grafana bind to `127.0.0.1` by default in this repository
 - To reach them through WireGuard, set `MONITORING_BIND_ADDRESS=10.8.0.1` before starting the stack
 - Use SSH tunnel or a separate reverse proxy if you need remote operator access
-- The repository currently pins Prometheus `v3.11.2` and Grafana `13.0.1`
-- AWS Security Groups do not need additional `3000/tcp` or `9090/tcp` ingress for WireGuard-only access, because the traffic arrives as encrypted UDP on the WireGuard port and is decrypted locally on the EC2 instance
+- Grafana provisions the Prometheus and Loki data sources from `cloud/monitoring/grafana/provisioning/datasources/datasources.yml`
+- The repository currently pins Prometheus `v3.11.2`, Grafana `13.0.1`, and Loki `3.7.0`
+- AWS Security Groups do not need additional `3000/tcp`, `9090/tcp`, or `3100/tcp` ingress for WireGuard-only access, because the traffic arrives as encrypted UDP on the WireGuard port and is decrypted locally on the EC2 instance
 
 To access the web UIs through SSH tunneling from your local machine:
 
@@ -206,6 +215,7 @@ To access the web UIs through SSH tunneling from your local machine:
 ssh -i <your-key.pem> \
   -L 3000:127.0.0.1:3000 \
   -L 9090:127.0.0.1:9090 \
+  -L 3100:127.0.0.1:3100 \
   -L 9100:127.0.0.1:9100 \
   ec2-user@<elastic-ip>
 ```
@@ -213,6 +223,7 @@ ssh -i <your-key.pem> \
 Then open:
 - Grafana: `http://127.0.0.1:3000`
 - Prometheus: `http://127.0.0.1:9090`
+- Loki readiness: `http://127.0.0.1:3100/ready`
 - Node Exporter metrics: `http://127.0.0.1:9100/metrics`
 
 ## 7. Prepare the Edge Node
@@ -386,7 +397,38 @@ Expected results:
 - The cloud node reaches the edge node over the overlay address
 - Prometheus can scrape Node Exporter over the overlay network
 
-## 10. Shared Hardening and Monitoring Agents
+## 10. Edge Log Forwarding with Alloy
+
+Run Alloy on the edge node after the WireGuard tunnel can reach the cloud overlay address.
+The default Alloy config reads journald and pushes logs to Loki at `http://10.8.0.1:3100/loki/api/v1/push`.
+For this default endpoint to work, start the cloud monitoring stack with `MONITORING_BIND_ADDRESS=10.8.0.1` and allow monitoring over WireGuard in `hardening.sh`.
+
+```bash
+set -a && . ./.env && set +a
+sudo -E ./edge/observability/alloy/install-alloy.sh
+```
+
+Override the push endpoint if your cloud WireGuard IP or Loki port differs:
+
+```bash
+sudo ALLOY_LOKI_URL=http://10.8.0.1:3100/loki/api/v1/push ./edge/observability/alloy/install-alloy.sh
+```
+
+Verify Alloy:
+
+```bash
+sudo systemctl status alloy --no-pager
+sudo journalctl -u alloy --no-pager
+```
+
+In Grafana, open Explore and select the provisioned `Loki` data source.
+A useful first query is:
+
+```logql
+{job="edge-journal"}
+```
+
+## 11. Shared Hardening and Monitoring Agents
 
 Run the shared scripts on both environments as needed:
 
@@ -412,11 +454,11 @@ curl http://127.0.0.1:9100/metrics | head
 Operational notes:
 - `hardening.sh` opens `WIREGUARD_PORT/udp`, but it does not open the Registration API TLS port automatically
 - On edge hosts using `ufw`, `hardening.sh` also opens the extra inbound TCP ports listed in `EDGE_EXTRA_TCP_PORTS`, default `443 5201`
-- To expose Grafana, Prometheus, and Node Exporter only through the overlay, set `ALLOW_MONITORING_OVER_WIREGUARD=true` and `WIREGUARD_NETWORK=10.8.0.0/24` before running `hardening.sh`
+- To expose Grafana, Prometheus, Loki, and Node Exporter only through the overlay, set `ALLOW_MONITORING_OVER_WIREGUARD=true` and `WIREGUARD_NETWORK=10.8.0.0/24` before running `hardening.sh`
 - If you expose the Registration API and also run `hardening.sh` on the cloud host, add access for `443/tcp` in `firewalld`
 - The cloud Security Group also allows `ICMPv4` so you can test reachability with `ping`
 
-## 11. Quick Troubleshooting
+## 12. Quick Troubleshooting
 
 Useful checks on the cloud node:
 
@@ -428,12 +470,14 @@ sudo systemctl status docker --no-pager
 sudo docker ps
 sudo systemctl status node_exporter --no-pager
 curl http://127.0.0.1:9100/metrics | head
+curl http://127.0.0.1:3100/ready
 ```
 
 Useful checks on the edge node:
 
 ```bash
 sudo journalctl -u wwan.service -u wwan-monitor.service -f
+sudo journalctl -u alloy -f
 sudo wg show
 ip addr
 ```
@@ -443,3 +487,4 @@ Common causes of failure:
 - Entering API port `5000` from the client even though the public endpoint is `443`
 - Using HTTPS against the bootstrap self-signed certificate without replacing or trusting that certificate
 - Forgetting to re-run `terraform apply` after enabling Registration API ingress
+- Starting Alloy before Loki is reachable at `ALLOY_LOKI_URL`

@@ -19,7 +19,7 @@ This project demonstrates how to deploy a **Zero-Trust secure tunnel** between E
 
 The platform integrates:
 
-- Infrastructure monitoring (Prometheus + Grafana)
+- Infrastructure observability (Prometheus + Loki + Grafana, with Edge Alloy log forwarding)
 - System hardening and security best practices
 - Auto-Registration API for seamless Zero-touch VPN enrollment
 
@@ -35,7 +35,8 @@ The multi-peer model used here assigns `/32` host routes to each edge peer while
                 │ (Amazon Linux 2023 EC2)│
                 │ - WireGuard Server     │
                 │ - Registration API     │
-                │ - Prometheus/Grafana   │
+                │ - Prometheus/Loki      │
+                │ - Grafana              │
                 └──────────┬─────────────┘
                            │
              Encrypted Tunnel (WireGuard)
@@ -47,6 +48,7 @@ The multi-peer model used here assigns `/32` host routes to each edge peer while
                 │ - 5G WWAN Quectel      │
                 │ - WireGuard Client     │
                 │ - Node Exporter        │
+                │ - Grafana Alloy        │
                 └────────────────────────┘
 
 ---
@@ -61,7 +63,7 @@ wireguard-edge-cloud-5g/
 │   └── COMMANDS.md           # Common command reference
 ├── cloud/                    # Cloud Gateway components
 │   ├── terraform/ec2/        # AWS IaC (AWS Provider v6, EC2, SG, Auto-install WG & API)
-│   ├── monitoring/           # Prometheus & Grafana docker infrastructure
+│   ├── monitoring/           # Prometheus, Loki, and Grafana docker infrastructure
 │   └── vpn-reference/        # Reference configuration files
 ├── edge/                     # Edge Node components
 │   ├── 5g-wwan/              # Cellular network physical layer scripts
@@ -69,6 +71,7 @@ wireguard-edge-cloud-5g/
 │   │   ├── docker/           # Alternative: Containerized WWAN deployment
 │   │   ├── install.sh        # Systemd installation script
 │   │   └── uninstall.sh      # Cleanup automation
+│   ├── observability/alloy/  # Edge Alloy journald-to-Loki pipeline
 │   └── vpn/                  # VPN Overlay network layer
 │       ├── setup-wg-client.sh    # Key generation & Zero-Touch cloud auto-registration
 │       └── uninstall-wg-client.sh# Remove the local edge WireGuard client setup
@@ -84,7 +87,7 @@ wireguard-edge-cloud-5g/
 - **Zero-Touch VPN Registration:** Edge nodes can register through a token-secured API, but API ingress is disabled by default and should be exposed only behind trusted CIDRs or TLS.
 - **Multi-Peer Addressing:** The server owns `10.8.0.1/24`, while each edge peer gets a unique `/32` address such as `10.8.0.2/32`.
 - **Infrastructure as Code (IaC):** Cloud environments are 100% automated using Terraform.
-- **Observability:** Prometheus and Grafana dashboards actively pull metrics via the private `10.8.0.0/24` tunnel.
+- **Observability:** Prometheus pulls metrics, Alloy forwards edge journald logs to Loki, and Grafana provisions Prometheus/Loki data sources from YAML.
 - **Hardening:** Best-practice security including OS-aware firewalling (`ufw` on Armbian/Debian, `firewalld` on Amazon Linux 2023), Fail2Ban, and key-only SSH.
 
 ## ⚙️ Environment File
@@ -97,6 +100,7 @@ Important groups:
 - `TF_VAR_*`: Terraform inputs for cloud provisioning
 - `GRAFANA_ADMIN_PASSWORD`: password used by `cloud/monitoring/docker-compose.yml`
 - `MONITORING_BIND_ADDRESS`, `ALLOW_MONITORING_OVER_WIREGUARD`: monitoring access mode
+- `PROMETHEUS_VERSION`, `GRAFANA_VERSION`, `LOKI_VERSION`, `LOKI_PORT`, `ALLOY_LOKI_URL`: observability runtime settings
 - `WIREGUARD_*`: edge VPN client runtime defaults
 - `WWAN_APN`, `SSH_ADMIN_PORT`, `EDGE_EXTRA_TCP_PORTS`: edge WWAN and hardening runtime settings
 
@@ -211,7 +215,7 @@ sudo ./shared/scripts/install-node-exporter.sh
 If you use a non-default WireGuard port, run `hardening.sh` with `WIREGUARD_PORT=<port>`.
 On the edge node, the default extra inbound TCP rules are `443` and `5201` through `EDGE_EXTRA_TCP_PORTS`. This repository does not add `8006` or `64203`.
 
-For Grafana, set a non-default password first, then start the monitoring stack:
+For Grafana, set a non-default password first, then start the monitoring stack. This starts Prometheus, Loki, and Grafana; Grafana provisions the Prometheus and Loki data sources from YAML.
 
 ```bash
 set -a && . ./.env && set +a
@@ -219,7 +223,7 @@ cd cloud/monitoring
 sudo docker compose up -d
 ```
 
-If you want to reach Grafana and Prometheus through the WireGuard overlay instead of SSH tunneling, set:
+If you want to reach Grafana, Prometheus, and Loki through the WireGuard overlay instead of SSH tunneling, set:
 
 ```bash
 MONITORING_BIND_ADDRESS=10.8.0.1
@@ -234,7 +238,7 @@ cd cloud/monitoring
 sudo docker compose up -d
 ```
 
-You do not need extra AWS Security Group ingress for `3000/tcp`, `9090/tcp`, or `9100/tcp` in that model. Only the WireGuard UDP port is exposed publicly; Grafana, Prometheus, and Node Exporter are reached after traffic is decrypted on the EC2 instance.
+You do not need extra AWS Security Group ingress for `3000/tcp`, `9090/tcp`, `3100/tcp`, or `9100/tcp` in that model. Only the WireGuard UDP port is exposed publicly; Grafana, Prometheus, Loki, and Node Exporter are reached after traffic is decrypted on the EC2 instance.
 
 To access the monitoring web UIs through SSH tunneling from your local machine:
 
@@ -242,6 +246,7 @@ To access the monitoring web UIs through SSH tunneling from your local machine:
 ssh -i <your-key.pem> \
   -L 3000:127.0.0.1:3000 \
   -L 9090:127.0.0.1:9090 \
+  -L 3100:127.0.0.1:3100 \
   -L 9100:127.0.0.1:9100 \
   ec2-user@<EC2_PUBLIC_IP>
 ```
@@ -249,7 +254,17 @@ ssh -i <your-key.pem> \
 Then open:
 - Grafana: `http://127.0.0.1:3000`
 - Prometheus: `http://127.0.0.1:9090`
+- Loki readiness: `http://127.0.0.1:3100/ready`
 - Node Exporter metrics: `http://127.0.0.1:9100/metrics`
+
+To forward edge logs to Loki with Alloy after WireGuard is up:
+
+```bash
+set -a && . ./.env && set +a
+sudo -E ./edge/observability/alloy/install-alloy.sh
+```
+
+The default Alloy endpoint expects cloud Loki at `10.8.0.1:3100`, so bind the monitoring stack to the WireGuard address before using it.
 
 To verify Node Exporter after installation:
 
@@ -283,7 +298,7 @@ Dự án này cho thấy cách triển khai một **đường hầm bảo mật 
 
 Nền tảng này tích hợp sẵn:
 
-- Phân hệ Giám sát Hạ tầng (Prometheus + Grafana).
+- Phân hệ quan sát hạ tầng và log (Prometheus + Loki + Grafana, Edge dùng Alloy đẩy log).
 - Áp dụng các tiêu chuẩn Làm cứng hệ thống/Bảo mật lõi (System Hardening).
 - Auto-Registration API hỗ trợ tính năng gia nhập mạng VPN tự động (Zero-touch).
 
@@ -299,7 +314,8 @@ Mô hình multi-peer trong repo dùng `10.8.0.1/24` cho server và cấp IP `/32
                 │ (Amazon Linux 2023 EC2)│
                 │ - Dịch vụ WireGuard    │
                 │ - Registration API     │
-                │ - Prometheus/Grafana   │
+                │ - Prometheus/Loki      │
+                │ - Grafana              │
                 └──────────┬─────────────┘
                            │
              Đường hầm mã hóa (WireGuard)
@@ -311,6 +327,7 @@ Mô hình multi-peer trong repo dùng `10.8.0.1/24` cho server và cấp IP `/32
                 │ - 5G WWAN Quectel      │
                 │ - Client WireGuard     │
                 │ - Node Exporter        │
+                │ - Grafana Alloy        │
                 └────────────────────────┘
 
 ---
@@ -325,7 +342,7 @@ wireguard-edge-cloud-5g/
 │   └── COMMANDS.md           # Tổng hợp lệnh hay dùng
 ├── cloud/                    # Phân hệ Máy chủ Cổng kết nối
 │   ├── terraform/ec2/        # Triển khai tự động AWS (Provider v6, EC2, tự động tải WG & API)
-│   ├── monitoring/           # Cụm Docker cho Prometheus & Grafana
+│   ├── monitoring/           # Cụm Docker cho Prometheus, Loki và Grafana
 │   └── vpn-reference/        # Nơi lưu cấu hình tham chiếu của Server
 ├── edge/                     # Phân hệ Thiết bị Đầu cuối
 │   ├── 5g-wwan/              # Kịch bản giao tiếp phần cứng mạng di động
@@ -333,6 +350,7 @@ wireguard-edge-cloud-5g/
 │   │   ├── docker/           # Triển khai giải pháp thay thế qua Docker Container
 │   │   ├── install.sh        # Tiện ích tự động cài đặt Systemd Service
 │   │   └── uninstall.sh      # Tiện ích dọn dẹp hệ thống
+│   ├── observability/alloy/  # Pipeline Alloy đọc journald và đẩy về Loki
 │   └── vpn/                  # Tầng mạng ảo (Overlay network)
 │       ├── setup-wg-client.sh    # Sinh khóa mã hóa & Gia nhập mạng tự động không chạm
 │       └── uninstall-wg-client.sh# Gỡ cấu hình WireGuard client cục bộ trên edge
@@ -348,7 +366,7 @@ wireguard-edge-cloud-5g/
 - **Đăng Ký VPN Tự Động (Zero-Touch):** Edge nodes có thể đăng ký bằng API dùng token, nhưng API ingress bị tắt mặc định và chỉ nên bật khi đã giới hạn CIDR tin cậy hoặc đặt sau TLS.
 - **Mô Hình Multi-Peer:** Server dùng `10.8.0.1/24`, còn mỗi edge peer nhận một IP `/32` riêng như `10.8.0.2/32`.
 - **Hạ tầng dưới dạng Mã (IaC):** Server rỗng được khởi tạo và cài cắm 100% tự động qua môi trường Terraform.
-- **Khả năng Quan sát (Observability):** Dashboard Grafana và trạm trung chuyển Prometheus tự động cào metrics (sức khoẻ phần cứng) bọc kín theo luồng đường hầm `10.8.0.0/24`.
+- **Khả năng Quan sát (Observability):** Prometheus thu metrics, Alloy đẩy journald log từ edge về Loki, và Grafana tự provision datasource Prometheus/Loki bằng YAML.
 - **Bảo Mật (Hardening):** Áp dụng hardening theo môi trường đích: `ufw` cho Armbian/Debian ở Edge, `firewalld` cho Amazon Linux 2023 ở Cloud, kết hợp Fail2Ban và chỉ cho phép SSH bằng khoá.
 
 ## ⚙️ File Môi Trường
@@ -360,6 +378,7 @@ Các nhóm biến chính:
 - `TF_VAR_*`: đầu vào Terraform cho phần cloud
 - `GRAFANA_ADMIN_PASSWORD`: mật khẩu dùng cho `cloud/monitoring/docker-compose.yml`
 - `MONITORING_BIND_ADDRESS`, `ALLOW_MONITORING_OVER_WIREGUARD`: chế độ truy cập monitoring
+- `PROMETHEUS_VERSION`, `GRAFANA_VERSION`, `LOKI_VERSION`, `LOKI_PORT`, `ALLOY_LOKI_URL`: tham số runtime cho observability
 - `WIREGUARD_*`: mặc định runtime cho edge VPN client
 - `WWAN_APN`, `SSH_ADMIN_PORT`, `EDGE_EXTRA_TCP_PORTS`: tham số runtime cho WWAN và hardening
 
@@ -474,7 +493,7 @@ sudo ./shared/scripts/install-node-exporter.sh
 Nếu bạn dùng cổng WireGuard khác `51820`, hãy chạy với biến `WIREGUARD_PORT=<port>`.
 Trên edge node, rule TCP vào mặc định bổ sung là `443` và `5201` qua biến `EDGE_EXTRA_TCP_PORTS`. Repo này không tự thêm `8006` hoặc `64203`.
 
-Đặt mật khẩu Grafana không mặc định rồi mới khởi chạy giám sát trên Cloud:
+Đặt mật khẩu Grafana không mặc định rồi mới khởi chạy giám sát trên Cloud. Stack này chạy Prometheus, Loki và Grafana; Grafana tự provision datasource Prometheus/Loki bằng YAML.
 
 ```bash
 set -a && . ./.env && set +a
@@ -482,7 +501,7 @@ cd cloud/monitoring
 sudo docker compose up -d
 ```
 
-Nếu muốn truy cập Grafana và Prometheus qua đường hầm WireGuard thay vì SSH tunnel, hãy đặt:
+Nếu muốn truy cập Grafana, Prometheus và Loki qua đường hầm WireGuard thay vì SSH tunnel, hãy đặt:
 
 ```bash
 MONITORING_BIND_ADDRESS=10.8.0.1
@@ -497,7 +516,7 @@ cd cloud/monitoring
 sudo docker compose up -d
 ```
 
-Mô hình này không cần mở thêm AWS Security Group cho `3000/tcp`, `9090/tcp`, hoặc `9100/tcp`. Bên ngoài chỉ mở cổng UDP của WireGuard; Grafana, Prometheus và Node Exporter chỉ được truy cập sau khi gói tin được giải mã trên chính EC2.
+Mô hình này không cần mở thêm AWS Security Group cho `3000/tcp`, `9090/tcp`, `3100/tcp`, hoặc `9100/tcp`. Bên ngoài chỉ mở cổng UDP của WireGuard; Grafana, Prometheus, Loki và Node Exporter chỉ được truy cập sau khi gói tin được giải mã trên chính EC2.
 
 Nếu muốn truy cập Web UI của monitoring qua SSH tunnel từ máy local:
 
@@ -505,6 +524,7 @@ Nếu muốn truy cập Web UI của monitoring qua SSH tunnel từ máy local:
 ssh -i <your-key.pem> \
   -L 3000:127.0.0.1:3000 \
   -L 9090:127.0.0.1:9090 \
+  -L 3100:127.0.0.1:3100 \
   -L 9100:127.0.0.1:9100 \
   ec2-user@<EC2_PUBLIC_IP>
 ```
@@ -512,7 +532,17 @@ ssh -i <your-key.pem> \
 Sau đó mở:
 - Grafana: `http://127.0.0.1:3000`
 - Prometheus: `http://127.0.0.1:9090`
+- Loki readiness: `http://127.0.0.1:3100/ready`
 - Node Exporter metrics: `http://127.0.0.1:9100/metrics`
+
+Đẩy log edge về Loki bằng Alloy sau khi WireGuard đã chạy:
+
+```bash
+set -a && . ./.env && set +a
+sudo -E ./edge/observability/alloy/install-alloy.sh
+```
+
+Endpoint Alloy mặc định cần Loki ở `10.8.0.1:3100`, nên hãy bind monitoring stack vào địa chỉ WireGuard trước khi dùng.
 
 Kiểm tra Node Exporter sau khi cài:
 

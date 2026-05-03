@@ -83,10 +83,13 @@ cd cloud/monitoring
 sudo docker compose up -d
 sudo docker ps
 curl http://127.0.0.1:9090/-/healthy
+curl http://127.0.0.1:3100/ready
 curl http://127.0.0.1:3000/api/health
 ```
 
-Expose Grafana and Prometheus through WireGuard only:
+Grafana loads Prometheus and Loki from `cloud/monitoring/grafana/provisioning/datasources/datasources.yml`.
+
+Expose Grafana, Prometheus, and Loki through WireGuard only:
 
 ```bash
 set -a && . ./.env && set +a
@@ -101,12 +104,13 @@ sudo docker compose up -d
 
 ## SSH Tunnels For Web UI
 
-Grafana, Prometheus, and Node Exporter:
+Grafana, Prometheus, Loki, and Node Exporter:
 
 ```bash
 ssh -i <your-key.pem> \
   -L 3000:127.0.0.1:3000 \
   -L 9090:127.0.0.1:9090 \
+  -L 3100:127.0.0.1:3100 \
   -L 9100:127.0.0.1:9100 \
   ec2-user@<EC2_PUBLIC_IP>
 ```
@@ -114,7 +118,32 @@ ssh -i <your-key.pem> \
 Open locally:
 - `http://127.0.0.1:3000`
 - `http://127.0.0.1:9090`
+- `http://127.0.0.1:3100/ready`
 - `http://127.0.0.1:9100/metrics`
+
+## Edge Alloy
+
+Install Alloy on the edge node after WireGuard can reach the cloud overlay address:
+the default `ALLOY_LOKI_URL` expects cloud Loki to be reachable at `10.8.0.1:3100`.
+
+```bash
+set -a && . ./.env && set +a
+sudo -E ./edge/observability/alloy/install-alloy.sh
+sudo systemctl status alloy --no-pager
+sudo journalctl -u alloy --no-pager
+```
+
+Override the Loki push endpoint if the cloud overlay IP or port is different:
+
+```bash
+sudo ALLOY_LOKI_URL=http://10.8.0.1:3100/loki/api/v1/push ./edge/observability/alloy/install-alloy.sh
+```
+
+Uninstall local Alloy service/config:
+
+```bash
+sudo ./edge/observability/alloy/uninstall-alloy.sh
+```
 
 ## Node Exporter
 
@@ -211,12 +240,14 @@ sudo systemctl status docker --no-pager
 sudo docker ps
 sudo systemctl status node_exporter --no-pager
 curl http://127.0.0.1:9100/metrics | head
+curl http://127.0.0.1:3100/ready
 ```
 
 Edge:
 
 ```bash
 sudo journalctl -u wwan.service -u wwan-monitor.service -f
+sudo journalctl -u alloy -f
 sudo wg show
 ip addr
 ```

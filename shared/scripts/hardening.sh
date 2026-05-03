@@ -17,6 +17,7 @@ EDGE_EXTRA_TCP_PORTS="${EDGE_EXTRA_TCP_PORTS:-443 5201}"
 ALLOW_MONITORING_OVER_WIREGUARD="${ALLOW_MONITORING_OVER_WIREGUARD:-false}"
 GRAFANA_PORT="${GRAFANA_PORT:-3000}"
 PROMETHEUS_PORT="${PROMETHEUS_PORT:-9090}"
+LOKI_PORT="${LOKI_PORT:-3100}"
 NODE_EXPORTER_PORT="${NODE_EXPORTER_PORT:-9100}"
 RESTART_DOCKER_IF_ACTIVE="${RESTART_DOCKER_IF_ACTIVE:-true}"
 OS_FAMILY=""
@@ -147,6 +148,7 @@ configure_firewall_debian() {
   if [[ "${ALLOW_MONITORING_OVER_WIREGUARD}" == "true" ]]; then
     ufw allow in on wg0 to any port "${GRAFANA_PORT}" proto tcp
     ufw allow in on wg0 to any port "${PROMETHEUS_PORT}" proto tcp
+    ufw allow in on wg0 to any port "${LOKI_PORT}" proto tcp
     ufw allow in on wg0 to any port "${NODE_EXPORTER_PORT}" proto tcp
   fi
   ufw --force enable
@@ -166,6 +168,7 @@ configure_firewall_amzn2023() {
   if [[ "${ALLOW_MONITORING_OVER_WIREGUARD}" == "true" ]]; then
     firewall-cmd --permanent --add-rich-rule="rule family=\"ipv4\" source address=\"${WIREGUARD_NETWORK}\" port protocol=\"tcp\" port=\"${GRAFANA_PORT}\" accept"
     firewall-cmd --permanent --add-rich-rule="rule family=\"ipv4\" source address=\"${WIREGUARD_NETWORK}\" port protocol=\"tcp\" port=\"${PROMETHEUS_PORT}\" accept"
+    firewall-cmd --permanent --add-rich-rule="rule family=\"ipv4\" source address=\"${WIREGUARD_NETWORK}\" port protocol=\"tcp\" port=\"${LOKI_PORT}\" accept"
     firewall-cmd --permanent --add-rich-rule="rule family=\"ipv4\" source address=\"${WIREGUARD_NETWORK}\" port protocol=\"tcp\" port=\"${NODE_EXPORTER_PORT}\" accept"
   fi
   firewall-cmd --reload
@@ -237,7 +240,7 @@ print_summary() {
     echo "- Edge Extra TCP Ports: ${EDGE_EXTRA_TCP_PORTS}"
   fi
   if [[ "${ALLOW_MONITORING_OVER_WIREGUARD}" == "true" ]]; then
-    echo "- Monitoring over WireGuard: Enabled for ${WIREGUARD_NETWORK} on ${GRAFANA_PORT}/tcp, ${PROMETHEUS_PORT}/tcp, and ${NODE_EXPORTER_PORT}/tcp"
+    echo "- Monitoring over WireGuard: Enabled for ${WIREGUARD_NETWORK} on ${GRAFANA_PORT}/tcp, ${PROMETHEUS_PORT}/tcp, ${LOKI_PORT}/tcp, and ${NODE_EXPORTER_PORT}/tcp"
   else
     echo "- Monitoring over WireGuard: Disabled"
   fi
