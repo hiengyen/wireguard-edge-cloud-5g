@@ -80,7 +80,7 @@ Start monitoring on the cloud node:
 ```bash
 set -a && . ./.env && set +a
 cd cloud/monitoring
-sudo docker compose up -d
+sudo -E docker compose up -d
 sudo docker ps
 curl http://127.0.0.1:9090/-/healthy
 curl http://127.0.0.1:3100/ready
@@ -99,7 +99,7 @@ export WIREGUARD_NETWORK=10.8.0.0/24
 sudo -E ./shared/scripts/hardening.sh
 cd cloud/monitoring
 sudo docker compose down
-sudo docker compose up -d
+sudo -E docker compose up -d
 ```
 
 ## SSH Tunnels For Web UI

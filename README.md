@@ -152,7 +152,7 @@ The edge installer also provisions the common operator toolset:
 **Option B: Docker Containerized (Alternative)**
 ```bash
 cd edge/5g-wwan/docker
-sudo docker compose up -d
+sudo -E docker compose up -d
 ```
 
 ### 3. Edge VPN Manual Registration
@@ -207,7 +207,7 @@ For Grafana, set a non-default password first, then start the monitoring stack. 
 ```bash
 set -a && . ./.env && set +a
 cd cloud/monitoring
-sudo docker compose up -d
+sudo -E docker compose up -d
 ```
 
 If you want to reach Grafana, Prometheus, and Loki through the WireGuard overlay instead of SSH tunneling, set:
@@ -222,7 +222,7 @@ Then re-run:
 ```bash
 sudo ./shared/scripts/hardening.sh
 cd cloud/monitoring
-sudo docker compose up -d
+sudo -E docker compose up -d
 ```
 
 You do not need extra AWS Security Group ingress for `3000/tcp`, `9090/tcp`, `3100/tcp`, or `9100/tcp` in that model. Only the WireGuard UDP port is exposed publicly; Grafana, Prometheus, Loki, and Node Exporter are reached after traffic is decrypted on the EC2 instance.
@@ -417,7 +417,7 @@ Trình cài đặt edge cũng cài sẵn bộ công cụ vận hành:
 **Cách 2: Đóng gói siêu sạch qua Docker (Alternative)**
 ```bash
 cd edge/5g-wwan/docker
-sudo docker compose up -d
+sudo -E docker compose up -d
 ```
 
 ### 3. Đăng ký Cấu Hình VPN Thủ Công
@@ -472,7 +472,7 @@ Trên edge node, rule TCP vào mặc định bổ sung là `443` và `5201` qua 
 ```bash
 set -a && . ./.env && set +a
 cd cloud/monitoring
-sudo docker compose up -d
+sudo -E docker compose up -d
 ```
 
 Nếu muốn truy cập Grafana, Prometheus và Loki qua đường hầm WireGuard thay vì SSH tunnel, hãy đặt:
@@ -487,7 +487,7 @@ Sau đó chạy lại:
 ```bash
 sudo ./shared/scripts/hardening.sh
 cd cloud/monitoring
-sudo docker compose up -d
+sudo -E docker compose up -d
 ```
 
 Mô hình này không cần mở thêm AWS Security Group cho `3000/tcp`, `9090/tcp`, `3100/tcp`, hoặc `9100/tcp`. Bên ngoài chỉ mở cổng UDP của WireGuard; Grafana, Prometheus, Loki và Node Exporter chỉ được truy cập sau khi gói tin được giải mã trên chính EC2.

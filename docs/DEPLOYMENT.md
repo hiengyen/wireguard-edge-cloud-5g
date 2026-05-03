@@ -171,7 +171,7 @@ On the cloud host:
 ```bash
 set -a && . ./.env && set +a
 cd cloud/monitoring
-sudo docker compose up -d
+sudo -E docker compose up -d
 ```
 
 Verify:
@@ -223,7 +223,7 @@ If you use the Docker-based WWAN mode:
 ```bash
 set -a && . ./.env && set +a
 cd edge/5g-wwan/docker
-sudo docker compose up -d
+sudo -E docker compose up -d
 ```
 
 Check WWAN state:
