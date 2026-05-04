@@ -201,12 +201,18 @@ enable_wg() {
 summary() {
   header "SUMMARY"
 
-  echo "Interface : $WG_INTERFACE"
-  echo "Port      : $WG_PORT"
-  echo "Uplink    : $UPLINK"
+  echo "Interface        : $WG_INTERFACE"
+  echo "Client ListenPort: $WG_PORT  (local UDP port, set via WIREGUARD_PORT env)"
+  echo "Server Endpoint  : ${WG_SERVER_ENDPOINT}:${WG_SERVER_PORT}"
+  echo "Client IP        : $WG_CLIENT_IP"
+  echo "Uplink           : $UPLINK"
   echo ""
-  echo "Client public key:"
+  echo "Client public key (add this to the cloud server):"
   echo "$PUBLIC_KEY"
+  echo ""
+  echo "Run on cloud server to register this peer:"
+  echo "  sudo wg set wg0 peer ${PUBLIC_KEY} allowed-ips ${WG_CLIENT_IP%/*}/32"
+  echo "  sudo wg-quick save wg0"
 }
 
 # ==========================================================
