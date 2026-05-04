@@ -34,7 +34,7 @@ Native install:
 
 ```bash
 cd edge/5g-wwan
-sudo ./install.sh
+sudo -E ./install.sh
 sudo systemctl status wwan.service
 sudo systemctl status wwan-monitor.service
 ```
@@ -50,7 +50,7 @@ sudo docker compose up -d
 
 ```bash
 set -a && . ./.env && set +a
-sudo ./edge/vpn/setup-wg-client.sh
+sudo -E ./edge/vpn/setup-wg-client.sh
 ```
 
 Manual peer registration on the cloud node:
@@ -64,13 +64,13 @@ sudo wg show
 Remove the local WireGuard client setup from the edge node:
 
 ```bash
-sudo ./edge/vpn/uninstall-wg-client.sh
+sudo -E ./edge/vpn/uninstall-wg-client.sh
 ```
 
 Remove the local key pair too:
 
 ```bash
-sudo REMOVE_WG_KEYS=true ./edge/vpn/uninstall-wg-client.sh
+sudo -E REMOVE_WG_KEYS=true ./edge/vpn/uninstall-wg-client.sh
 ```
 
 ## Monitoring Stack
@@ -137,13 +137,13 @@ sudo journalctl -u alloy --no-pager
 Override the Loki push endpoint if the cloud overlay IP or port is different:
 
 ```bash
-sudo ALLOY_LOKI_URL=http://10.8.0.1:3100/loki/api/v1/push ./edge/observability/alloy/install-alloy.sh
+sudo -E ALLOY_LOKI_URL=http://10.8.0.1:3100/loki/api/v1/push ./edge/observability/alloy/install-alloy.sh
 ```
 
 Uninstall local Alloy service/config:
 
 ```bash
-sudo ./edge/observability/alloy/uninstall-alloy.sh
+sudo -E ./edge/observability/alloy/uninstall-alloy.sh
 ```
 
 ## Node Exporter
@@ -151,13 +151,13 @@ sudo ./edge/observability/alloy/uninstall-alloy.sh
 Install:
 
 ```bash
-sudo ./shared/scripts/install-node-exporter.sh
+sudo -E ./shared/scripts/install-node-exporter.sh
 ```
 
 Install with a specific version:
 
 ```bash
-sudo NODE_EXPORTER_VERSION=1.11.1 ./shared/scripts/install-node-exporter.sh
+sudo -E NODE_EXPORTER_VERSION=1.11.1 ./shared/scripts/install-node-exporter.sh
 ```
 
 Verify:
@@ -179,7 +179,7 @@ curl http://10.8.0.3:9100/metrics | head
 Default:
 
 ```bash
-sudo ./shared/scripts/hardening.sh
+sudo -E ./shared/scripts/hardening.sh
 ```
 
 With custom WireGuard port:

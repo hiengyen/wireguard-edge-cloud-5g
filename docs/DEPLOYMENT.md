@@ -240,7 +240,7 @@ On the edge device:
 ```bash
 set -a && . ./.env && set +a
 cd edge/5g-wwan
-sudo ./install.sh
+sudo -E ./install.sh
 ```
 
 If you use the Docker-based WWAN mode:
@@ -275,7 +275,7 @@ Run the client setup on the edge node:
 
 ```bash
 set -a && . ./.env && set +a
-sudo ./edge/vpn/setup-wg-client.sh
+sudo -E ./edge/vpn/setup-wg-client.sh
 ```
 
 Recommended answers:
@@ -302,13 +302,13 @@ sudo wg show
 If you need to remove the local WireGuard client setup from the edge node later:
 
 ```bash
-sudo ./edge/vpn/uninstall-wg-client.sh
+sudo -E ./edge/vpn/uninstall-wg-client.sh
 ```
 
 To remove the local key pair too:
 
 ```bash
-sudo REMOVE_WG_KEYS=true ./edge/vpn/uninstall-wg-client.sh
+sudo -E REMOVE_WG_KEYS=true ./edge/vpn/uninstall-wg-client.sh
 ```
 
 This only removes the local edge setup. Remove the peer on the cloud server separately if it was previously registered.
@@ -344,7 +344,7 @@ sudo -E ./edge/observability/alloy/install-alloy.sh
 Override the push endpoint if your cloud WireGuard IP or Loki port differs:
 
 ```bash
-sudo ALLOY_LOKI_URL=http://10.8.0.1:3100/loki/api/v1/push ./edge/observability/alloy/install-alloy.sh
+sudo -E ALLOY_LOKI_URL=http://10.8.0.1:3100/loki/api/v1/push ./edge/observability/alloy/install-alloy.sh
 ```
 
 Verify Alloy:

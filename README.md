@@ -142,7 +142,7 @@ Connect your Quectel 5G Module via USB/M.2 to the Edge SBC (e.g., Orange Pi). Yo
 **Option A: Systemd Service (Native)**
 ```bash
 cd edge/5g-wwan
-sudo ./install.sh
+sudo -E ./install.sh
 ```
 
 The edge installer also provisions the common operator toolset:
@@ -160,7 +160,7 @@ sudo -E docker compose up -d
 Once connected to the internet, join the VPN overlay by running the client setup script:
 
 ```bash
-sudo ./edge/vpn/setup-wg-client.sh
+sudo -E ./edge/vpn/setup-wg-client.sh
 ```
 
 Follow the prompts to generate a client public key. Then, SSH into your cloud gateway and add the peer manually using `sudo wg set wg0 peer <client-public-key> allowed-ips 10.8.0.x/32` and `sudo wg-quick save wg0`.
@@ -172,13 +172,13 @@ The client should keep:
 If you need to remove the local WireGuard client setup from the edge node later:
 
 ```bash
-sudo ./edge/vpn/uninstall-wg-client.sh
+sudo -E ./edge/vpn/uninstall-wg-client.sh
 ```
 
 To remove the local key pair too:
 
 ```bash
-sudo REMOVE_WG_KEYS=true ./edge/vpn/uninstall-wg-client.sh
+sudo -E REMOVE_WG_KEYS=true ./edge/vpn/uninstall-wg-client.sh
 ```
 
 This only removes the local edge client. If you also need to remove the peer from the cloud server, delete that peer separately on the server with `wg set ... peer ... remove` and `wg-quick save`.
@@ -191,8 +191,8 @@ The cloud bootstrap also installs the common operator toolset on Amazon Linux 20
 On both environments, run:
 
 ```bash
-sudo ./shared/scripts/hardening.sh
-sudo ./shared/scripts/install-node-exporter.sh
+sudo -E ./shared/scripts/hardening.sh
+sudo -E ./shared/scripts/install-node-exporter.sh
 ```
 
 `hardening.sh` auto-detects the target OS:
@@ -220,7 +220,7 @@ ALLOW_MONITORING_OVER_WIREGUARD=true
 Then re-run:
 
 ```bash
-sudo ./shared/scripts/hardening.sh
+sudo -E ./shared/scripts/hardening.sh
 cd cloud/monitoring
 sudo -E docker compose up -d
 ```
@@ -265,7 +265,7 @@ curl http://127.0.0.1:9100/metrics | head
 The repository currently installs Node Exporter `1.11.1` by default. Override it with:
 
 ```bash
-sudo NODE_EXPORTER_VERSION=<version> ./shared/scripts/install-node-exporter.sh
+sudo -E NODE_EXPORTER_VERSION=<version> ./shared/scripts/install-node-exporter.sh
 ```
 
 
@@ -408,7 +408,7 @@ Bạn có thể chọn 1 trong 2 cách triển khai:
 **Cách 1: Chạy trực tiếp qua Systemd (Khuyên dùng)**
 ```bash
 cd edge/5g-wwan
-sudo ./install.sh
+sudo -E ./install.sh
 ```
 
 Trình cài đặt edge cũng cài sẵn bộ công cụ vận hành:
@@ -426,7 +426,7 @@ sudo -E docker compose up -d
 Sau khi có kết nối Internet do SIM cấp, tạo cấu hình và tham gia vào mạng:
 
 ```bash
-sudo ./edge/vpn/setup-wg-client.sh
+sudo -E ./edge/vpn/setup-wg-client.sh
 ```
 
 Thực hiện theo các bước trên màn hình để tạo Client Public Key. Sau đó, SSH lên Cloud Gateway và thêm Peer thủ công bằng lệnh `sudo wg set wg0 peer <client-public-key> allowed-ips 10.8.0.x/32` và lưu lại bằng `sudo wg-quick save wg0`.
@@ -438,13 +438,13 @@ Client nên giữ:
 Nếu cần gỡ cấu hình WireGuard client cục bộ trên edge sau này:
 
 ```bash
-sudo ./edge/vpn/uninstall-wg-client.sh
+sudo -E ./edge/vpn/uninstall-wg-client.sh
 ```
 
 Nếu muốn xóa cả key local:
 
 ```bash
-sudo REMOVE_WG_KEYS=true ./edge/vpn/uninstall-wg-client.sh
+sudo -E REMOVE_WG_KEYS=true ./edge/vpn/uninstall-wg-client.sh
 ```
 
 Script này chỉ gỡ phía edge local. Nếu cần xóa peer trên cloud server thì phải thực hiện riêng bằng `wg set ... peer ... remove` và `wg-quick save`.
@@ -457,8 +457,8 @@ Bootstrap cloud cũng cài sẵn bộ công cụ vận hành trên Amazon Linux 
 Hoạt động dùng chung ở cả 2 bề mặt của hệ thống:
 
 ```bash
-sudo ./shared/scripts/hardening.sh
-sudo ./shared/scripts/install-node-exporter.sh
+sudo -E ./shared/scripts/hardening.sh
+sudo -E ./shared/scripts/install-node-exporter.sh
 ```
 
 `hardening.sh` sẽ tự nhận diện hệ điều hành:
@@ -486,7 +486,7 @@ ALLOW_MONITORING_OVER_WIREGUARD=true
 Sau đó chạy lại:
 
 ```bash
-sudo ./shared/scripts/hardening.sh
+sudo -E ./shared/scripts/hardening.sh
 cd cloud/monitoring
 sudo -E docker compose up -d
 ```
@@ -531,7 +531,7 @@ curl http://127.0.0.1:9100/metrics | head
 Repo hiện cài Node Exporter mặc định ở phiên bản `1.11.1`. Có thể đổi bằng:
 
 ```bash
-sudo NODE_EXPORTER_VERSION=<version> ./shared/scripts/install-node-exporter.sh
+sudo -E NODE_EXPORTER_VERSION=<version> ./shared/scripts/install-node-exporter.sh
 ```
 
 
