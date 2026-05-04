@@ -7,7 +7,7 @@
 set -euo pipefail
 
 apt_package_exists() {
-    apt-cache show "$1" >/dev/null 2>&1
+    apt-get --simulate install "$1" >/dev/null 2>&1
 }
 
 dnf_package_exists() {
