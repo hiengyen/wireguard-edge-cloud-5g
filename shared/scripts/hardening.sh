@@ -8,6 +8,8 @@
 
 set -euo pipefail
 
+SSH_HARDENED="true"
+
 WIREGUARD_PORT="${WIREGUARD_PORT:-51820}"
 WIREGUARD_NETWORK="${WIREGUARD_NETWORK:-10.8.0.0/24}"
 SSHD_CONFIG="/etc/ssh/sshd_config"
@@ -113,16 +115,19 @@ restart_ssh_service() {
   systemctl restart ssh 2>/dev/null || systemctl restart sshd
 }
 
-ensure_authorized_keys_present() {
-  if ! find /root/.ssh /home -maxdepth 3 -type f -name authorized_keys 2>/dev/null | grep -q .; then
-    error "No authorized_keys file found. Refusing to disable password-based SSH access."
-    exit 1
-  fi
+has_authorized_keys() {
+  find /root/.ssh /home -maxdepth 3 -type f -name authorized_keys 2>/dev/null | grep -q .
 }
 
 configure_ssh() {
   log "Hardening SSH configuration..."
-  ensure_authorized_keys_present
+
+  if ! has_authorized_keys; then
+    echo "[WARN] No authorized_keys file found. Skipping SSH hardening (password login remains enabled)."
+    echo "[WARN] Run this script again after setting up SSH key authentication."
+    SSH_HARDENED="false"
+    return 0
+  fi
 
   if [[ ! -f "${SSHD_CONFIG}.bak" ]]; then
     cp "$SSHD_CONFIG" "${SSHD_CONFIG}.bak"
@@ -231,8 +236,13 @@ configure_fail2ban() {
 print_summary() {
   echo "=== System Hardening Complete ==="
   echo "- OS Family: ${OS_FAMILY}"
-  echo "- SSH Root Login: Disabled"
-  echo "- SSH Password Auth: Disabled"
+  if [[ "${SSH_HARDENED}" == "true" ]]; then
+    echo "- SSH Root Login: Disabled"
+    echo "- SSH Password Auth: Disabled"
+  else
+    echo "- SSH Hardening: SKIPPED (no authorized_keys found)"
+    echo "- SSH Password Auth: Still enabled"
+  fi
   echo "- Firewall: ${FIREWALL_NAME} enabled (SSH & WireGuard allowed)"
   echo "- SSH Port: ${SSH_ADMIN_PORT}/tcp"
   echo "- WireGuard Port: ${WIREGUARD_PORT}/udp"

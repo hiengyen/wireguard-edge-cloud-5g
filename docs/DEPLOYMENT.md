@@ -323,6 +323,60 @@ sudo -E ./shared/scripts/hardening.sh
 sudo -E ./shared/scripts/install-node-exporter.sh
 ```
 
+If the edge node does not have an `authorized_keys` file yet, the script will **skip SSH hardening** and print a warning:
+
+```
+[WARN] No authorized_keys file found. Skipping SSH hardening (password login remains enabled).
+[WARN] Run this script again after setting up SSH key authentication.
+```
+
+Firewall (UFW) and Fail2Ban are still configured normally. Password-based SSH login remains enabled until you complete the next step.
+
+### 10.1. Set Up SSH Key Authentication and Re-Harden
+
+To complete SSH hardening, set up key-based authentication first.
+
+If you are already connected to the edge node via password-based SSH, keep that session open as a safety net throughout this process.
+
+**On your local machine**, copy your public key to the edge node:
+
+```bash
+ssh-copy-id <user>@<edge-ip>
+```
+
+Or manually — get your public key on the local machine:
+
+```bash
+cat ~/.ssh/id_ed25519.pub
+```
+
+Then paste it on the edge node (in your existing SSH session):
+
+```bash
+mkdir -p ~/.ssh && chmod 700 ~/.ssh
+echo "ssh-ed25519 AAAA..." >> ~/.ssh/authorized_keys
+chmod 600 ~/.ssh/authorized_keys
+```
+
+If you do not have an SSH key pair yet, generate one first on your local machine:
+
+```bash
+ssh-keygen -t ed25519 -C "your-email@example.com"
+```
+
+**Verify key-based login works** by opening a **new terminal** (keep the old session open):
+
+```bash
+ssh -o PasswordAuthentication=no <user>@<edge-ip>
+```
+
+Once key-based login is confirmed, re-run the hardening script to disable password authentication:
+
+```bash
+set -a && . ./.env && set +a
+sudo -E ./shared/scripts/hardening.sh
+```
+
 Verify Node Exporter on the edge host:
 
 ```bash
