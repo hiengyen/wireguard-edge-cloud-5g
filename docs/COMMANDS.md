@@ -229,6 +229,50 @@ scp /tmp/wg-test.txt ec2-user@10.8.0.1:/tmp/
 ssh ec2-user@10.8.0.1 'cat /tmp/wg-test.txt'
 ```
 
+## Benchmark Suite
+
+Run all non-destructive suites:
+
+```bash
+./benchmark/run_all.sh
+```
+
+Run specific suites:
+
+```bash
+./benchmark/run_all.sh --suite 01,02      # connectivity + bandwidth
+./benchmark/run_all.sh --suite 03         # services health
+./benchmark/run_all.sh --suite 05         # end-to-end full stack
+```
+
+Run a single script:
+
+```bash
+bash benchmark/01-connectivity/test_ping_latency.sh
+bash benchmark/02-bandwidth/test_iperf3_tcp.sh
+bash benchmark/03-services/test_prometheus.sh
+bash benchmark/05-e2e/test_full_stack.sh
+```
+
+Override thresholds or targets inline:
+
+```bash
+IPERF3_DURATION=30 WG_SERVER_IP=10.8.0.1 ./benchmark/run_all.sh 02
+set -a && . .env && set +a && ./benchmark/run_all.sh 03
+```
+
+Enable destructive tests (WWAN reconnect, failover):
+
+```bash
+sudo ./benchmark/run_all.sh --allow-destructive
+```
+
+iperf3 server (start on cloud gateway before running suite 02 or 04):
+
+```bash
+iperf3 -s -D
+```
+
 ## Troubleshooting
 
 Cloud:
