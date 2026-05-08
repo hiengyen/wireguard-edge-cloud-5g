@@ -78,13 +78,18 @@ sudo -E REMOVE_WG_KEYS=true ./edge/vpn/uninstall-wg-client.sh
 Start monitoring on the cloud node:
 
 ```bash
-set -a && . ./.env && set +a
 cd cloud/monitoring
-sudo -E docker compose up -d
+sudo docker compose --env-file ../../.env up -d
 sudo docker ps
 curl http://127.0.0.1:9090/-/healthy
 curl http://127.0.0.1:3100/ready
 curl http://127.0.0.1:3000/api/health
+```
+
+Or use the wrapper script (handles `ALLOW_MONITORING_OVER_WIREGUARD` and validates `GRAFANA_ADMIN_PASSWORD` automatically):
+
+```bash
+sudo ./cloud/monitoring/setup-monitoring.sh
 ```
 
 Grafana loads Prometheus and Loki from `cloud/monitoring/grafana/provisioning/datasources/datasources.yml`.
@@ -92,14 +97,18 @@ Grafana loads Prometheus and Loki from `cloud/monitoring/grafana/provisioning/da
 Expose Grafana, Prometheus, and Loki through WireGuard only:
 
 ```bash
-set -a && . ./.env && set +a
-export MONITORING_BIND_ADDRESS=10.8.0.1
-export ALLOW_MONITORING_OVER_WIREGUARD=true
-export WIREGUARD_NETWORK=10.8.0.0/24
+# In .env: set ALLOW_MONITORING_OVER_WIREGUARD=true
 sudo -E ./shared/scripts/hardening.sh
 cd cloud/monitoring
-sudo docker compose down
-sudo -E docker compose up -d
+sudo docker compose --env-file ../../.env down
+sudo docker compose --env-file ../../.env up -d
+```
+
+Or with the wrapper (sets `MONITORING_BIND_ADDRESS=10.8.0.1` automatically from `ALLOW_MONITORING_OVER_WIREGUARD`):
+
+```bash
+sudo ./cloud/monitoring/setup-monitoring.sh down
+sudo ./cloud/monitoring/setup-monitoring.sh
 ```
 
 ## SSH Tunnels For Web UI

@@ -195,9 +195,14 @@ curl http://127.0.0.1:9100/metrics | head
 On the cloud host:
 
 ```bash
-set -a && . ./.env && set +a
 cd cloud/monitoring
-sudo -E docker compose up -d
+sudo docker compose --env-file ../../.env up -d
+```
+
+Alternatively, use the wrapper script which automatically applies `ALLOW_MONITORING_OVER_WIREGUARD` and validates required variables:
+
+```bash
+sudo ./cloud/monitoring/setup-monitoring.sh
 ```
 
 Verify:
@@ -211,7 +216,7 @@ curl http://127.0.0.1:3000/api/health
 
 Notes:
 
-- Prometheus, Loki, and Grafana bind to `127.0.0.1` by default. To reach them through WireGuard instead of SSH tunneling, set `MONITORING_BIND_ADDRESS=10.8.0.1` and `ALLOW_MONITORING_OVER_WIREGUARD=true` in `.env` before running `hardening.sh` and starting the stack.
+- Prometheus, Loki, and Grafana bind to `127.0.0.1` by default. To reach them through WireGuard instead of SSH tunneling, set `ALLOW_MONITORING_OVER_WIREGUARD=true` in `.env` before running `hardening.sh` and starting the stack. The wrapper script applies this automatically; with the direct `docker compose` command, export `MONITORING_BIND_ADDRESS=10.8.0.1` first.
 - Grafana provisions the Prometheus and Loki data sources from `cloud/monitoring/grafana/provisioning/datasources/datasources.yml`.
 
 To access the web UIs through SSH tunneling from your local machine:
@@ -466,3 +471,47 @@ Common causes of failure:
 
 - Reusing `10.8.0.2/32` while the bootstrap sample peer still exists
 - Starting Alloy before Loki is reachable at `ALLOY_LOKI_URL`
+- Changing `ALLOW_MONITORING_OVER_WIREGUARD` in `.env` without restarting the Docker stack
+
+### Loki not reachable on `10.8.0.1:3100`
+
+**Symptom:** `curl http://10.8.0.1:3100/ready` fails but `curl http://127.0.0.1:3100/ready` succeeds.
+
+**Cause:** The monitoring containers are still bound to `127.0.0.1` from a previous run. The new `MONITORING_BIND_ADDRESS` value only takes effect after the stack is restarted.
+
+Check which address Loki is actually bound to:
+
+```bash
+sudo ss -lntp | grep 3100
+```
+
+Fix — restart the stack so Docker picks up the updated bind address:
+
+```bash
+cd cloud/monitoring
+sudo docker compose --env-file ../../.env down
+sudo docker compose --env-file ../../.env up -d
+curl http://10.8.0.1:3100/ready
+```
+
+### Alloy crash loop — corrupted positions file
+
+**Symptom:** `alloy.service` enters a crash loop (`Start request repeated too quickly`) with this error in the journal:
+
+```
+invalid yaml positions file [.../loki.source.journal.system/positions.yml]: yaml: control characters are not allowed
+```
+
+**Cause:** Alloy's journal read-position tracking file got corrupted (contains binary/control characters). Alloy cannot start until the file is removed; it will recreate it cleanly on the next start.
+
+Fix on the edge node:
+
+```bash
+sudo rm /var/lib/alloy/data/loki.source.journal.system/positions.yml
+sudo systemctl reset-failed alloy
+sudo systemctl start alloy
+sudo systemctl status alloy --no-pager
+sudo journalctl -u alloy -n 20 --no-pager
+```
+
+After recovery, Alloy replays up to `max_age` (default `1h`) of journald entries and begins forwarding to Loki.

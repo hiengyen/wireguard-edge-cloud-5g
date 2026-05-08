@@ -215,24 +215,21 @@ On the edge node, the default extra inbound TCP rules are `443` and `5201` throu
 For Grafana, set a non-default password first, then start the monitoring stack. This starts Prometheus, Loki, and Grafana; Grafana provisions the Prometheus and Loki data sources from YAML.
 
 ```bash
-set -a && . ./.env && set +a
 cd cloud/monitoring
-sudo -E docker compose up -d
+sudo docker compose --env-file ../../.env up -d
 ```
 
-If you want to reach Grafana, Prometheus, and Loki through the WireGuard overlay instead of SSH tunneling, set:
+Or use the wrapper script which validates `GRAFANA_ADMIN_PASSWORD` and applies `ALLOW_MONITORING_OVER_WIREGUARD` automatically:
 
 ```bash
-MONITORING_BIND_ADDRESS=10.8.0.1
-ALLOW_MONITORING_OVER_WIREGUARD=true
+sudo ./cloud/monitoring/setup-monitoring.sh
 ```
 
-Then re-run:
+If you want to reach Grafana, Prometheus, and Loki through the WireGuard overlay instead of SSH tunneling, set `ALLOW_MONITORING_OVER_WIREGUARD=true` in `.env`, then re-run:
 
 ```bash
 sudo -E ./shared/scripts/hardening.sh
-cd cloud/monitoring
-sudo -E docker compose up -d
+sudo ./cloud/monitoring/setup-monitoring.sh
 ```
 
 You do not need extra AWS Security Group ingress for `3000/tcp`, `9090/tcp`, `3100/tcp`, or `9100/tcp` in that model. Only the WireGuard UDP port is exposed publicly; Grafana, Prometheus, Loki, and Node Exporter are reached after traffic is decrypted on the EC2 instance.
@@ -521,24 +518,21 @@ Trên edge node, rule TCP vào mặc định bổ sung là `443` và `5201` qua 
 Đặt mật khẩu Grafana không mặc định rồi mới khởi chạy giám sát trên Cloud. Stack này chạy Prometheus, Loki và Grafana; Grafana tự provision datasource Prometheus/Loki bằng YAML.
 
 ```bash
-set -a && . ./.env && set +a
 cd cloud/monitoring
-sudo -E docker compose up -d
+sudo docker compose --env-file ../../.env up -d
 ```
 
-Nếu muốn truy cập Grafana, Prometheus và Loki qua đường hầm WireGuard thay vì SSH tunnel, hãy đặt:
+Hoặc dùng wrapper script để tự validate `GRAFANA_ADMIN_PASSWORD` và tự áp dụng `ALLOW_MONITORING_OVER_WIREGUARD`:
 
 ```bash
-MONITORING_BIND_ADDRESS=10.8.0.1
-ALLOW_MONITORING_OVER_WIREGUARD=true
+sudo ./cloud/monitoring/setup-monitoring.sh
 ```
 
-Sau đó chạy lại:
+Nếu muốn truy cập Grafana, Prometheus và Loki qua đường hầm WireGuard thay vì SSH tunnel, đặt `ALLOW_MONITORING_OVER_WIREGUARD=true` trong `.env` rồi chạy lại:
 
 ```bash
 sudo -E ./shared/scripts/hardening.sh
-cd cloud/monitoring
-sudo -E docker compose up -d
+sudo ./cloud/monitoring/setup-monitoring.sh
 ```
 
 Mô hình này không cần mở thêm AWS Security Group cho `3000/tcp`, `9090/tcp`, `3100/tcp`, hoặc `9100/tcp`. Bên ngoài chỉ mở cổng UDP của WireGuard; Grafana, Prometheus, Loki và Node Exporter chỉ được truy cập sau khi gói tin được giải mã trên chính EC2.
@@ -616,6 +610,35 @@ sudo ./benchmark/run_all.sh --allow-destructive
 
 Báo cáo được ghi vào `benchmark/reports/` dưới dạng `.txt`, `.csv` và `.json`.  
 Tham khảo đầy đủ thông số và mô tả từng suite tại [BENCHMARK.md](docs/BENCHMARK.md).
+
+---
+
+## 🔧 Troubleshooting / Gỡ Lỗi
+
+For the full troubleshooting guide see [DEPLOYMENT.md — Section 13](docs/DEPLOYMENT.md).
+
+**Loki not reachable on `10.8.0.1:3100` after changing `ALLOW_MONITORING_OVER_WIREGUARD`**
+
+The containers must be restarted for the new bind address to take effect:
+
+```bash
+cd cloud/monitoring
+sudo docker compose --env-file ../../.env down
+sudo docker compose --env-file ../../.env up -d
+curl http://10.8.0.1:3100/ready
+```
+
+**Alloy crash loop — `invalid yaml positions file: yaml: control characters are not allowed`**
+
+The journal read-position tracking file is corrupted. Delete it and restart:
+
+```bash
+sudo rm /var/lib/alloy/data/loki.source.journal.system/positions.yml
+sudo systemctl reset-failed alloy
+sudo systemctl start alloy
+```
+
+---
 
 ---
 
