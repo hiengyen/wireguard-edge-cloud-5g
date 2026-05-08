@@ -21,6 +21,7 @@ SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
 ALLOY_CONFIG_SRC="${ALLOY_CONFIG_SRC:-${SCRIPT_DIR}/config.alloy}"
 ALLOY_CONFIG_DST="${ALLOY_CONFIG_DST:-/etc/alloy/config.alloy}"
 ALLOY_LOKI_URL="${ALLOY_LOKI_URL:-http://10.8.0.1:3100/loki/api/v1/push}"
+ALLOY_HTTP_LISTEN_ADDR="${ALLOY_HTTP_LISTEN_ADDR:-0.0.0.0:12345}"
 PKG_MANAGER=""
 ALLOY_ENV_FILE=""
 
@@ -164,6 +165,7 @@ configure_alloy() {
 
   set_env_var "$ALLOY_ENV_FILE" "CONFIG_FILE" "$ALLOY_CONFIG_DST"
   set_env_var "$ALLOY_ENV_FILE" "ALLOY_LOKI_URL" "$ALLOY_LOKI_URL"
+  set_env_var "$ALLOY_ENV_FILE" "CUSTOM_ARGS" "--server.http.listen-addr=${ALLOY_HTTP_LISTEN_ADDR}"
 
   if command -v alloy >/dev/null 2>&1 && alloy help validate >/dev/null 2>&1; then
     ALLOY_LOKI_URL="$ALLOY_LOKI_URL" alloy validate "$ALLOY_CONFIG_DST"
@@ -182,13 +184,19 @@ enable_alloy() {
 print_summary() {
   echo
   log "Alloy is configured."
-  echo "Config : $ALLOY_CONFIG_DST"
-  echo "Env    : $ALLOY_ENV_FILE"
-  echo "Loki   : $ALLOY_LOKI_URL"
+  echo "Config    : $ALLOY_CONFIG_DST"
+  echo "Env       : $ALLOY_ENV_FILE"
+  echo "Loki      : $ALLOY_LOKI_URL"
+  echo "UI listen : $ALLOY_HTTP_LISTEN_ADDR"
   echo
   echo "Useful checks:"
   echo "  sudo systemctl status alloy --no-pager"
   echo "  sudo journalctl -u alloy --no-pager"
+  echo "  curl http://127.0.0.1:12345"
+  echo
+  echo "Access Alloy UI from your laptop via SSH tunnel through the cloud gateway:"
+  echo "  ssh -N -L 12345:$(hostname -I | awk '{print $1}'):12345 ec2-user@<EC2_PUBLIC_IP>"
+  echo "  Then open: http://127.0.0.1:12345"
 }
 
 require_root

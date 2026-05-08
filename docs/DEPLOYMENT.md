@@ -55,6 +55,7 @@ Update `.env` with your real values:
 - `LOKI_VERSION`
 - `LOKI_PORT`
 - `ALLOY_LOKI_URL`
+- `ALLOY_HTTP_LISTEN_ADDR`
 - `MONITORING_BIND_ADDRESS`
 - `ALLOW_MONITORING_OVER_WIREGUARD`
 - `WIREGUARD_PORT`
@@ -73,6 +74,7 @@ Recommended base values:
 - `MONITORING_BIND_ADDRESS=127.0.0.1`
 - `LOKI_PORT=3100`
 - `ALLOY_LOKI_URL=http://10.8.0.1:3100/loki/api/v1/push`
+- `ALLOY_HTTP_LISTEN_ADDR=0.0.0.0:12345`
 - `ALLOW_MONITORING_OVER_WIREGUARD=false`
 - `EDGE_EXTRA_TCP_PORTS='443 5201'`
 - `TF_VAR_admin_ssh_cidr='["<your-public-ip>/32"]'`
@@ -221,13 +223,17 @@ Notes:
 
 To access the web UIs through SSH tunneling from your local machine:
 
+> The addresses below assume `ALLOW_MONITORING_OVER_WIREGUARD=true` (`MONITORING_BIND_ADDRESS=10.8.0.1`).
+> If your stack binds to `127.0.0.1` instead, replace `10.8.0.1` with `127.0.0.1` in the cloud `-L` flags.
+
 ```bash
-# If MONITORING_BIND_ADDRESS is 10.8.0.1, change 127.0.0.1 below to 10.8.0.1
-ssh -i <your-key.pem> \
-  -L 3000:127.0.0.1:3000 \
-  -L 9090:127.0.0.1:9090 \
-  -L 3100:127.0.0.1:3100 \
-  -L 9100:127.0.0.1:9100 \
+# -N keeps the tunnel open without opening a shell
+ssh -i <your-key.pem> -N \
+  -L 3000:10.8.0.1:3000 \
+  -L 9090:10.8.0.1:9090 \
+  -L 3100:10.8.0.1:3100 \
+  -L 9100:10.8.0.1:9100 \
+  -L 12345:10.8.0.2:12345 \
   ec2-user@<elastic-ip>
 ```
 
@@ -236,7 +242,12 @@ Then open:
 - Grafana: `http://127.0.0.1:3000`
 - Prometheus: `http://127.0.0.1:9090`
 - Loki readiness: `http://127.0.0.1:3100/ready`
-- Node Exporter metrics: `http://127.0.0.1:9100/metrics`
+- Node Exporter (cloud): `http://127.0.0.1:9100/metrics`
+- Alloy UI (edge): `http://127.0.0.1:12345`
+
+> **Alloy UI prerequisite:** `install-alloy.sh` sets `CUSTOM_ARGS="--server.http.listen-addr=0.0.0.0:12345"` so
+> the UI is reachable over WireGuard. Also open the port on the edge UFW (one-time):
+> `sudo ufw allow in on wg0 to any port 12345 proto tcp`
 
 ## 8. Prepare the Edge Node
 
@@ -411,7 +422,37 @@ Verify Alloy:
 ```bash
 sudo systemctl status alloy --no-pager
 sudo journalctl -u alloy --no-pager
+
+# Confirm Alloy UI is listening on all interfaces
+ss -lntp | grep 12345
+
+# Quick local check
+curl http://127.0.0.1:12345
 ```
+
+### Accessing the Alloy Web UI
+
+Alloy exposes a pipeline graph and component status UI on port `12345`.
+`install-alloy.sh` configures `CUSTOM_ARGS="--server.http.listen-addr=0.0.0.0:12345"` so the UI
+is reachable from the WireGuard overlay.
+
+Before using the SSH tunnel, open the port on the edge UFW (one-time):
+
+```bash
+sudo ufw allow in on wg0 to any port 12345 proto tcp
+```
+
+Then from your local machine, add the Alloy line to the SSH tunnel:
+
+```bash
+ssh -i <your-key.pem> -N \
+  -L 12345:10.8.0.2:12345 \
+  ec2-user@<elastic-ip>
+```
+
+Open `http://127.0.0.1:12345` in a browser. The UI shows:
+- **Graph** — live pipeline component graph
+- **Components** — status of `loki.source.journal`, `loki.write.cloud`, etc.
 
 In Grafana, open Explore and select the provisioned `Loki` data source.
 A useful first query is:

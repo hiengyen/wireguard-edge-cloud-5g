@@ -143,10 +143,28 @@ sudo systemctl status alloy --no-pager
 sudo journalctl -u alloy --no-pager
 ```
 
+`install-alloy.sh` sets `CUSTOM_ARGS="--server.http.listen-addr=0.0.0.0:12345"` so the UI is
+reachable over WireGuard. Override the listen address if needed:
+
+```bash
+sudo -E ALLOY_HTTP_LISTEN_ADDR=0.0.0.0:12345 ./edge/observability/alloy/install-alloy.sh
+```
+
 Override the Loki push endpoint if the cloud overlay IP or port is different:
 
 ```bash
 sudo -E ALLOY_LOKI_URL=http://10.8.0.1:3100/loki/api/v1/push ./edge/observability/alloy/install-alloy.sh
+```
+
+Access the Alloy UI from your laptop via SSH tunnel through EC2:
+
+```bash
+# One-time: open port on edge UFW
+sudo ufw allow in on wg0 to any port 12345 proto tcp
+
+# On laptop
+ssh -i <your-key.pem> -N -L 12345:10.8.0.2:12345 ec2-user@<EC2_PUBLIC_IP>
+# Open: http://127.0.0.1:12345
 ```
 
 Uninstall local Alloy service/config:

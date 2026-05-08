@@ -109,7 +109,7 @@ Important groups:
 - `TF_VAR_*`: Terraform inputs for cloud provisioning
 - `GRAFANA_ADMIN_PASSWORD`: password used by `cloud/monitoring/docker-compose.yml`
 - `MONITORING_BIND_ADDRESS`, `ALLOW_MONITORING_OVER_WIREGUARD`: monitoring access mode
-- `PROMETHEUS_VERSION`, `GRAFANA_VERSION`, `LOKI_VERSION`, `LOKI_PORT`, `ALLOY_LOKI_URL`: observability runtime settings
+- `PROMETHEUS_VERSION`, `GRAFANA_VERSION`, `LOKI_VERSION`, `LOKI_PORT`, `ALLOY_LOKI_URL`, `ALLOY_HTTP_LISTEN_ADDR`: observability runtime settings
 - `WIREGUARD_*`: edge VPN client runtime defaults
 - `WWAN_APN`, `SSH_ADMIN_PORT`, `EDGE_EXTRA_TCP_PORTS`: edge WWAN and hardening runtime settings
 
@@ -237,12 +237,14 @@ You do not need extra AWS Security Group ingress for `3000/tcp`, `9090/tcp`, `31
 To access the monitoring web UIs through SSH tunneling from your local machine:
 
 ```bash
-# If MONITORING_BIND_ADDRESS is 10.8.0.1, change 127.0.0.1 below to 10.8.0.1
-ssh -i <your-key.pem> \
-  -L 3000:127.0.0.1:3000 \
-  -L 9090:127.0.0.1:9090 \
-  -L 3100:127.0.0.1:3100 \
-  -L 9100:127.0.0.1:9100 \
+# -N keeps the tunnel open without opening a shell
+# Cloud services (10.8.0.1) + Alloy UI on edge (10.8.0.2:12345)
+ssh -i <your-key.pem> -N \
+  -L 3000:10.8.0.1:3000 \
+  -L 9090:10.8.0.1:9090 \
+  -L 3100:10.8.0.1:3100 \
+  -L 9100:10.8.0.1:9100 \
+  -L 12345:10.8.0.2:12345 \
   ec2-user@<EC2_PUBLIC_IP>
 ```
 
@@ -250,7 +252,11 @@ Then open:
 - Grafana: `http://127.0.0.1:3000`
 - Prometheus: `http://127.0.0.1:9090`
 - Loki readiness: `http://127.0.0.1:3100/ready`
-- Node Exporter metrics: `http://127.0.0.1:9100/metrics`
+- Node Exporter (cloud): `http://127.0.0.1:9100/metrics`
+- Alloy UI (edge): `http://127.0.0.1:12345`
+
+For the Alloy UI line to work, open port 12345 on the edge UFW once:
+`sudo ufw allow in on wg0 to any port 12345 proto tcp`
 
 To forward edge logs to Loki with Alloy after WireGuard is up:
 
@@ -412,7 +418,7 @@ Các nhóm biến chính:
 - `TF_VAR_*`: đầu vào Terraform cho phần cloud
 - `GRAFANA_ADMIN_PASSWORD`: mật khẩu dùng cho `cloud/monitoring/docker-compose.yml`
 - `MONITORING_BIND_ADDRESS`, `ALLOW_MONITORING_OVER_WIREGUARD`: chế độ truy cập monitoring
-- `PROMETHEUS_VERSION`, `GRAFANA_VERSION`, `LOKI_VERSION`, `LOKI_PORT`, `ALLOY_LOKI_URL`: tham số runtime cho observability
+- `PROMETHEUS_VERSION`, `GRAFANA_VERSION`, `LOKI_VERSION`, `LOKI_PORT`, `ALLOY_LOKI_URL`, `ALLOY_HTTP_LISTEN_ADDR`: tham số runtime cho observability
 - `WIREGUARD_*`: mặc định runtime cho edge VPN client
 - `WWAN_APN`, `SSH_ADMIN_PORT`, `EDGE_EXTRA_TCP_PORTS`: tham số runtime cho WWAN và hardening
 
@@ -540,12 +546,14 @@ Mô hình này không cần mở thêm AWS Security Group cho `3000/tcp`, `9090/
 Nếu muốn truy cập Web UI của monitoring qua SSH tunnel từ máy local:
 
 ```bash
-# Nếu MONITORING_BIND_ADDRESS là 10.8.0.1, hãy đổi 127.0.0.1 bên dưới thành 10.8.0.1
-ssh -i <your-key.pem> \
-  -L 3000:127.0.0.1:3000 \
-  -L 9090:127.0.0.1:9090 \
-  -L 3100:127.0.0.1:3100 \
-  -L 9100:127.0.0.1:9100 \
+# -N giữ tunnel mở mà không mở shell
+# Cloud services (10.8.0.1) + Alloy UI trên edge (10.8.0.2:12345)
+ssh -i <your-key.pem> -N \
+  -L 3000:10.8.0.1:3000 \
+  -L 9090:10.8.0.1:9090 \
+  -L 3100:10.8.0.1:3100 \
+  -L 9100:10.8.0.1:9100 \
+  -L 12345:10.8.0.2:12345 \
   ec2-user@<EC2_PUBLIC_IP>
 ```
 
@@ -553,7 +561,11 @@ Sau đó mở:
 - Grafana: `http://127.0.0.1:3000`
 - Prometheus: `http://127.0.0.1:9090`
 - Loki readiness: `http://127.0.0.1:3100/ready`
-- Node Exporter metrics: `http://127.0.0.1:9100/metrics`
+- Node Exporter (cloud): `http://127.0.0.1:9100/metrics`
+- Alloy UI (edge): `http://127.0.0.1:12345`
+
+Để dùng được dòng Alloy UI, mở port 12345 trên UFW của edge một lần:
+`sudo ufw allow in on wg0 to any port 12345 proto tcp`
 
 Đẩy log edge về Loki bằng Alloy sau khi WireGuard đã chạy:
 
