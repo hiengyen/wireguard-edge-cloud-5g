@@ -54,7 +54,6 @@ if command -v apt-get >/dev/null 2>&1; then
     APT_PACKAGES=(
         build-essential
         curl
-        docker.io
         git
         iperf3
         iproute2
