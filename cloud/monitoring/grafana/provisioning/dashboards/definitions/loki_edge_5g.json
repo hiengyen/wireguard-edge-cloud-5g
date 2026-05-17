@@ -420,56 +420,80 @@
     "5g",
     "edge"
   ],
-  "templates": [
-    {
-      "current": {},
-      "datasource": {
-        "type": "loki",
-        "uid": "loki"
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "value": "edge-journal",
+          "text": "edge-journal"
+        },
+        "datasource": {
+          "type": "loki",
+          "uid": "loki"
+        },
+        "definition": "label_values(job)",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Job",
+        "multi": false,
+        "name": "job",
+        "options": [
+          {
+            "selected": true,
+            "value": "edge-journal",
+            "text": "edge-journal"
+          }
+        ],
+        "query": {
+          "label": "job",
+          "refId": "LokiVariableQueryEditor-VariableQuery",
+          "stream": ""
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
       },
-      "definition": "label_values({job=~\"^.+\"}, job)",
-      "hide": 0,
-      "includeAll": false,
-      "label": "Job",
-      "multi": false,
-      "name": "job",
-      "options": [],
-      "query": {
-        "label": "job",
-        "refId": "LokiVariableQueryEditor-VariableQuery",
-        "stream": ""
-      },
-      "refresh": 1,
-      "regex": "",
-      "skipUrlSync": false,
-      "sort": 1,
-      "type": "query"
-    },
-    {
-      "current": {},
-      "datasource": {
-        "type": "loki",
-        "uid": "loki"
-      },
-      "definition": "label_values({job=\"$job\"}, host)",
-      "hide": 0,
-      "includeAll": true,
-      "label": "Edge Host",
-      "multi": true,
-      "name": "host",
-      "options": [],
-      "query": {
-        "label": "host",
-        "refId": "LokiVariableQueryEditor-VariableQuery",
-        "stream": ""
-      },
-      "refresh": 1,
-      "regex": "",
-      "skipUrlSync": false,
-      "sort": 1,
-      "type": "query"
-    }
-  ],
+      {
+        "current": {
+          "selected": true,
+          "value": [
+            "$__all"
+          ],
+          "text": "All"
+        },
+        "datasource": {
+          "type": "loki",
+          "uid": "loki"
+        },
+        "definition": "label_values({job=\"$job\"}, host)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Edge Host",
+        "multi": true,
+        "name": "host",
+        "options": [
+          {
+            "selected": true,
+            "value": "$__all",
+            "text": "All"
+          }
+        ],
+        "query": {
+          "label": "host",
+          "refId": "LokiVariableQueryEditor-VariableQuery",
+          "stream": ""
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
   "time": {
     "from": "now-1h",
     "to": "now"
@@ -485,5 +509,5 @@
   "timezone": "browser",
   "title": "WireGuard 5G Edge Log Dashboard",
   "uid": "loki-edge-5g",
-  "version": 3
+  "version": 5
 }
