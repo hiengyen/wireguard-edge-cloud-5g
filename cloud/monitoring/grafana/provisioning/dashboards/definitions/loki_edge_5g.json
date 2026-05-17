@@ -41,39 +41,22 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "mode": "palette-classic"
           },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 100000
-              },
-              {
-                "color": "red",
-                "value": 500000
-              }
-            ]
-          }
+          "mappings": []
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
-        "w": 24,
+        "h": 8,
+        "w": 6,
         "x": 0,
         "y": 1
       },
       "id": 2,
       "options": {
         "colorMode": "value",
-        "graphMode": "area",
+        "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
@@ -93,13 +76,105 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "sum(count_over_time({job=\"$job\", host=~\"$host\"}[$__range]))",
+          "expr": "sum by (host) (count_over_time({job=\"$job\", host=~\"$host\"}[$__range]))",
+          "legendFormat": "{{host}}",
           "queryType": "range",
           "refId": "A"
         }
       ],
-      "title": "Total Logs Received",
+      "title": "Total Logs per Node",
       "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 18,
+        "x": 6,
+        "y": 1
+      },
+      "id": 12,
+      "options": {
+        "legend": {
+          "calcs": [
+            "sum"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "editorMode": "code",
+          "expr": "sum by (host) (rate({job=\"$job\", host=~\"$host\"}[$__interval]))",
+          "legendFormat": "{{host}}",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "title": "Logs Rate Timeline (Cloud vs Edge Nodes)",
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -126,7 +201,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 7
+        "y": 9
       },
       "id": 3,
       "options": {
@@ -162,12 +237,13 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "sum by (unit) (count_over_time({job=\"$job\", host=~\"$host\"} | regexp \"^.*? (?P<unit>[a-zA-Z0-9\\\\-_\\\\.]+)(?:\\\\[\\\\d+\\\\])?:\" [$__interval]))",
+          "expr": "sum by (host, unit) (count_over_time({job=\"$job\", host=~\"$host\"} | regexp \"^.*? (?P<unit>[a-zA-Z0-9\\\\-_\\\\.]+)(?:\\\\[\\\\d+\\\\])?:\" [$__interval]))",
+          "legendFormat": "[{{host}}] {{unit}}",
           "queryType": "range",
           "refId": "A"
         }
       ],
-      "title": "Log Distribution by Service / Systemd Unit",
+      "title": "Log Distribution by Service / Node",
       "type": "piechart"
     },
     {
@@ -176,7 +252,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 17
+        "y": 19
       },
       "id": 4,
       "title": "🌐 5G CELLULAR & WIREGUARD VPN OVERLAY MONITORING",
@@ -191,14 +267,14 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 18
+        "y": 20
       },
       "id": 5,
       "options": {
         "enableLogDetails": true,
         "prettifyLogMessage": false,
         "showCommonLabels": false,
-        "showLabels": false,
+        "showLabels": true,
         "showTime": true,
         "sortOrder": "Descending",
         "wrapLogMessage": true
@@ -227,14 +303,14 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 18
+        "y": 20
       },
       "id": 6,
       "options": {
         "enableLogDetails": true,
         "prettifyLogMessage": false,
         "showCommonLabels": false,
-        "showLabels": false,
+        "showLabels": true,
         "showTime": true,
         "sortOrder": "Descending",
         "wrapLogMessage": true
@@ -260,7 +336,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 26
+        "y": 28
       },
       "id": 7,
       "title": "🛡️ SYSTEM SECURITY & HARDENING (SSH & FIREWALL)",
@@ -275,14 +351,14 @@
         "h": 8,
         "w": 16,
         "x": 0,
-        "y": 27
+        "y": 29
       },
       "id": 8,
       "options": {
         "enableLogDetails": true,
         "prettifyLogMessage": false,
         "showCommonLabels": false,
-        "showLabels": false,
+        "showLabels": true,
         "showTime": true,
         "sortOrder": "Descending",
         "wrapLogMessage": true
@@ -333,7 +409,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 27
+        "y": 29
       },
       "id": 9,
       "options": {
@@ -357,12 +433,13 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "sum(count_over_time({job=\"$job\", host=~\"$host\"} |~ \"(?i)(sshd.*Failed|fail2ban.*Ban)\" [$__range]))",
+          "expr": "sum by (host) (count_over_time({job=\"$job\", host=~\"$host\"} |~ \"(?i)(sshd.*Failed|fail2ban.*Ban)\" [$__range]))",
+          "legendFormat": "{{host}}",
           "queryType": "range",
           "refId": "A"
         }
       ],
-      "title": "Blocked Intrusion Attempts",
+      "title": "Blocked Intrusion Attempts per Node",
       "type": "stat"
     },
     {
@@ -371,7 +448,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 35
+        "y": 37
       },
       "id": 10,
       "title": "🚨 SYSTEM ALERTS & KERNEL PANICS",
@@ -386,14 +463,14 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 36
+        "y": 38
       },
       "id": 11,
       "options": {
         "enableLogDetails": true,
         "prettifyLogMessage": false,
         "showCommonLabels": false,
-        "showLabels": false,
+        "showLabels": true,
         "showTime": true,
         "sortOrder": "Descending",
         "wrapLogMessage": true
@@ -474,7 +551,7 @@
         "definition": "label_values({job=\"$job\"}, host)",
         "hide": 0,
         "includeAll": true,
-        "label": "Edge Host",
+        "label": "Node / Host",
         "multi": true,
         "name": "host",
         "options": [
@@ -512,5 +589,5 @@
   "timezone": "browser",
   "title": "WireGuard 5G Edge Log Dashboard",
   "uid": "loki-edge-5g",
-  "version": 7
+  "version": 8
 }
