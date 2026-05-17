@@ -88,7 +88,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "time() - node_boot_time_seconds{instance=~\"$instance\"}",
+          "expr": "time() - node_boot_time_seconds{job=~\"$job\"}",
           "legendFormat": "Uptime",
           "range": true,
           "refId": "A"
@@ -159,7 +159,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "100 - (avg by (instance) (irate(node_cpu_seconds_total{instance=~\"$instance\", mode=\"idle\"}[5m])) * 100)",
+          "expr": "100 - (avg(irate(node_cpu_seconds_total{job=~\"$job\", mode=\"idle\"}[5m])) * 100)",
           "legendFormat": "CPU Used",
           "range": true,
           "refId": "A"
@@ -230,7 +230,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "100 * (1 - (node_memory_MemAvailable_bytes{instance=~\"$instance\"} / node_memory_MemTotal_bytes{instance=~\"$instance\"}))",
+          "expr": "100 * (1 - (node_memory_MemAvailable_bytes{job=~\"$job\"} / node_memory_MemTotal_bytes{job=~\"$job\"}))",
           "legendFormat": "Memory Used",
           "range": true,
           "refId": "A"
@@ -301,7 +301,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "node_load1{instance=~\"$instance\"}",
+          "expr": "node_load1{job=~\"$job\"}",
           "legendFormat": "Load 1m",
           "range": true,
           "refId": "A"
@@ -406,7 +406,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (mode) (irate(node_cpu_seconds_total{instance=~\"$instance\"}[5m])) / count(node_cpu_seconds_total{instance=~\"$instance\", mode=\"idle\"}) * 100",
+          "expr": "sum by (mode) (irate(node_cpu_seconds_total{job=~\"$job\"}[5m])) / count(node_cpu_seconds_total{job=~\"$job\", mode=\"idle\"}) * 100",
           "legendFormat": "{{mode}}",
           "range": true,
           "refId": "A"
@@ -499,7 +499,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "node_memory_MemTotal_bytes{instance=~\"$instance\"}",
+          "expr": "node_memory_MemTotal_bytes{job=~\"$job\"}",
           "legendFormat": "Total RAM",
           "range": true,
           "refId": "A"
@@ -510,7 +510,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "node_memory_MemTotal_bytes{instance=~\"$instance\"} - node_memory_MemAvailable_bytes{instance=~\"$instance\"}",
+          "expr": "node_memory_MemTotal_bytes{job=~\"$job\"} - node_memory_MemAvailable_bytes{job=~\"$job\"}",
           "legendFormat": "Used RAM",
           "range": true,
           "refId": "B"
@@ -521,7 +521,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "node_memory_MemAvailable_bytes{instance=~\"$instance\"}",
+          "expr": "node_memory_MemAvailable_bytes{job=~\"$job\"}",
           "legendFormat": "Available RAM",
           "range": true,
           "refId": "C"
@@ -626,7 +626,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "irate(node_network_receive_bytes_total{instance=~\"$instance\", device=\"wg0\"}[5m]) * 8",
+          "expr": "irate(node_network_receive_bytes_total{job=~\"$job\", device=\"wg0\"}[5m]) * 8",
           "legendFormat": "Inbound (wg0)",
           "range": true,
           "refId": "A"
@@ -637,7 +637,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "irate(node_network_transmit_bytes_total{instance=~\"$instance\", device=\"wg0\"}[5m]) * 8",
+          "expr": "irate(node_network_transmit_bytes_total{job=~\"$job\", device=\"wg0\"}[5m]) * 8",
           "legendFormat": "Outbound (wg0)",
           "range": true,
           "refId": "B"
@@ -730,7 +730,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "irate(node_network_receive_bytes_total{instance=~\"$instance\", device=~\"wwan.*|rmnet.*|usb.*|eth0\"}[5m]) * 8",
+          "expr": "irate(node_network_receive_bytes_total{job=~\"$job\", device=~\"wwan.*|rmnet.*|usb.*|eth0\"}[5m]) * 8",
           "legendFormat": "Inbound (Physical)",
           "range": true,
           "refId": "A"
@@ -741,7 +741,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "irate(node_network_transmit_bytes_total{instance=~\"$instance\", device=~\"wwan.*|rmnet.*|usb.*|eth0\"}[5m]) * 8",
+          "expr": "irate(node_network_transmit_bytes_total{job=~\"$job\", device=~\"wwan.*|rmnet.*|usb.*|eth0\"}[5m]) * 8",
           "legendFormat": "Outbound (Physical)",
           "range": true,
           "refId": "B"
@@ -823,7 +823,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "100 * (1 - (node_filesystem_free_bytes{instance=~\"$instance\", mountpoint=\"/\"} / node_filesystem_size_bytes{instance=~\"$instance\", mountpoint=\"/\"}))",
+          "expr": "100 * (1 - (node_filesystem_free_bytes{job=~\"$job\", mountpoint=\"/\"} / node_filesystem_size_bytes{job=~\"$job\", mountpoint=\"/\"}))",
           "legendFormat": "Storage Space Used (/) ",
           "range": true,
           "refId": "A"
@@ -890,7 +890,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "avg by (instance) (node_thermal_zone_temp{instance=~\"$instance\"} / 1000) or avg by (instance) (node_hwmon_temp_celsius{instance=~\"$instance\"})",
+          "expr": "avg(node_thermal_zone_temp{job=~\"$job\"} / 1000) or avg(node_hwmon_temp_celsius{job=~\"$job\"})",
           "legendFormat": "CPU / SoC Temp",
           "range": true,
           "refId": "A"
@@ -916,15 +916,15 @@
           "type": "prometheus",
           "uid": "prometheus"
         },
-        "definition": "label_values(node_boot_time_seconds, instance)",
+        "definition": "label_values(node_boot_time_seconds, job)",
         "hide": 0,
-        "includeAll": true,
-        "label": "Host / Node",
-        "multi": true,
-        "name": "instance",
+        "includeAll": false,
+        "label": "Node / Host",
+        "multi": false,
+        "name": "job",
         "options": [],
         "query": {
-          "query": "label_values(node_boot_time_seconds, instance)",
+          "query": "label_values(node_boot_time_seconds, job)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,
