@@ -13,6 +13,11 @@ services:
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
 
   loki:
     image: grafana/loki:${LOKI_VERSION:-3.7.1}
@@ -25,6 +30,11 @@ services:
     command:
       - '-config.file=/etc/loki/local-config.yaml'
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
 
   grafana:
     image: grafana/grafana:${GRAFANA_VERSION:-13.0.1}
@@ -41,6 +51,11 @@ services:
       - prometheus
       - loki
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
 
 volumes:
   prometheus_data:

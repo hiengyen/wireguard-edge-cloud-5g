@@ -30,7 +30,7 @@
         "y": 0
       },
       "id": 1,
-      "title": "📊 SYSTEM OVERVIEW & LOGS RATE",
+      "title": "SYSTEM OVERVIEW & LOGS RATE",
       "type": "row"
     },
     {
@@ -179,7 +179,7 @@
         "y": 19
       },
       "id": 4,
-      "title": "🌐 5G CELLULAR & WIREGUARD VPN OVERLAY MONITORING",
+      "title": "5G CELLULAR & WIREGUARD VPN OVERLAY MONITORING",
       "type": "row"
     },
     {
@@ -263,7 +263,7 @@
         "y": 40
       },
       "id": 7,
-      "title": "🛡️ SYSTEM SECURITY & HARDENING (SSH & FIREWALL)",
+      "title": "SYSTEM SECURITY & HARDENING (SSH & FIREWALL)",
       "type": "row"
     },
     {
@@ -375,7 +375,7 @@
         "y": 57
       },
       "id": 10,
-      "title": "🚨 SYSTEM ALERTS & KERNEL PANICS",
+      "title": "SYSTEM ALERTS & KERNEL PANICS",
       "type": "row"
     },
     {
