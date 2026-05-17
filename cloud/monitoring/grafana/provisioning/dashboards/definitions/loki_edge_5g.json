@@ -485,5 +485,5 @@
   "timezone": "browser",
   "title": "WireGuard 5G Edge Log Dashboard",
   "uid": "loki-edge-5g",
-  "version": 2
+  "version": 3
 }

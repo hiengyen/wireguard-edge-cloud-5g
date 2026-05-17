@@ -47,8 +47,8 @@ To force Grafana to read the new provisioning config:
 
 ```bash
 cd cloud/monitoring
-sudo docker compose --env-file ../../.env down
-sudo docker compose --env-file ../../.env up -d
+sudo -E docker compose --env-file ../../.env down
+sudo -E docker compose --env-file ../../.env up -d
 ```
 
 ### Step 2: Access Grafana via SSH Tunnel (or directly over WireGuard)
