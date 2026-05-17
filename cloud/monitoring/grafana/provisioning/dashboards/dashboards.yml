@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: 'Loki Edge 5G Dashboards'
+    orgId: 1
+    folder: 'Edge Monitoring'
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /etc/grafana/provisioning/dashboards
