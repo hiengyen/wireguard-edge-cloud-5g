@@ -41,6 +41,73 @@ The dashboard is structured into a clean, **100% full-width vertically stacked l
 
 ---
 
+## ⚠️ Edge Time Synchronization (Critical Gotcha)
+
+Embedded ARM single-board computers (such as Orange Pi 5 Max) **do not have a hardware RTC battery backup by default**. If they lose power or internet access, their system clock can fall back to a hardcoded past date (e.g. May 12th instead of May 18th).
+
+**Why this breaks the Loki dashboard:**
+1. **Loki Discards Logs:** Loki rejects logs that are too far behind the active ingestion window (e.g., older than 2-7 days).
+2. **Outside Grafana Query Range:** If Grafana is set to query "Last 1 hour" of today, logs dated days in the past will simply never appear.
+
+**How to verify and fix the Edge clock:**
+Check the time on the Edge:
+```bash
+date
+# Or view synchronization status
+timedatectl
+```
+To instantly fix the time without rebooting, run:
+```bash
+# Option A: Automatic NTP sync
+sudo timedatectl set-ntp true
+sudo systemctl restart systemd-timesyncd
+
+# Option B: Manual clock sync (set to today's date)
+sudo date -s "2026-05-18 00:20:00"
+```
+After fixing the date, always **restart Alloy** to flush logs with correct timestamps:
+```bash
+sudo systemctl restart alloy
+```
+
+---
+
+## 🛡️ 5G CGNAT Stealth Topology Note
+
+Because the Edge node connects through a **5G QMI cellular interface**, it naturally sits behind **CGNAT (Carrier-Grade NAT)** provided by the cellular network operator. 
+
+*   **Immune to Scans:** The Edge node has no public inbound IPv4 address. It is practically impossible for internet scanners, hackers, or automated bots to scan or brute-force SSH on the Orange Pi.
+*   **Log Behavior:** As a result, the **SYSTEM SECURITY & HARDENING** panel for the Edge node host will naturally display `"No data"`. This is highly secure architecture by design!
+*   **Cloud Node exposure:** Only the Cloud Gateway (which has a public Elastic IP) will show active security brute-force blocks if SSH port 22 is exposed to `0.0.0.0/0`.
+
+---
+
+## 🧪 Simulating and Testing Dashboard Panels
+
+Because your systems operate healthily under normal circumstances, the **SYSTEM ALERTS & KERNEL PANICS** and **SYSTEM SECURITY** panels will naturally display `"No data"`. 
+
+To safely test these panels and verify the ingestion pipeline, run these simulation commands:
+
+### A. Simulating a System Crash (Alerts Panel)
+Run on the host:
+```bash
+logger "TEST ALERT: segfault crash in system service, critical exception triggered"
+```
+
+### B. Simulating an SSH Intrusion Attempt (Security Panel)
+```bash
+logger "sshd[9999]: Failed password for invalid user hacker from 192.168.1.100 port 54321 ssh2"
+```
+
+### C. Simulating a Fail2Ban Ban (Security Panel)
+```bash
+logger "fail2ban.actions[1234]: WARNING [sshd] Ban 192.168.1.100"
+```
+
+Within **5 to 10 seconds**, Grafana will pick up these mock logs, and the red counters and history tables will instantly spring to life!
+
+---
+
 ## 🛡️ Production Hardening: Docker Log Rotation
 
 To prevent container logs (from Loki, Prometheus, and Grafana) from consuming all available disk space over long runtimes, we have implemented automated **Docker Log Rotation** inside `cloud/monitoring/docker-compose.yml`:
@@ -52,27 +119,6 @@ To prevent container logs (from Loki, Prometheus, and Grafana) from consuming al
         max-size: "50m" # Keep each log file under 50MB
         max-file: "3"   # Maintain at most 3 historical files per container (max 150MB total)
 ```
-
----
-
-## 🧪 Simulating and Testing Critical Alarms
-
-Because your systems operate healthily under normal circumstances, the **SYSTEM ALERTS & KERNEL PANICS** panel will naturally display `"No data"`.
-
-To safely test this panel and verify that the monitoring pipeline is working, you can simulate a critical crash event by writing to system logs:
-
-### Option A: Trigger on the Cloud Gateway (or Edge) via CLI
-Log in to your host and execute:
-```bash
-logger "TEST ALERT: segfault crash in user-app, critical exception triggered"
-```
-
-### Option B: Trigger a Service Failure Simulation
-```bash
-logger "TEST: systemd-hostfailed failed to start wireguard service critical exception"
-```
-
-Within **5 to 10 seconds**, Grafana will pick up these logs, and they will immediately appear inside your **Critical System & Kernel Logs** panel in bold!
 
 ---
 

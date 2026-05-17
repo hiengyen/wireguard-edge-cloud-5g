@@ -407,6 +407,20 @@ Run Alloy on the edge node after the WireGuard tunnel can reach the cloud overla
 The default Alloy config reads journald and pushes logs to Loki at `http://10.8.0.1:3100/loki/api/v1/push`.
 For this default endpoint to work, you must have started the cloud monitoring stack with `MONITORING_BIND_ADDRESS=10.8.0.1` and allowed monitoring over WireGuard in `hardening.sh`.
 
+> [!WARNING]
+> **Edge Time Synchronization Required!**  
+> Since embedded ARM SBCs (like Orange Pi) do not have a hardware RTC battery, their clock can be completely wrong (e.g. out of sync by days) after a reboot or power loss. Loki automatically rejects logs that are too far behind the active ingestion window, and Grafana will hide them from current time queries.  
+>   
+> **Always verify and sync the Edge clock before running Alloy:**  
+> ```bash
+> date
+> # Sync using NTP if it's incorrect:
+> sudo timedatectl set-ntp true
+> sudo systemctl restart systemd-timesyncd
+> # Or set manually:
+> sudo date -s "2026-05-18 00:20:00"
+> ```
+
 ```bash
 set -a && . ./.env && set +a
 sudo -E ./edge/observability/alloy/install-alloy.sh

@@ -652,19 +652,69 @@ sudo systemctl reset-failed alloy
 sudo systemctl start alloy
 ```
 
-**How to trigger a simulated Critical System Alarm/Panic for testing / Cách giả lập log Cảnh Báo Lỗi hệ thống**
+**How to trigger simulated Dashboard Alarms & Intrusion Attacks for testing / Cách giả lập Cảnh Báo Lỗi & Tấn Công Bảo Mật để kiểm thử**
 
-To verify that the *SYSTEM ALERTS & KERNEL PANICS* dashboard panel works (which naturally shows "No data" on healthy systems), run the following CLI command to write a mock critical log:
+To verify that the *SYSTEM ALERTS*, *KERNEL PANICS*, and *SYSTEM SECURITY* panels work correctly (which naturally show "No data" on healthy and CGNAT-shielded nodes), run the following CLI commands:
 
 - **English:**
-  ```bash
-  logger "TEST ALERT: segfault crash in system service, critical exception triggered"
-  ```
+  * Simulate System Crash/Alert:
+    ```bash
+    logger "TEST ALERT: segfault crash in system service, critical exception triggered"
+    ```
+  * Simulate SSH Login Failure:
+    ```bash
+    logger "sshd[9999]: Failed password for invalid user hacker from 192.168.1.100 port 54321 ssh2"
+    ```
+  * Simulate Fail2Ban IP block:
+    ```bash
+    logger "fail2ban.actions[1234]: WARNING [sshd] Ban 192.168.1.100"
+    ```
 - **Tiếng Việt:**
+  * Giả lập Sập tiến trình / Lỗi hệ thống:
+    ```bash
+    logger "TEST ALERT: segfault crash in system service, critical exception triggered"
+    ```
+  * Giả lập Dò mật khẩu SSH thất bại:
+    ```bash
+    logger "sshd[9999]: Failed password for invalid user hacker from 192.168.1.100 port 54321 ssh2"
+    ```
+  * Giả lập Fail2Ban cấm IP xấu:
+    ```bash
+    logger "fail2ban.actions[1234]: WARNING [sshd] Ban 192.168.1.100"
+    ```
+  *(Các dòng log giả lập này sẽ hiển thị lên màn hình Grafana chỉ sau 5-10 giây để kiểm thử xem các bộ lọc có hoạt động chuẩn xác).*
+
+**Edge Node Clock Out-of-Sync (No logs appearing on Grafana) / Lệch giờ hệ thống ở Edge (Không thấy log xuất hiện)**
+
+Because embedded ARM SBCs (like Orange Pi) do not have an RTC battery backup, their system clock can drift or reset to a past date after a power loss. Loki will discard logs that are too far behind, and Grafana won't display them inside current time-range queries.
+
+- **English Fix:**
+  Verify the current clock on the Edge using `date`. Fix it instantly without rebooting:
   ```bash
-  logger "TEST ALERT: segfault crash in system service, critical exception triggered"
+  # Enable automatic NTP synchronization over internet:
+  sudo timedatectl set-ntp true
+  sudo systemctl restart systemd-timesyncd
+  # Or set the time manually (e.g. May 18, 2026):
+  sudo date -s "2026-05-18 00:20:00"
+  # Always restart Alloy after updating the clock:
+  sudo systemctl restart alloy
   ```
-  *(Dòng log giả lập này sẽ xuất hiện trên màn hình Grafana chỉ sau 5-10 giây để kiểm thử xem bộ lọc cảnh báo hoạt động).*
+- **Tiếng Việt khắc phục:**
+  Kiểm tra giờ trên Edge bằng lệnh `date`. Sửa lỗi lệch giờ ngay lập tức mà không cần khởi động lại máy:
+  ```bash
+  # Bật đồng bộ giờ NTP tự động qua internet:
+  sudo timedatectl set-ntp true
+  sudo systemctl restart systemd-timesyncd
+  # Hoặc chỉnh giờ thủ công bằng tay (ví dụ: ngày 18 tháng 5 năm 2026):
+  sudo date -s "2026-05-18 00:20:00"
+  # Luôn nhớ khởi động lại Alloy để xả log với mốc giờ mới:
+  sudo systemctl restart alloy
+  ```
+
+**5G CGNAT Stealth Topology Note / Lưu ý về cơ chế ẩn mình sau 5G CGNAT**
+
+- **English:** The Edge node sits behind Carrier-Grade NAT (CGNAT) on the 5G WWAN interface. It has no inbound public IPv4 address, meaning public bots cannot scan or brute-force SSH on the Orange Pi. The *SYSTEM SECURITY* panel for the Edge node will naturally display `"No data"`. This is highly secure by design!
+- **Tiếng Việt:** Thiết bị Edge nằm sau lớp CGNAT của nhà mạng 5G nên không có IP Public đầu vào, giúp ngăn chặn tuyệt đối các cuộc quét cổng hay brute-force SSH từ bên ngoài Internet. Vì vậy, việc phần bảo mật của Orange Pi hiển thị `"No data"` là hoàn toàn bình thường và cực kỳ an toàn!
 
 ---
 
