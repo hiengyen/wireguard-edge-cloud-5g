@@ -41,22 +41,39 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "mode": "thresholds"
           },
-          "mappings": []
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 100000
+              },
+              {
+                "color": "red",
+                "value": 500000
+              }
+            ]
+          }
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
-        "w": 6,
+        "h": 6,
+        "w": 24,
         "x": 0,
         "y": 1
       },
       "id": 2,
       "options": {
         "colorMode": "value",
-        "graphMode": "none",
+        "graphMode": "area",
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
@@ -76,105 +93,13 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "sum by (host) (count_over_time({job=\"$job\", host=~\"$host\"}[$__range]))",
-          "legendFormat": "{{host}}",
+          "expr": "sum(count_over_time({job=\"$job\", host=~\"$host\"}[$__range]))",
           "queryType": "range",
           "refId": "A"
         }
       ],
-      "title": "Total Logs per Node",
+      "title": "Total Logs Received",
       "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "loki",
-        "uid": "loki"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 20,
-            "gradientMode": "opacity",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 18,
-        "x": 6,
-        "y": 1
-      },
-      "id": 12,
-      "options": {
-        "legend": {
-          "calcs": [
-            "sum"
-          ],
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "loki"
-          },
-          "editorMode": "code",
-          "expr": "sum by (host) (rate({job=\"$job\", host=~\"$host\"}[$__interval]))",
-          "legendFormat": "{{host}}",
-          "queryType": "range",
-          "refId": "A"
-        }
-      ],
-      "title": "Logs Rate Timeline (Cloud vs Edge Nodes)",
-      "type": "timeseries"
     },
     {
       "datasource": {
@@ -198,10 +123,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 10,
+        "h": 12,
         "w": 24,
         "x": 0,
-        "y": 9
+        "y": 7
       },
       "id": 3,
       "options": {
@@ -237,13 +162,12 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "sum by (host, unit) (count_over_time({job=\"$job\", host=~\"$host\"} | regexp \"^.*? (?P<unit>[a-zA-Z0-9\\\\-_\\\\.]+)(?:\\\\[\\\\d+\\\\])?:\" [$__interval]))",
-          "legendFormat": "[{{host}}] {{unit}}",
+          "expr": "sum by (unit) (count_over_time({job=\"$job\", host=~\"$host\"} | regexp \"^.*? (?P<unit>[a-zA-Z0-9\\\\-_\\\\.]+)(?:\\\\[\\\\d+\\\\])?:\" [$__interval]))",
           "queryType": "range",
           "refId": "A"
         }
       ],
-      "title": "Log Distribution by Service / Node",
+      "title": "Log Distribution by Service / Systemd Unit",
       "type": "piechart"
     },
     {
@@ -264,8 +188,8 @@
         "uid": "loki"
       },
       "gridPos": {
-        "h": 8,
-        "w": 12,
+        "h": 10,
+        "w": 24,
         "x": 0,
         "y": 20
       },
@@ -300,10 +224,10 @@
         "uid": "loki"
       },
       "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 20
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 30
       },
       "id": 6,
       "options": {
@@ -322,7 +246,7 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "{job=\"$job\", host=~\"$host\"} |~ \"(?i)(wireguard|wg0|handshake|peer|keepalive|endpoint)\"",
+          "expr": "{job=\"$job\", host=~\"$host\"} |~ \"(?i)(\\\\bwireguard\\\\b|wg0|handshake|peer|keepalive|endpoint)\"",
           "queryType": "range",
           "refId": "A"
         }
@@ -336,47 +260,11 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 28
+        "y": 40
       },
       "id": 7,
       "title": "🛡️ SYSTEM SECURITY & HARDENING (SSH & FIREWALL)",
       "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "loki",
-        "uid": "loki"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 16,
-        "x": 0,
-        "y": 29
-      },
-      "id": 8,
-      "options": {
-        "enableLogDetails": true,
-        "prettifyLogMessage": false,
-        "showCommonLabels": false,
-        "showLabels": true,
-        "showTime": true,
-        "sortOrder": "Descending",
-        "wrapLogMessage": true
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "loki"
-          },
-          "editorMode": "code",
-          "expr": "{job=\"$job\", host=~\"$host\"} |~ \"(?i)(sshd.*(Failed|Accepted|invalid)|fail2ban.*Ban|ufw.*BLOCK|firewall)\"",
-          "queryType": "range",
-          "refId": "A"
-        }
-      ],
-      "title": "Security History & Blocked Attacks (SSH/Firewall/Fail2Ban)",
-      "type": "logs"
     },
     {
       "datasource": {
@@ -406,10 +294,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 29
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 41
       },
       "id": 9,
       "options": {
@@ -443,12 +331,48 @@
       "type": "stat"
     },
     {
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 47
+      },
+      "id": 8,
+      "options": {
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": true,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "editorMode": "code",
+          "expr": "{job=\"$job\", host=~\"$host\"} |~ \"(?i)(sshd.*(Failed|Accepted|invalid)|fail2ban.*Ban|ufw.*BLOCK|firewall)\"",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "title": "Security History & Blocked Attacks (SSH/Firewall/Fail2Ban)",
+      "type": "logs"
+    },
+    {
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 37
+        "y": 57
       },
       "id": 10,
       "title": "🚨 SYSTEM ALERTS & KERNEL PANICS",
@@ -460,10 +384,10 @@
         "uid": "loki"
       },
       "gridPos": {
-        "h": 8,
+        "h": 10,
         "w": 24,
         "x": 0,
-        "y": 38
+        "y": 58
       },
       "id": 11,
       "options": {
@@ -589,5 +513,5 @@
   "timezone": "browser",
   "title": "WireGuard 5G Edge Log Dashboard",
   "uid": "loki-edge-5g",
-  "version": 8
+  "version": 9
 }
