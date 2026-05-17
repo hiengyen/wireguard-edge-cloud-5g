@@ -53,11 +53,11 @@
               },
               {
                 "color": "orange",
-                "value": 100
+                "value": 100000
               },
               {
                 "color": "red",
-                "value": 500
+                "value": 500000
               }
             ]
           }
@@ -65,8 +65,8 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 4,
-        "w": 8,
+        "h": 8,
+        "w": 6,
         "x": 0,
         "y": 1
       },
@@ -123,21 +123,24 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 4,
-        "w": 16,
-        "x": 8,
+        "h": 8,
+        "w": 18,
+        "x": 6,
         "y": 1
       },
       "id": 3,
       "options": {
         "displayLabels": [
-          "percent",
-          "value"
+          "percent"
         ],
         "legend": {
-          "displayMode": "list",
+          "displayMode": "table",
           "placement": "right",
-          "showLegend": true
+          "showLegend": true,
+          "values": [
+            "value",
+            "percent"
+          ]
         },
         "pieType": "donut",
         "reduceOptions": {
@@ -149,7 +152,7 @@
         },
         "tooltip": {
           "mode": "single",
-          "sort": "none"
+          "sort": "desc"
         }
       },
       "targets": [
@@ -173,7 +176,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 5
+        "y": 9
       },
       "id": 4,
       "title": "🌐 5G CELLULAR & WIREGUARD VPN OVERLAY MONITORING",
@@ -188,7 +191,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 6
+        "y": 10
       },
       "id": 5,
       "options": {
@@ -224,7 +227,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 6
+        "y": 10
       },
       "id": 6,
       "options": {
@@ -257,7 +260,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 14
+        "y": 18
       },
       "id": 7,
       "title": "🛡️ SYSTEM SECURITY & HARDENING (SSH & FIREWALL)",
@@ -272,7 +275,7 @@
         "h": 8,
         "w": 16,
         "x": 0,
-        "y": 15
+        "y": 19
       },
       "id": 8,
       "options": {
@@ -330,7 +333,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 15
+        "y": 19
       },
       "id": 9,
       "options": {
@@ -368,7 +371,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 23
+        "y": 27
       },
       "id": 10,
       "title": "🚨 SYSTEM ALERTS & KERNEL PANICS",
@@ -383,7 +386,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 24
+        "y": 28
       },
       "id": 11,
       "options": {
@@ -509,5 +512,5 @@
   "timezone": "browser",
   "title": "WireGuard 5G Edge Log Dashboard",
   "uid": "loki-edge-5g",
-  "version": 5
+  "version": 6
 }
