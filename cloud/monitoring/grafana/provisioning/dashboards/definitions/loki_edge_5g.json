@@ -130,9 +130,7 @@
       },
       "id": 3,
       "options": {
-        "displayLabels": [
-          "percent"
-        ],
+        "displayLabels": [],
         "legend": {
           "displayMode": "table",
           "placement": "right",
