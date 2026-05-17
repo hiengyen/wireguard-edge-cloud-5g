@@ -941,7 +941,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "WireGuard 5G Resource & Hardware Metrics",
-  "uid": "prometheus_node_exporter",
+  "title": "WireGuard 5G Resource Monitoring",
+  "uid": "node_exporter_5g_fixed",
   "version": 1
 }

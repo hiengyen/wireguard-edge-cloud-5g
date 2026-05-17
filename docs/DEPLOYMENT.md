@@ -409,9 +409,10 @@ For this default endpoint to work, you must have started the cloud monitoring st
 
 > [!WARNING]
 > **Edge Time Synchronization Required!**  
-> Since embedded ARM SBCs (like Orange Pi) do not have a hardware RTC battery, their clock can be completely wrong (e.g. out of sync by days) after a reboot or power loss. Loki automatically rejects logs that are too far behind the active ingestion window, and Grafana will hide them from current time queries.  
->   
-> **Always verify and sync the Edge clock before running Alloy:**  
+> Since embedded ARM SBCs (like Orange Pi) do not have a hardware RTC battery, their clock can be completely wrong (e.g. out of sync by days) after a reboot or power loss. Loki automatically rejects logs that are too far behind the active ingestion window, and Grafana will hide them from current time queries.
+>
+> **Always verify and sync the Edge clock before running Alloy:**
+>
 > ```bash
 > date
 > # Sync using NTP if it's incorrect:
@@ -466,6 +467,7 @@ ssh -i <your-key.pem> -N \
 ```
 
 Open `http://127.0.0.1:12345` in a browser. The UI shows:
+
 - **Graph** — live pipeline component graph
 - **Components** — status of `loki.source.journal`, `loki.write.cloud`, etc.
 
