@@ -1,12 +1,12 @@
-# 📊 WireGuard 5G Edge Observability Dashboard Blueprint
+# WireGuard 5G Edge Observability Dashboard Blueprint
 
-This document details the newly designed **Grafana Loki Dashboard** specifically customized to monitor your WireGuard Edge-Cloud 5G overlay network, system hardening, and 5G Quectel cellular modem logs.
+This document details the newly designed, high-performance **Grafana Loki Dashboard** specifically customized to monitor your WireGuard Edge-Cloud 5G overlay network, system hardening, and 5G Quectel cellular modem logs.
 
 > [!IMPORTANT]
 > **Zero-Touch Provisioning Enabled!**  
 > We have automated the loading of this dashboard. It is configured directly inside the Grafana provisioning directory:
 > - Config Provider: `cloud/monitoring/grafana/provisioning/dashboards/dashboards.yml`
-> - Dashboard JSON: `cloud/monitoring/grafana/provisioning/dashboards/loki_edge_5g.json`
+> - Dashboard JSON: `cloud/monitoring/grafana/provisioning/dashboards/definitions/loki_edge_5g.json`
 >
 > When you start or restart your monitoring Docker containers, Grafana will **automatically import and configure** this dashboard for you. No manual JSON copy-pasting is required.
 
@@ -14,62 +14,89 @@ This document details the newly designed **Grafana Loki Dashboard** specifically
 
 ## 🏗️ Dashboard Layout & Panel Blueprints
 
-The dashboard is structured into 4 dedicated rows matching the lifecycle of your Edge nodes:
+The dashboard is structured into a clean, **100% full-width vertically stacked layout** (`w: 24`) designed for high-density log reading without side-by-side splits. The rows use a flat, modern typography aesthetic:
 
-### 1. 📊 System Overview & Logs Rate
-*   **Total Logs Count (Stat Panel):** Shows the absolute volume of logs received during the selected time range.
+### 1. SYSTEM OVERVIEW & LOGS RATE
+*   **Total Logs Received (Stat Panel):** Shows the total logs received across all nodes.
     *   *LogQL Query:* `sum(count_over_time({job="$job", host=~"$host"}[$__range]))`
-*   **Donut Breakdown (Pie Chart):** Visually identifies which Systemd units are logging the most, using regular expression matching to parse the process name.
+*   **Log Distribution by Service / Systemd Unit (Donut Chart):** Shows which services are generating the most logs.
+    *   *Layout Optimization:* Donut slice labels are disabled (`displayLabels: []`) to keep the visual clean and uncluttered. It relies on the interactive **Table Legend** on the right, which displays absolute log count and percentages.
     *   *LogQL Query:* `sum by (unit) (count_over_time({job="$job", host=~"$host"} | regexp "^.*? (?P<unit>[a-zA-Z0-9\-_.]+)(?:\[\d+\])?:" [$__interval]))`
 
-### 2. 🌐 5G Cellular Status & WireGuard VPN Overlay
-*   **5G Modem & QMI Connection (Logs Panel):** Isolates cellular network events (Quectel dynamic detection, raw IP configuration, APN handshake, cellular disconnects/reconnects).
+### 2. 5G CELLULAR & WIREGUARD VPN OVERLAY MONITORING
+*   **5G Modem & Cellular Connection Logs (Logs Panel):** Focuses on cellular dynamic detection, raw IP configuration, APN handshakes, and WWAN disconnect/reconnect signals.
     *   *LogQL Query:* `{job="$job", host=~"$host"} |~ "(?i)(wwan|quectel|qmi|cdc-wdm|apn|sim|signal|disconnect|reconnect|cm)"`
-*   **WireGuard Overlay VPN (Logs Panel):** Focuses entirely on WireGuard health, handshake status, and network reachability.
-    *   *LogQL Query:* `{job="$job", host=~"$host"} |~ "(?i)(wireguard|wg0|handshake|peer|keepalive|endpoint)"`
+*   **WireGuard Secure VPN Overlay Logs (Logs Panel):** Tracks secure VPN tunnel health, keepalives, and peer handshakes.
+    *   *LogQL Query:* `{job="$job", host=~"$host"} |~ "(?i)(\bwireguard\b|wg0|handshake|peer|keepalive|endpoint)"`
 
-### 3. 🛡️ System Hardening & Security (SSH / UFW / Fail2Ban)
-*   **Security Logs (Logs Panel):** Captures unauthorized access attempts, SSH login failures, brute-force bans from Fail2Ban, and packets blocked by the UFW/Firewalld firewalls.
+### 3. SYSTEM SECURITY & HARDENING (SSH & FIREWALL)
+*   **Blocked Intrusion Attempts per Node (Stat Panel):** Displays an alarming red card counting failed SSH logins or Fail2Ban bans, grouped automatically by host.
+    *   *LogQL Query:* `sum by (host) (count_over_time({job="$job", host=~"$host"} |~ "(?i)(sshd.*Failed|fail2ban.*Ban)" [$__range]))`
+*   **Security History & Blocked Attacks (Logs Panel):** Aggregates direct unauthorized SSH attempts, UFW/Firewalld block alerts, and iptables warnings.
     *   *LogQL Query:* `{job="$job", host=~"$host"} |~ "(?i)(sshd.*(Failed|Accepted|invalid)|fail2ban.*Ban|ufw.*BLOCK|firewall)"`
-*   **Intrusion Attempts Blocked (Stat Panel):** Displays a red alarming counter if security systems are active and blocking attacks.
-    *   *LogQL Query:* `sum(count_over_time({job="$job", host=~"$host"} |~ "(?i)(sshd.*Failed|fail2ban.*Ban)" [$__range]))`
 
-### 4. 🚨 Critical Systems & Kernel Alarms
-*   **Hardware & Memory Crash Alarms (Logs Panel):** Dedicated panel to isolate OOM (Out Of Memory) kills, kernel panics, segment faults, or systemd services that failed to start.
+### 4. SYSTEM ALERTS & KERNEL PANICS
+*   **Critical System & Kernel Logs (Logs Panel):** Isolates critical system issues like Out-Of-Memory (OOM) kills, kernel panics, hardware errors, segment faults, or crashed Systemd units.
     *   *LogQL Query:* `{job="$job", host=~"$host"} |~ "(?i)(oom|panic|hardware error|segfault|kill|aborted|critical|exception|failed to start)"`
 
 ---
 
-## 🚀 How to Load and Access
+## 🛡️ Production Hardening: Docker Log Rotation
 
-### Step 1: Restart your Cloud Monitoring stack
-To force Grafana to read the new provisioning config:
+To prevent container logs (from Loki, Prometheus, and Grafana) from consuming all available disk space over long runtimes, we have implemented automated **Docker Log Rotation** inside `cloud/monitoring/docker-compose.yml`:
+
+```yaml
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m" # Keep each log file under 50MB
+        max-file: "3"   # Maintain at most 3 historical files per container (max 150MB total)
+```
+
+---
+
+## 🧪 Simulating and Testing Critical Alarms
+
+Because your systems operate healthily under normal circumstances, the **SYSTEM ALERTS & KERNEL PANICS** panel will naturally display `"No data"`.
+
+To safely test this panel and verify that the monitoring pipeline is working, you can simulate a critical crash event by writing to system logs:
+
+### Option A: Trigger on the Cloud Gateway (or Edge) via CLI
+Log in to your host and execute:
+```bash
+logger "TEST ALERT: segfault crash in user-app, critical exception triggered"
+```
+
+### Option B: Trigger a Service Failure Simulation
+```bash
+logger "TEST: systemd-hostfailed failed to start wireguard service critical exception"
+```
+
+Within **5 to 10 seconds**, Grafana will pick up these logs, and they will immediately appear inside your **Critical System & Kernel Logs** panel in bold!
+
+---
+
+## 🚀 How to Apply and Run
+
+### Step 1: Apply the configuration
+Run the command below in the cloud gateway workspace:
 
 ```bash
 cd cloud/monitoring
-sudo -E docker compose --env-file ../../.env down
-sudo -E docker compose --env-file ../../.env up -d
+sudo -E docker compose --env-file ../../.env up -d --force-recreate
 ```
 
-### Step 2: Access Grafana via SSH Tunnel (or directly over WireGuard)
-If monitoring over WireGuard is enabled:
-- Open your browser to: `http://10.8.0.1:3000`
-
-If accessing via SSH Tunnel:
+### Step 2: Access Grafana UIs
+If using a WireGuard overlay, access directly at: `http://10.8.0.1:3000`  
+Otherwise, set up an SSH tunnel:
 ```bash
 ssh -i <your-key.pem> -N -L 3000:10.8.0.1:3000 ec2-user@<EC2_PUBLIC_IP>
-# Then open http://127.0.0.1:3000
 ```
-
-### Step 3: Open the Dashboard
-1. Log in to Grafana.
-2. Go to **Dashboards** in the left menu.
-3. You will see a folder named **Edge Monitoring**.
-4. Click on **WireGuard 5G Edge Log Dashboard**.
+Open your browser to `http://127.0.0.1:3000`.
 
 ---
 
 ## 🛠️ Dynamic Variables Explained
 At the top of the dashboard, you will find two drop-down selectors:
-*   **`Job`**: Automatically populated with available jobs (defaults to `edge-journal`).
-*   **`Edge Host`**: Automatically dynamically lists all Edge hosts sending logs to Loki. If you deploy to 10 Orange Pi devices, they will all automatically appear in this drop-down list! You can select "All" or filter down to a single device.
+*   **`Job`**: Set of jobs (defaults to `edge-journal`).
+*   **`Node / Host`**: Automatically dynamically lists all Cloud and Edge hosts pushing logs. If you select "All", statistics are aggregated; or you can filter down to one specific host.

@@ -198,7 +198,8 @@ On the cloud host:
 
 ```bash
 cd cloud/monitoring
-sudo docker compose --env-file ../../.env up -d
+# Use -E to preserve environment variables loaded from .env
+sudo -E docker compose --env-file ../../.env up -d --force-recreate
 ```
 
 Alternatively, use the wrapper script which automatically applies `ALLOW_MONITORING_OVER_WIREGUARD` and validates required variables:
@@ -530,8 +531,8 @@ Fix — restart the stack so Docker picks up the updated bind address:
 
 ```bash
 cd cloud/monitoring
-sudo docker compose --env-file ../../.env down
-sudo docker compose --env-file ../../.env up -d
+sudo -E docker compose --env-file ../../.env down
+sudo -E docker compose --env-file ../../.env up -d --force-recreate
 curl http://10.8.0.1:3100/ready
 ```
 

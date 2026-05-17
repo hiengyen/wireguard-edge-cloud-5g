@@ -216,7 +216,8 @@ For Grafana, set a non-default password first, then start the monitoring stack. 
 
 ```bash
 cd cloud/monitoring
-sudo docker compose --env-file ../../.env up -d
+# Use -E to preserve environment variables loaded from .env
+sudo -E docker compose --env-file ../../.env up -d --force-recreate
 ```
 
 Or use the wrapper script which validates `GRAFANA_ADMIN_PASSWORD` and applies `ALLOW_MONITORING_OVER_WIREGUARD` automatically:
@@ -525,7 +526,8 @@ Trên edge node, rule TCP vào mặc định bổ sung là `443` và `5201` qua 
 
 ```bash
 cd cloud/monitoring
-sudo docker compose --env-file ../../.env up -d
+# Sử dụng flag -E để giữ các biến môi trường được tải từ file .env
+sudo -E docker compose --env-file ../../.env up -d --force-recreate
 ```
 
 Hoặc dùng wrapper script để tự validate `GRAFANA_ADMIN_PASSWORD` và tự áp dụng `ALLOW_MONITORING_OVER_WIREGUARD`:
@@ -649,6 +651,20 @@ sudo rm /var/lib/alloy/data/loki.source.journal.system/positions.yml
 sudo systemctl reset-failed alloy
 sudo systemctl start alloy
 ```
+
+**How to trigger a simulated Critical System Alarm/Panic for testing / Cách giả lập log Cảnh Báo Lỗi hệ thống**
+
+To verify that the *SYSTEM ALERTS & KERNEL PANICS* dashboard panel works (which naturally shows "No data" on healthy systems), run the following CLI command to write a mock critical log:
+
+- **English:**
+  ```bash
+  logger "TEST ALERT: segfault crash in system service, critical exception triggered"
+  ```
+- **Tiếng Việt:**
+  ```bash
+  logger "TEST ALERT: segfault crash in system service, critical exception triggered"
+  ```
+  *(Dòng log giả lập này sẽ xuất hiện trên màn hình Grafana chỉ sau 5-10 giây để kiểm thử xem bộ lọc cảnh báo hoạt động).*
 
 ---
 
