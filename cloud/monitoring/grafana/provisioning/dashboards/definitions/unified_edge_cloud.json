@@ -246,6 +246,85 @@
           "unit": "Mbps"
         }
       }
+    },
+    {
+      "type": "timeseries",
+      "title": "RootFS Disk Usage (%)",
+      "gridPos": {
+        "x": 0,
+        "y": 15,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "expr": "100 - ((node_filesystem_avail_bytes{mountpoint=\"/\",fstype!~\"rootfs\"} * 100) / node_filesystem_size_bytes{mountpoint=\"/\",fstype!~\"rootfs\"})",
+          "legendFormat": "{{host}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        }
+      ],
+      "options": {
+        "tooltip": {"mode": "multi"},
+        "legend": {"displayMode": "table", "placement": "right", "calcs": ["last"]}
+      },
+      "fieldConfig": {
+        "defaults": {"custom": {"lineWidth": 2, "fillOpacity": 15}, "unit": "percent"}
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "CPU Temperature (°C)",
+      "gridPos": {
+        "x": 12,
+        "y": 15,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "expr": "max by (host) (node_hwmon_temp_celsius{job=~\"cloud-node|edge-nodes\"} or node_thermal_zone_temp{job=~\"cloud-node|edge-nodes\"})",
+          "legendFormat": "{{host}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        }
+      ],
+      "options": {
+        "tooltip": {"mode": "multi"},
+        "legend": {"displayMode": "table", "placement": "right", "calcs": ["last", "max"]}
+      },
+      "fieldConfig": {
+        "defaults": {"custom": {"lineWidth": 2, "fillOpacity": 10}, "unit": "celsius"}
+      }
+    },
+    {
+      "type": "logs",
+      "title": "System Logs & Errors (Loki)",
+      "gridPos": {
+        "x": 0,
+        "y": 22,
+        "w": 24,
+        "h": 10
+      },
+      "targets": [
+        {
+          "expr": "{job=~\"edge-journal|cloud-journal\"} |~ \"(?i)(error|failed|warn|panic|fatal|critical)\"",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          }
+        }
+      ],
+      "options": {
+        "showLabels": false,
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending"
+      }
     }
   ]
 }
