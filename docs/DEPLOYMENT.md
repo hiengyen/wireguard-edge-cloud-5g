@@ -198,6 +198,17 @@ On the cloud host:
 
 ```bash
 cd cloud/monitoring
+```
+
+Before starting Grafana, generate the **Unified Edge & Cloud Dashboard** for a single-pane-of-glass operational view:
+
+```bash
+python3 generate_unified_dashboard.py
+```
+
+Then start the stack:
+
+```bash
 # Use -E to preserve environment variables loaded from .env
 sudo -E docker compose --env-file ../../.env up -d --force-recreate
 ```
@@ -573,3 +584,29 @@ sudo journalctl -u alloy -n 20 --no-pager
 ```
 
 After recovery, Alloy replays up to `max_age` (default `1h`) of journald entries and begins forwarding to Loki.
+
+### Clearing "Ghost" Jobs in Grafana & Prometheus (No Data / N/A showing on Gauges)
+
+If you change a `job_name` in `prometheus.yml` (e.g. from `cloud-gateway` to `cloud-node`), the old name will still appear in Grafana dropdowns for 15 days, causing "N/A" values if selected. To wipe the old data immediately:
+
+```bash
+cd cloud/monitoring
+set -a && source ../../.env && set +a
+sudo docker compose stop prometheus
+sudo docker compose rm -f prometheus
+sudo docker volume rm monitoring_prometheus_data
+sudo docker compose up -d
+```
+*(Similarly, if a provisioned dashboard is stuck in Grafana, stop grafana, remove `monitoring_grafana_data` volume or delete `/var/lib/grafana/grafana.db`, and restart).*
+
+### Testing SWAP and CPU Load via `stress-ng` on Edge Nodes
+
+To verify the dashboard metrics spike correctly under heavy load, install and run `stress-ng`:
+
+```bash
+sudo apt update && sudo apt install stress-ng -y
+# Spike CPU (100% on 4 cores for 60s)
+stress-ng --cpu 4 --timeout 60s
+# Spike RAM and Force SWAP (allocate 120% of RAM, respawn if OOM killed, for 300s)
+stress-ng --vm 4 --vm-bytes 120% --vm-keep --oomable --timeout 300s
+```

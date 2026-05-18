@@ -214,6 +214,15 @@ On the edge node, the default extra inbound TCP rules are `443` and `5201` throu
 
 For Grafana, set a non-default password first, then start the monitoring stack. This starts Prometheus, Loki, and Grafana; Grafana provisions the Prometheus and Loki data sources from YAML.
 
+Before starting Grafana, you can generate the **Unified Edge & Cloud Dashboard** which provides a single-pane-of-glass overview of all nodes:
+
+```bash
+cd cloud/monitoring
+python3 generate_unified_dashboard.py
+```
+
+Then start the stack:
+
 ```bash
 cd cloud/monitoring
 # Use -E to preserve environment variables loaded from .env
@@ -524,6 +533,15 @@ Trên edge node, rule TCP vào mặc định bổ sung là `443` và `5201` qua 
 
 Đặt mật khẩu Grafana không mặc định rồi mới khởi chạy giám sát trên Cloud. Stack này chạy Prometheus, Loki và Grafana; Grafana tự provision datasource Prometheus/Loki bằng YAML.
 
+Trước khi chạy, bạn có thể sinh ra **Dashboard Tổng Hợp (Unified Edge & Cloud)** để có cái nhìn bao quát toàn bộ hệ thống trên cùng một màn hình:
+
+```bash
+cd cloud/monitoring
+python3 generate_unified_dashboard.py
+```
+
+Sau đó khởi động stack:
+
 ```bash
 cd cloud/monitoring
 # Sử dụng flag -E để giữ các biến môi trường được tải từ file .env
@@ -715,6 +733,32 @@ Because embedded ARM SBCs (like Orange Pi) do not have an RTC battery backup, th
 
 - **English:** The Edge node sits behind Carrier-Grade NAT (CGNAT) on the 5G WWAN interface. It has no inbound public IPv4 address, meaning public bots cannot scan or brute-force SSH on the Orange Pi. The *SYSTEM SECURITY* panel for the Edge node will naturally display `"No data"`. This is highly secure by design!
 - **Tiếng Việt:** Thiết bị Edge nằm sau lớp CGNAT của nhà mạng 5G nên không có IP Public đầu vào, giúp ngăn chặn tuyệt đối các cuộc quét cổng hay brute-force SSH từ bên ngoài Internet. Vì vậy, việc phần bảo mật của Orange Pi hiển thị `"No data"` là hoàn toàn bình thường và cực kỳ an toàn!
+
+**Clearing "Ghost" Jobs in Grafana & Prometheus / Xóa dữ liệu rác (Job cũ) hiển thị sai trong Grafana**
+
+If you rename a job in `prometheus.yml` (e.g. from `cloud-gateway` to `cloud-node`), the old name will linger in Grafana dropdowns for 15 days due to Prometheus TSDB retention. To clear it immediately, wipe the Prometheus volume:
+Nếu bạn đổi tên cấu hình job (VD từ `cloud-gateway` thành `cloud-node`), tên cũ vẫn sẽ kẹt lại trong menu thả xuống của Grafana 15 ngày. Để dọn dẹp ngay, hãy xóa volume của Prometheus và khởi động lại:
+```bash
+cd cloud/monitoring
+set -a && source ../../.env && set +a
+docker compose stop prometheus
+docker compose rm -f prometheus
+docker volume rm monitoring_prometheus_data
+docker compose up -d
+```
+
+**Testing SWAP and CPU Load / Kiểm thử ép tải CPU và SWAP trên Edge Node**
+
+To verify that the monitoring stack correctly reports CPU and memory pressure, use `stress-ng`.
+Để xác nhận hệ thống báo cáo chính xác % CPU và SWAP đang sử dụng, hãy SSH vào Edge Node và dùng công cụ `stress-ng`.
+```bash
+sudo apt update && sudo apt install stress-ng -y
+# Max out 4 CPU cores for 60 seconds / Vắt kiệt 4 nhân CPU trong 60 giây
+stress-ng --cpu 4 --timeout 60s
+
+# Force Heavy SWAP Usage (Consume 120% RAM) / Ép hệ thống dùng SWAP bằng cách ăn 120% RAM vật lý
+stress-ng --vm 4 --vm-bytes 120% --vm-keep --oomable --timeout 300s
+```
 
 ---
 
