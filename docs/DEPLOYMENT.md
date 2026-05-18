@@ -200,13 +200,9 @@ On the cloud host:
 cd cloud/monitoring
 ```
 
-Before starting Grafana, generate the **Unified Edge & Cloud Dashboard** for a single-pane-of-glass operational view:
+The monitoring stack includes a **Unified Edge & Cloud Dashboard** for a single-pane-of-glass operational view.
 
-```bash
-python3 generate_unified_dashboard.py
-```
-
-Then start the stack:
+To start the stack:
 
 ```bash
 # Use -E to preserve environment variables loaded from .env

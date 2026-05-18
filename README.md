@@ -214,14 +214,9 @@ On the edge node, the default extra inbound TCP rules are `443` and `5201` throu
 
 For Grafana, set a non-default password first, then start the monitoring stack. This starts Prometheus, Loki, and Grafana; Grafana provisions the Prometheus and Loki data sources from YAML.
 
-Before starting Grafana, you can generate the **Unified Edge & Cloud Dashboard** which provides a single-pane-of-glass overview of all nodes:
+The monitoring stack includes a **Unified Edge & Cloud Dashboard** for a single-pane-of-glass overview of all nodes.
 
-```bash
-cd cloud/monitoring
-python3 generate_unified_dashboard.py
-```
-
-Then start the stack:
+To start the stack:
 
 ```bash
 cd cloud/monitoring
@@ -533,14 +528,9 @@ Trên edge node, rule TCP vào mặc định bổ sung là `443` và `5201` qua 
 
 Đặt mật khẩu Grafana không mặc định rồi mới khởi chạy giám sát trên Cloud. Stack này chạy Prometheus, Loki và Grafana; Grafana tự provision datasource Prometheus/Loki bằng YAML.
 
-Trước khi chạy, bạn có thể sinh ra **Dashboard Tổng Hợp (Unified Edge & Cloud)** để có cái nhìn bao quát toàn bộ hệ thống trên cùng một màn hình:
+Hệ thống giám sát đi kèm sẵn **Dashboard Tổng Hợp (Unified Edge & Cloud)** để bạn có cái nhìn bao quát toàn bộ các node trên cùng một màn hình.
 
-```bash
-cd cloud/monitoring
-python3 generate_unified_dashboard.py
-```
-
-Sau đó khởi động stack:
+Để khởi động stack:
 
 ```bash
 cd cloud/monitoring
