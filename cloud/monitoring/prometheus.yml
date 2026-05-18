@@ -1,0 +1,25 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: "cloud-node"
+    # The Cloud Node Exporter listens on the local host
+    static_configs:
+      - targets: ["host.docker.internal:9100"]
+        labels:
+          host: "cloud-server"
+
+  - job_name: "edge-nodes"
+    # Add Edge Node Exporter endpoints here (using their WireGuard overlay IPs)
+    static_configs:
+      - targets: ["10.8.0.2:9100"]
+        labels:
+          host: "edge-node-01"
+      - targets: ["10.8.0.3:9100"]
+        labels:
+          host: "edge-node-02"
