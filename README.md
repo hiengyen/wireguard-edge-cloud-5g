@@ -652,10 +652,11 @@ curl http://10.8.0.1:3100/ready
 
 **Alloy crash loop — `invalid yaml positions file: yaml: control characters are not allowed`**
 
-The journal read-position tracking file is corrupted. Delete it and restart:
+- **English:** Alloy's journal read-position tracking file gets corrupted if the Edge node suffers a sudden power loss or ungraceful restart. Delete it to let Alloy recreate it and recover:
+- **Tiếng Việt:** File theo dõi tiến trình đọc log của Alloy bị lỗi khi thiết bị Edge mất điện đột ngột hoặc khởi động lại không an toàn. Bạn cần xóa nó đi để Alloy tự tạo lại:
 
 ```bash
-sudo rm /var/lib/alloy/data/loki.source.journal.system/positions.yml
+sudo rm -f /var/lib/alloy/data/loki.source.journal.system/positions.yml
 sudo systemctl reset-failed alloy
 sudo systemctl start alloy
 ```

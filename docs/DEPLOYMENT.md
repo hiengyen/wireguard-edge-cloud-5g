@@ -567,12 +567,12 @@ curl http://10.8.0.1:3100/ready
 invalid yaml positions file [.../loki.source.journal.system/positions.yml]: yaml: control characters are not allowed
 ```
 
-**Cause:** Alloy's journal read-position tracking file got corrupted (contains binary/control characters). Alloy cannot start until the file is removed; it will recreate it cleanly on the next start.
+**Cause:** Alloy's journal read-position tracking file gets corrupted (contains binary/control characters) if the Edge node suffers a sudden power loss or ungraceful restart. Alloy cannot start until the file is removed; it will recreate it cleanly on the next start.
 
 Fix on the edge node:
 
 ```bash
-sudo rm /var/lib/alloy/data/loki.source.journal.system/positions.yml
+sudo rm -f /var/lib/alloy/data/loki.source.journal.system/positions.yml
 sudo systemctl reset-failed alloy
 sudo systemctl start alloy
 sudo systemctl status alloy --no-pager
