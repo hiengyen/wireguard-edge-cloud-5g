@@ -20,10 +20,14 @@ run_ping() {
         return 1
     fi
 
-    # Parse: min/avg/max/mdev from summary line
-    local stats; stats=$(echo "$raw" | grep -E 'min/avg/max' | awk -F'/' '{print $4, $5, $6, $7}')
+    # Parse: min/avg/max/mdev from summary line (e.g. rtt min/avg/max/mdev = 54.224/65.195/81.239/5.940 ms)
+    local stats; stats=$(echo "$raw" | grep -oE '([0-9]+\.[0-9]+/)+[0-9]+\.[0-9]+')
     local min avg max mdev
-    read -r min avg max mdev <<< "$stats"
+    if [[ -n "$stats" ]]; then
+        IFS='/' read -r min avg max mdev <<< "$stats"
+    else
+        min="?" avg="?" max="?" mdev="?"
+    fi
 
     # Packet loss
     local loss; loss=$(echo "$raw" | grep -oE '[0-9]+(\.[0-9]+)? ?% packet loss' | grep -oE '[0-9]+(\.[0-9]+)?')

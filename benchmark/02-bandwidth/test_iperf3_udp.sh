@@ -27,6 +27,14 @@ run_udp_test() {
         return 1
     fi
 
+    # Check for iperf3 error response
+    local iperf_err
+    iperf_err=$(echo "$result_json" | python3 -c "import sys, json; d=json.load(sys.stdin); print(d.get('error', ''))" 2>/dev/null || true)
+    if [[ -n "$iperf_err" ]]; then
+        fail "${label}: iperf3 error: $iperf_err"
+        return 1
+    fi
+
     local mbps jitter loss_pct packets_lost packets_total
     mbps=$(echo "$result_json" | python3 -c "
 import sys, json
@@ -56,20 +64,25 @@ print(d.get('end',{}).get('sum',{}).get('lost_packets', 0))
     info "${label}: ${mbps} Mbps  jitter=${jitter}ms  loss=${loss_pct}%  lost_pkts=${packets_lost}"
 
     local ok=true
-    (( $(echo "$mbps < $MIN_UDP_MBPS"   | bc -l) )) && { fail "${label}: ${mbps} Mbps below min ${MIN_UDP_MBPS} Mbps"; ok=false; }
-    (( $(echo "$jitter > $MAX_JITTER_MS"| bc -l) )) && { warn "${label}: jitter ${jitter}ms exceeds ${MAX_JITTER_MS}ms"; }
-    (( $(echo "$loss_pct > $MAX_LOSS_PCT"| bc -l) )) && { fail "${label}: loss ${loss_pct}% exceeds ${MAX_LOSS_PCT}%"; ok=false; }
+    if (( $(echo "$mbps < $MIN_UDP_MBPS"   | bc -l) )); then fail "${label}: ${mbps} Mbps below min ${MIN_UDP_MBPS} Mbps"; ok=false; fi
+    if (( $(echo "$jitter > $MAX_JITTER_MS"| bc -l) )); then warn "${label}: jitter ${jitter}ms exceeds ${MAX_JITTER_MS}ms"; fi
+    if (( $(echo "$loss_pct > $MAX_LOSS_PCT"| bc -l) )); then fail "${label}: loss ${loss_pct}% exceeds ${MAX_LOSS_PCT}%"; ok=false; fi
 
-    $ok && pass "${label}: ${mbps} Mbps jitter=${jitter}ms loss=${loss_pct}%"
+    $ok && pass "${label}: ${mbps} Mbps jitter=${jitter}ms loss=${loss_pct}%" || true
 }
 
 # Check server
 log "Verifying iperf3 server at ${IPERF3_SERVER}:${IPERF3_PORT}"
 if ! iperf3 -c "$IPERF3_SERVER" -p "$IPERF3_PORT" -u -b 1M -t 1 -J &>/dev/null; then
-    fail "iperf3 UDP server unreachable — ensure server is running: iperf3 -s -D"
-    print_summary "02-udp-bandwidth"; exit 1
+    # Could be busy from previous run, try once more
+    sleep 2
+    if ! iperf3 -c "$IPERF3_SERVER" -p "$IPERF3_PORT" -u -b 1M -t 1 -J &>/dev/null; then
+        fail "iperf3 UDP server unreachable — ensure server is running: iperf3 -s -D"
+        print_summary "02-udp-bandwidth"; exit 1
+    fi
 fi
 pass "iperf3 server reachable (UDP)"
+sleep 2 # Wait for server to be ready for the first real test
 
 # ─── Tests at increasing bitrates ─────────────────────────────────────────────
 run_udp_test "UDP-1Mbps   (uplink)"  "1M"

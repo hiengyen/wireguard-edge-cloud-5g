@@ -70,11 +70,22 @@ load_test_endpoint() {
     local n=${#times[@]}
     local sorted; sorted=$(printf '%s\n' "${times[@]}" | sort -n)
     local p50 p95 p99 mean_ms max_ms
-    p50=$(echo "$sorted" | awk -v n="$n" 'NR==int(n*0.50)+1{print}')
-    p95=$(echo "$sorted" | awk -v n="$n" 'NR==int(n*0.95)+1{print}')
-    p99=$(echo "$sorted" | awk -v n="$n" 'NR==int(n*0.99)+1{print}')
-    max_ms=$(echo "$sorted" | tail -1)
-    mean_ms=$(printf '%s\n' "${times[@]}" | awk '{s+=$1}END{printf "%.0f", s/NR}')
+    if (( n > 0 )); then
+        p50=$(echo "$sorted" | awk -v n="$n" 'NR==int(n*0.50)+1{print}')
+        p95=$(echo "$sorted" | awk -v n="$n" 'NR==int(n*0.95)+1{print}')
+        p99=$(echo "$sorted" | awk -v n="$n" 'NR==int(n*0.99)+1{print}')
+        max_ms=$(echo "$sorted" | tail -1)
+        mean_ms=$(printf '%s\n' "${times[@]}" | awk '{s+=$1}END{printf "%.0f", s/NR}')
+    else
+        p50="0" p95="0" p99="0" max_ms="0" mean_ms="0"
+    fi
+
+    # Ensure empty vars get defaults
+    p50="${p50:-0}"
+    p95="${p95:-0}"
+    p99="${p99:-0}"
+    max_ms="${max_ms:-0}"
+    mean_ms="${mean_ms:-0}"
 
     info "${label}: n=${n} fail=${failed} mean=${mean_ms}ms p50=${p50}ms p95=${p95}ms p99=${p99}ms max=${max_ms}ms"
 

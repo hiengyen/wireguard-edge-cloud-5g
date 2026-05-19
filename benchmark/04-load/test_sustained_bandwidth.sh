@@ -38,43 +38,50 @@ run_sustained() {
         fail "${label}: no output"; return 1
     fi
 
-    # Extract per-interval throughput
-    python3 << EOF
-import json, sys, math
+    # Parse JSON output and write to CSV
+    local analysis
+    analysis=$(python3 -c "
+import sys, json, math
 
-data = json.loads('''${json_output}''')
-intervals = data.get('intervals', [])
-mbps_series = []
-
-# Write CSV header
-with open('${REPORT_FILE}', 'a') as f:
-    f.write(f'label,interval_start,mbps\n')
-
-for iv in intervals:
-    # Sum across parallel streams
-    bits = sum(s.get('bits_per_second', 0) for s in iv.get('streams', []))
-    mbps = bits / 1e6
-    start = iv['sum']['start']
-    mbps_series.append((start, mbps))
-    with open('${REPORT_FILE}', 'a') as f:
-        f.write(f'${label},{start:.1f},{mbps:.2f}\n')
-
-if not mbps_series:
-    print("ERROR: no intervals in iperf3 output")
+try:
+    data = json.load(sys.stdin)
+except json.JSONDecodeError:
+    print('ERROR: invalid JSON output from iperf3')
     sys.exit(1)
 
-vals = [m for _, m in mbps_series]
-mean_mbps = sum(vals) / len(vals)
-min_mbps = min(vals)
-max_mbps = max(vals)
-stddev = math.sqrt(sum((x - mean_mbps)**2 for x in vals) / len(vals))
+if 'error' in data:
+    print('ERROR: iperf3 error: ' + data['error'])
+    sys.exit(1)
+
+intervals = data.get('intervals', [])
+if not intervals:
+    print('ERROR: no intervals in iperf3 output')
+    sys.exit(1)
+
+mbps_series = []
+
+with open('${REPORT_FILE}', 'a') as f:
+    f.write('label,interval_start,mbps\n')
+    for iv in intervals:
+        bits = sum(s.get('bits_per_second', 0) for s in iv.get('streams', []))
+        mbps = bits / 1e6
+        start = iv['sum']['start']
+        mbps_series.append(mbps)
+        f.write(f'${label},{start:.1f},{mbps:.2f}\n')
+
+mean_mbps = sum(mbps_series) / len(mbps_series)
+min_mbps = min(mbps_series)
+max_mbps = max(mbps_series)
+stddev = math.sqrt(sum((x - mean_mbps)**2 for x in mbps_series) / len(mbps_series))
 variance_pct = (stddev / mean_mbps * 100) if mean_mbps > 0 else 0
 
-print(f"  Intervals: {len(vals)}  Mean: {mean_mbps:.2f} Mbps  Min: {min_mbps:.2f}  Max: {max_mbps:.2f}  Stddev: {stddev:.2f} ({variance_pct:.1f}%)")
-print(f"  MEAN_MBPS={mean_mbps:.2f}")
-print(f"  MIN_MBPS={min_mbps:.2f}")
-print(f"  VARIANCE_PCT={variance_pct:.1f}")
-EOF
+print(f'{mean_mbps:.2f} {min_mbps:.2f} {max_mbps:.2f} {variance_pct:.1f}')
+" <<< "$json_output")
+
+    if [[ "$analysis" == ERROR:* ]]; then
+        fail "${label}: ${analysis}"
+        return 1
+    fi
 
     # Read computed values back
     local analysis

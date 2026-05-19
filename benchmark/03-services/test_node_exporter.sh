@@ -41,7 +41,7 @@ check_node_exporter() {
     if echo "$metrics" | grep -q 'node_memory_MemAvailable_bytes'; then
         local mem_avail
         mem_avail=$(echo "$metrics" | grep '^node_memory_MemAvailable_bytes ' | awk '{print $2}')
-        local mem_mb; mem_mb=$(echo "scale=0; $mem_avail / 1048576" | bc 2>/dev/null || echo "?")
+        local mem_mb; mem_mb=$(awk -v bytes="$mem_avail" 'BEGIN { printf "%.0f", bytes / 1048576 }' 2>/dev/null || echo "?")
         info "${label}: free memory = ${mem_mb} MiB"
         pass "${label}: memory metrics present"
     else
@@ -52,7 +52,7 @@ check_node_exporter() {
     if echo "$metrics" | grep -q 'node_filesystem_avail_bytes'; then
         local disk_avail
         disk_avail=$(echo "$metrics" | grep 'node_filesystem_avail_bytes{.*mountpoint="/"' | head -1 | awk '{print $2}')
-        local disk_gb; disk_gb=$(echo "scale=1; ${disk_avail:-0} / 1073741824" | bc 2>/dev/null || echo "?")
+        local disk_gb; disk_gb=$(awk -v bytes="${disk_avail:-0}" 'BEGIN { printf "%.1f", bytes / 1073741824 }' 2>/dev/null || echo "?")
         info "${label}: root disk available = ${disk_gb} GiB"
         pass "${label}: disk metrics present"
     else
@@ -83,9 +83,9 @@ check_node_exporter() {
     # 8. System uptime
     if echo "$metrics" | grep -q 'node_boot_time_seconds'; then
         local boot_ts now uptime_h
-        boot_ts=$(echo "$metrics" | grep '^node_boot_time_seconds ' | awk '{print $2}' | cut -d. -f1)
+        boot_ts=$(echo "$metrics" | grep '^node_boot_time_seconds ' | awk '{printf "%.0f", $2}')
         now=$(date +%s)
-        uptime_h=$(echo "scale=1; ($now - $boot_ts) / 3600" | bc 2>/dev/null || echo "?")
+        uptime_h=$(awk -v now="$now" -v boot="$boot_ts" 'BEGIN { printf "%.1f", (now - boot) / 3600 }' 2>/dev/null || echo "?")
         info "${label}: uptime = ${uptime_h}h"
     fi
 }

@@ -13,12 +13,14 @@ mkdir -p "$REPORT_DIR"
 
 check_iperf3_server() {
     log "Checking iperf3 server at ${IPERF3_SERVER}:${IPERF3_PORT}"
-    if ! iperf3 -c "$IPERF3_SERVER" -p "$IPERF3_PORT" -t 1 -J &>/dev/null; then
+    check_output=$(iperf3 -c "$IPERF3_SERVER" -p "$IPERF3_PORT" -t 1 -J 2>&1)
+    if [[ "$check_output" == *"error"* ]] && [[ "$check_output" != *"busy"* ]]; then
         fail "iperf3 server unreachable at ${IPERF3_SERVER}:${IPERF3_PORT}"
         info "Start iperf3 server on cloud with: iperf3 -s -D"
         print_summary "02-tcp-bandwidth"; exit 1
     fi
     pass "iperf3 server reachable"
+    sleep 2 # Wait for server to be ready for the next connection
 }
 
 run_tcp_test() {
@@ -34,6 +36,14 @@ run_tcp_test() {
 
     if [[ -z "$result_json" ]]; then
         fail "${label}: iperf3 produced no output"
+        return 1
+    fi
+
+    # Check for iperf3 error response
+    local iperf_err
+    iperf_err=$(echo "$result_json" | python3 -c "import sys, json; d=json.load(sys.stdin); print(d.get('error', ''))" 2>/dev/null || true)
+    if [[ -n "$iperf_err" ]]; then
+        fail "${label}: iperf3 error: $iperf_err"
         return 1
     fi
 

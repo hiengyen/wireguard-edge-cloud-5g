@@ -86,9 +86,9 @@ run_script() {
 
     local elapsed=$(( $(date +%s) - start ))
     local pass fail warn
-    pass=$(grep -c '✔ PASS' "$log_out" 2>/dev/null || echo 0)
-    fail=$(grep -c '✘ FAIL' "$log_out" 2>/dev/null || echo 0)
-    warn=$(grep -c '⚠ WARN' "$log_out" 2>/dev/null || echo 0)
+    pass=$(grep -c '✔ PASS' "$log_out" || true)
+    fail=$(grep -c '✘ FAIL' "$log_out" || true)
+    warn=$(grep -c '⚠ WARN' "$log_out" || true)
 
     (( GLOBAL_PASS += pass )) || true
     (( GLOBAL_FAIL += fail )) || true
