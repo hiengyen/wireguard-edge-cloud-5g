@@ -28,7 +28,7 @@ check_node_exporter() {
                              || warn "${label}: low metric count (${metric_count}) — check collectors"
 
     # 3. CPU
-    if echo "$metrics" | grep -q 'node_cpu_seconds_total'; then
+    if echo "$metrics" | grep 'node_cpu_seconds_total' >/dev/null; then
         local idle_pct
         idle_pct=$(echo "$metrics" | grep 'node_cpu_seconds_total{.*mode="idle"' | head -1 | awk '{print $2}')
         info "${label}: CPU idle counter=${idle_pct} (cumulative seconds)"
@@ -38,7 +38,7 @@ check_node_exporter() {
     fi
 
     # 4. Memory
-    if echo "$metrics" | grep -q 'node_memory_MemAvailable_bytes'; then
+    if echo "$metrics" | grep 'node_memory_MemAvailable_bytes' >/dev/null; then
         local mem_avail
         mem_avail=$(echo "$metrics" | grep '^node_memory_MemAvailable_bytes ' | awk '{print $2}')
         local mem_mb; mem_mb=$(awk -v bytes="$mem_avail" 'BEGIN { printf "%.0f", bytes / 1048576 }' 2>/dev/null || echo "?")
@@ -49,7 +49,7 @@ check_node_exporter() {
     fi
 
     # 5. Disk
-    if echo "$metrics" | grep -q 'node_filesystem_avail_bytes'; then
+    if echo "$metrics" | grep 'node_filesystem_avail_bytes' >/dev/null; then
         local disk_avail
         disk_avail=$(echo "$metrics" | grep 'node_filesystem_avail_bytes{.*mountpoint="/"' | head -1 | awk '{print $2}')
         local disk_gb; disk_gb=$(awk -v bytes="${disk_avail:-0}" 'BEGIN { printf "%.1f", bytes / 1073741824 }' 2>/dev/null || echo "?")
@@ -60,7 +60,7 @@ check_node_exporter() {
     fi
 
     # 6. Network
-    if echo "$metrics" | grep -q 'node_network_receive_bytes_total'; then
+    if echo "$metrics" | grep 'node_network_receive_bytes_total' >/dev/null; then
         local ifaces
         ifaces=$(echo "$metrics" | grep '^node_network_receive_bytes_total' | grep -oP 'device="\K[^"]+' | tr '\n' ' ')
         info "${label}: network interfaces = ${ifaces}"
@@ -70,7 +70,7 @@ check_node_exporter() {
     fi
 
     # 7. WireGuard interface present in network metrics
-    if echo "$metrics" | grep -q "device=\"${WG_INTERFACE}\""; then
+    if echo "$metrics" | grep "device=\"${WG_INTERFACE}\"" >/dev/null; then
         local wg_rx wg_tx
         wg_rx=$(echo "$metrics" | grep "node_network_receive_bytes_total{.*device=\"${WG_INTERFACE}\"" | awk '{print $2}')
         wg_tx=$(echo "$metrics" | grep "node_network_transmit_bytes_total{.*device=\"${WG_INTERFACE}\"" | awk '{print $2}')
@@ -81,7 +81,7 @@ check_node_exporter() {
     fi
 
     # 8. System uptime
-    if echo "$metrics" | grep -q 'node_boot_time_seconds'; then
+    if echo "$metrics" | grep 'node_boot_time_seconds' >/dev/null; then
         local boot_ts now uptime_h
         boot_ts=$(echo "$metrics" | grep '^node_boot_time_seconds ' | awk '{printf "%.0f", $2}')
         now=$(date +%s)

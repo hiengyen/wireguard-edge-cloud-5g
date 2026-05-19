@@ -93,7 +93,7 @@ fi
 
 # 7. DNS resolution via 5G uplink
 log "Testing DNS resolution via 5G"
-if host -W 3 google.com &>/dev/null; then
+if ping -c 1 -W 3 google.com &>/dev/null; then
     pass "DNS resolution working"
 else
     fail "DNS resolution failed over 5G uplink"
