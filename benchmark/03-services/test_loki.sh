@@ -38,8 +38,8 @@ import json, os
 ts = '${NOW_NS}'
 payload = {
     'streams': [{
-        'stream': {'job': 'benchmark-test', 'host': os.uname().nodename},
-        'values': [[ts, 'benchmark-test: Loki push test from wireguard-edge-cloud-5g benchmark suite']]
+        'stream': {'job': '_benchmark_probe', 'host': os.uname().nodename},
+        'values': [[ts, '_benchmark_probe: Loki push test from wireguard-edge-cloud-5g benchmark suite']]
     }]
 }
 print(json.dumps(payload))
@@ -57,7 +57,7 @@ fi
 # 4. Query back the test entry
 sleep 2  # allow indexing
 log "Querying test log entry back"
-ENCODED_QUERY=$(python3 -c "import urllib.parse; print(urllib.parse.quote('{job=\"benchmark-test\"}'  ))")
+ENCODED_QUERY=$(python3 -c "import urllib.parse; print(urllib.parse.quote('{job=\"_benchmark_probe\"}'))")
 query_result=$(http_get "${LOKI}/loki/api/v1/query_range?query=${ENCODED_QUERY}&limit=5&start=$(( NOW_NS - 30000000000 ))&end=$(date +%s%N)" || echo "{}")
 log_count=$(echo "$query_result" | python3 -c "
 import sys, json
@@ -66,7 +66,7 @@ total = sum(len(s.get('values',[])) for s in d.get('data',{}).get('result',[]))
 print(total)
 " 2>/dev/null || echo "0")
 
-(( log_count > 0 )) && pass "Query returned ${log_count} log line(s) for benchmark-test job" \
+(( log_count > 0 )) && pass "Query returned ${log_count} log line(s) for _benchmark_probe job" \
                       || fail "No log lines returned — push may have failed or index is slow"
 
 # 5. Check edge-journal label (Alloy log stream)
