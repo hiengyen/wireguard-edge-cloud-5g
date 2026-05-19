@@ -13,10 +13,14 @@ MAX_LOSS_PCT="${MAX_LOSS_PCT:-5}"      # max acceptable packet loss (%)
 MAX_JITTER_MS="${MAX_JITTER_MS:-30}"   # max acceptable jitter (ms)
 
 run_ping() {
-    local label="$1" host="$2" count="${3:-$PING_COUNT}" interval="${4:-$PING_INTERVAL}"
+    local label="$1" host="$2" count="${3:-$PING_COUNT}" interval="${4:-$PING_INTERVAL}" critical="${5:-true}"
     local raw
     if ! raw=$(ping -c "$count" -i "$interval" "$host" 2>&1); then
-        fail "${label}: host unreachable (${host})"
+        if [[ "$critical" == "true" ]]; then
+            fail "${label}: host unreachable (${host})"
+        else
+            warn "${label}: host unreachable (${host}) — gateway may block ICMP"
+        fi
         return 1
     fi
 
@@ -71,7 +75,7 @@ if [[ -n "$WWAN_INTERFACE" ]]; then
     local_gw=$(ip route show dev "$WWAN_INTERFACE" 2>/dev/null | awk '/default/{print $3; exit}')
     if [[ -n "$local_gw" ]]; then
         log "Pinging 5G local gateway: ${local_gw}"
-        run_ping "5G-local-gateway" "$local_gw" 5 0.2
+        run_ping "5G-local-gateway" "$local_gw" 5 0.2 "false"
     fi
 else
     warn "WWAN interface not found — skipping 5G local gateway ping"
