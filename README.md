@@ -59,6 +59,7 @@ wireguard-edge-cloud-5g/
 ├── README.md                 # You are here!
 ├── docs/                     # Deployment and operations documentation
 │   ├── DEPLOYMENT.md         # End-to-end rollout guide
+│   ├── PEERSIGHT_DEPLOYMENT.md # PeerSight installation and orchestration guide
 │   ├── COMMANDS.md           # Common command reference
 │   └── BENCHMARK.md          # Benchmark suite usage and interpretation guide
 ├── benchmark/                # Automated test and benchmark suite
@@ -384,6 +385,7 @@ wireguard-edge-cloud-5g/
 ├── README.md                 # Chính là tài liệu này (Song ngữ)
 ├── docs/                     # Tài liệu triển khai và vận hành
 │   ├── DEPLOYMENT.md         # Hướng dẫn triển khai đầy đủ
+│   ├── PEERSIGHT_DEPLOYMENT.md # Hướng dẫn cài đặt và sử dụng PeerSight
 │   ├── COMMANDS.md           # Tổng hợp lệnh hay dùng
 │   └── BENCHMARK.md          # Hướng dẫn sử dụng và đọc kết quả benchmark
 ├── benchmark/                # Bộ kiểm thử và đo hiệu năng tự động
