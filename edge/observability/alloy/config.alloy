@@ -38,3 +38,18 @@ loki.write "cloud" {
     url = sys.env("ALLOY_LOKI_URL")
   }
 }
+
+// ── PeerSight SIEM Bridge events ──
+local.file_match "peersight_events" {
+  path_targets = [{
+    __address__ = "localhost",
+    __path__    = "/var/log/peersight/events.jsonl",
+    job         = "peersight-alerts",
+    env         = "production",
+  }]
+}
+
+loki.source.file "peersight" {
+  targets    = local.file_match.peersight_events.targets
+  forward_to = [loki.write.cloud.receiver]
+}
