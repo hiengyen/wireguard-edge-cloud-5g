@@ -242,6 +242,8 @@ ssh -i <your-key.pem> -N \
   -L 3100:10.8.0.1:3100 \
   -L 9100:10.8.0.1:9100 \
   -L 12345:10.8.0.2:12345 \
+  -L 4000:10.8.0.1:4000 \
+  -L 5173:10.8.0.1:5173 \
   ec2-user@<elastic-ip>
 ```
 
@@ -252,6 +254,8 @@ Then open:
 - Loki readiness: `http://127.0.0.1:3100/ready`
 - Node Exporter (cloud): `http://127.0.0.1:9100/metrics`
 - Alloy UI (edge): `http://127.0.0.1:12345`
+- PeerSight API: `http://127.0.0.1:4000/health`
+- PeerSight UI: `http://127.0.0.1:5173`
 
 > **Alloy UI prerequisite:** `install-alloy.sh` sets `CUSTOM_ARGS="--server.http.listen-addr=0.0.0.0:12345"` so
 > the UI is reachable over WireGuard. Also open the port on the edge UFW (one-time):

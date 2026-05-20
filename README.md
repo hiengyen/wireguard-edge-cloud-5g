@@ -88,6 +88,12 @@ wireguard-edge-cloud-5g/
     └── scripts/
         ├── hardening.sh      # Distro-aware SSH/Firewall/Fail2Ban hardening
         └── install-node-exporter.sh # Prometheus metrics agent installation
+├── peersight/                # WireGuard Monitoring & Orchestration (PeerSight)
+│   ├── docker-compose.yml    # PostgreSQL + API + App UI + Broker
+│   ├── peersight-api/        # Go REST API (Gin + pgx + JWT)
+│   ├── peersight-app/        # Vue.js 3 Admin Dashboard
+│   ├── peersight-agent/      # Go daemon — syncs WireGuard state
+│   └── peersight-broker/     # Go daemon — SIEM bridge (alerts → Loki)
 ```
 
 ## 🔐 Key Features
@@ -250,6 +256,8 @@ ssh -i <your-key.pem> -N \
   -L 3100:10.8.0.1:3100 \
   -L 9100:10.8.0.1:9100 \
   -L 12345:10.8.0.2:12345 \
+  -L 4000:10.8.0.1:4000 \
+  -L 5173:10.8.0.1:5173 \
   ec2-user@<EC2_PUBLIC_IP>
 ```
 
@@ -259,6 +267,8 @@ Then open:
 - Loki readiness: `http://127.0.0.1:3100/ready`
 - Node Exporter (cloud): `http://127.0.0.1:9100/metrics`
 - Alloy UI (edge): `http://127.0.0.1:12345`
+- PeerSight API: `http://127.0.0.1:4000/health`
+- PeerSight UI: `http://127.0.0.1:5173`
 
 For the Alloy UI line to work, open port 12345 on the edge UFW once:
 `sudo ufw allow in on wg0 to any port 12345 proto tcp`
@@ -403,6 +413,12 @@ wireguard-edge-cloud-5g/
     └── scripts/
         ├── hardening.sh      # Hardening SSH/Firewall/Fail2Ban theo từng distro
         └── install-node-exporter.sh # Cài Agent theo dõi sức khoẻ phần cứng
+├── peersight/                # WireGuard Monitoring & Orchestration (PeerSight)
+│   ├── docker-compose.yml    # PostgreSQL + API + App UI + Broker
+│   ├── peersight-api/        # Go REST API (Gin + pgx + JWT)
+│   ├── peersight-app/        # Vue.js 3 Admin Dashboard
+│   ├── peersight-agent/      # Go daemon — syncs WireGuard state
+│   └── peersight-broker/     # Go daemon — SIEM bridge (alerts → Loki)
 ```
 
 ## 🔐 Tính Năng Chính
@@ -564,6 +580,8 @@ ssh -i <your-key.pem> -N \
   -L 3100:10.8.0.1:3100 \
   -L 9100:10.8.0.1:9100 \
   -L 12345:10.8.0.2:12345 \
+  -L 4000:10.8.0.1:4000 \
+  -L 5173:10.8.0.1:5173 \
   ec2-user@<EC2_PUBLIC_IP>
 ```
 
@@ -573,6 +591,8 @@ Sau đó mở:
 - Loki readiness: `http://127.0.0.1:3100/ready`
 - Node Exporter (cloud): `http://127.0.0.1:9100/metrics`
 - Alloy UI (edge): `http://127.0.0.1:12345`
+- PeerSight API: `http://127.0.0.1:4000/health`
+- PeerSight UI: `http://127.0.0.1:5173`
 
 Để dùng được dòng Alloy UI, mở port 12345 trên UFW của edge một lần:
 `sudo ufw allow in on wg0 to any port 12345 proto tcp`

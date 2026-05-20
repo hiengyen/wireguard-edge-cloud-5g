@@ -21,6 +21,8 @@ GRAFANA_PORT="${GRAFANA_PORT:-3000}"
 PROMETHEUS_PORT="${PROMETHEUS_PORT:-9090}"
 LOKI_PORT="${LOKI_PORT:-3100}"
 NODE_EXPORTER_PORT="${NODE_EXPORTER_PORT:-9100}"
+PEERSIGHT_API_PORT="${PEERSIGHT_API_PORT:-4000}"
+PEERSIGHT_APP_PORT="${PEERSIGHT_APP_PORT:-5173}"
 RESTART_DOCKER_IF_ACTIVE="${RESTART_DOCKER_IF_ACTIVE:-true}"
 OS_FAMILY=""
 FIREWALL_NAME=""
@@ -155,6 +157,8 @@ configure_firewall_debian() {
     ufw allow in on wg0 to any port "${PROMETHEUS_PORT}" proto tcp
     ufw allow in on wg0 to any port "${LOKI_PORT}" proto tcp
     ufw allow in on wg0 to any port "${NODE_EXPORTER_PORT}" proto tcp
+    ufw allow in on wg0 to any port "${PEERSIGHT_API_PORT}" proto tcp
+    ufw allow in on wg0 to any port "${PEERSIGHT_APP_PORT}" proto tcp
   fi
   ufw --force enable
 }
@@ -175,6 +179,8 @@ configure_firewall_amzn2023() {
     firewall-cmd --permanent --add-rich-rule="rule family=\"ipv4\" source address=\"${WIREGUARD_NETWORK}\" port protocol=\"tcp\" port=\"${PROMETHEUS_PORT}\" accept"
     firewall-cmd --permanent --add-rich-rule="rule family=\"ipv4\" source address=\"${WIREGUARD_NETWORK}\" port protocol=\"tcp\" port=\"${LOKI_PORT}\" accept"
     firewall-cmd --permanent --add-rich-rule="rule family=\"ipv4\" source address=\"${WIREGUARD_NETWORK}\" port protocol=\"tcp\" port=\"${NODE_EXPORTER_PORT}\" accept"
+    firewall-cmd --permanent --add-rich-rule="rule family=\"ipv4\" source address=\"${WIREGUARD_NETWORK}\" port protocol=\"tcp\" port=\"${PEERSIGHT_API_PORT}\" accept"
+    firewall-cmd --permanent --add-rich-rule="rule family=\"ipv4\" source address=\"${WIREGUARD_NETWORK}\" port protocol=\"tcp\" port=\"${PEERSIGHT_APP_PORT}\" accept"
   fi
   firewall-cmd --reload
 
@@ -251,6 +257,8 @@ print_summary() {
   fi
   if [[ "${ALLOW_MONITORING_OVER_WIREGUARD}" == "true" ]]; then
     echo "- Monitoring over WireGuard: Enabled for ${WIREGUARD_NETWORK} on ${GRAFANA_PORT}/tcp, ${PROMETHEUS_PORT}/tcp, ${LOKI_PORT}/tcp, and ${NODE_EXPORTER_PORT}/tcp"
+    echo "- PeerSight API Port: ${PEERSIGHT_API_PORT}/tcp"
+    echo "- PeerSight App Port: ${PEERSIGHT_APP_PORT}/tcp"
   else
     echo "- Monitoring over WireGuard: Disabled"
   fi
