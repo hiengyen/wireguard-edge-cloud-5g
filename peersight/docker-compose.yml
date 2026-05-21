@@ -1,0 +1,95 @@
+services:
+  # ── PostgreSQL ──
+  db:
+    image: postgres:16-alpine
+    container_name: peersight-db
+    environment:
+      POSTGRES_USER: peersight
+      POSTGRES_PASSWORD: ${PEERSIGHT_DB_PASSWORD:?set PEERSIGHT_DB_PASSWORD}
+      POSTGRES_DB: peersight
+    expose:
+      - "5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./peersight-api/migrations/001_init.sql:/docker-entrypoint-initdb.d/001_init.sql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U peersight"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  # ── API Server (Go) ──
+  api:
+    build:
+      context: ./peersight-api
+      dockerfile: Dockerfile
+    container_name: peersight-api
+    ports:
+      - "${MONITORING_BIND_ADDRESS:-127.0.0.1}:${PEERSIGHT_API_PORT:-4000}:4000"
+    environment:
+      DATABASE_URL: postgres://peersight:${PEERSIGHT_DB_PASSWORD}@db:5432/peersight?sslmode=disable
+      JWT_SECRET: ${PEERSIGHT_JWT_SECRET:?set PEERSIGHT_JWT_SECRET}
+      PORT: "4000"
+      ENV: production
+      ALLOWED_ORIGINS: "http://localhost:${PEERSIGHT_APP_PORT:-5173},http://10.8.0.1:${PEERSIGHT_APP_PORT:-5173}"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  # ── App UI (Vue.js via Nginx) ──
+  app:
+    build:
+      context: ./peersight-app
+      dockerfile: Dockerfile
+    container_name: peersight-app
+    ports:
+      - "${MONITORING_BIND_ADDRESS:-127.0.0.1}:${PEERSIGHT_APP_PORT:-5173}:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  # ── Broker (SIEM Bridge) ──
+  broker:
+    build:
+      context: ./peersight-broker
+      dockerfile: Dockerfile
+    container_name: peersight-broker
+    environment:
+      PEERSIGHT_API_URL: http://api:4000
+      PEERSIGHT_TOKEN: ${PEERSIGHT_BROKER_TOKEN:-placeholder}
+      PEERSIGHT_LOOP_INTERVAL: "15"
+      PEERSIGHT_PIPE_1_NAME: events-file
+      PEERSIGHT_PIPE_1_TO: file
+      PEERSIGHT_PIPE_1_FROM: alerts,changes
+      PEERSIGHT_PIPE_1_MAX: "100"
+      PEERSIGHT_PIPE_1_FILE: /var/log/peersight/events.jsonl
+    volumes:
+      - /var/log/peersight:/var/log/peersight
+    depends_on:
+      - api
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+volumes:
+  pgdata:

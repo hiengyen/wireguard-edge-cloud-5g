@@ -1,0 +1,38 @@
+# ── Binaries ──
+wmotrack-api
+wmotrack-agent
+wmotrack-broker
+
+# ── Go ──
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+
+# ── Node ──
+node_modules/
+dist/
+.vite/
+
+# ── Environment ──
+.env
+.env.local
+.env.*.local
+
+# ── IDE ──
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── OS ──
+.DS_Store
+Thumbs.db
+
+# ── Docker ──
+*.log
