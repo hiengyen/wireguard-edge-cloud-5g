@@ -17,7 +17,14 @@ PEERSIGHT_TOKEN="${PEERSIGHT_TOKEN:-}"
 PEERSIGHT_LOOP_INTERVAL="${PEERSIGHT_LOOP_INTERVAL:-15}"
 PEERSIGHT_READ_ONLY="${PEERSIGHT_READ_ONLY:-false}"
 PEERSIGHT_REDACT_SECRETS="${PEERSIGHT_REDACT_SECRETS:-true}"
-PEERSIGHT_WG_BINARY="${PEERSIGHT_WG_BINARY:-/usr/bin/wg}"
+# Ensure wireguard-tools (wg command) is installed
+if ! command -v wg &> /dev/null; then
+    echo "[ERROR] 'wg' command not found. Please install wireguard-tools manually."
+    exit 1
+fi
+
+DETECTED_WG=$(command -v wg)
+PEERSIGHT_WG_BINARY="${PEERSIGHT_WG_BINARY:-$DETECTED_WG}"
 PEERSIGHT_CONFIG_DIR="${PEERSIGHT_CONFIG_DIR:-/etc/wireguard}"
 
 if [[ -z "$PEERSIGHT_API_URL" || -z "$PEERSIGHT_HOST_ID" || -z "$PEERSIGHT_TOKEN" ]]; then

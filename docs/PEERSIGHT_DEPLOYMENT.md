@@ -1,189 +1,214 @@
 # PeerSight Deployment Guide (WireGuard Orchestration)
 
-This document provides instructions on deploying the **PeerSight** system (WireGuard network monitoring and management) into the existing Edge-Cloud 5G infrastructure. The system consists of 4 main components:
-1. **Database** (PostgreSQL)
-2. **API Backend** (Golang)
-3. **App UI** (Vue.js)
-4. **Agent** (Golang daemon running on both the Cloud Gateway and Edge Nodes)
+This document provides instructions for deploying the **PeerSight** system (WireGuard network monitoring and management) into the existing Edge-Cloud 5G infrastructure.
 
-The system is designed with a Zero-Trust architecture: all connections run through the WireGuard virtual network (Overlay network `10.8.0.x`) and no ports are exposed directly to the Internet.
+The architecture consists of 4 core parts:
+1. **Database** (PostgreSQL) — Cloud
+2. **API Backend** (Golang) — Cloud
+3. **App UI** (Vue.js via Nginx) — Cloud
+4. **Agent** (Golang daemon) — Running directly on **both** the Cloud Gateway and Edge Nodes
+
+The design implements **Zero-Trust** security principles: all traffic operates inside the WireGuard overlay network (`10.8.0.x`), and no administrative ports are exposed to the public Internet.
+
+---
+
+## Automation Scripts Overview
+
+The deployment is fully automated via shell scripts in the `peersight/` directory:
+
+| Script | Purpose | Run on |
+|---|---|---|
+| `deploy-cloud.sh` | Installs Go, builds agent, launches Docker stack, registers systemd service | Cloud Gateway |
+| `deploy-edge.sh` | Installs Go (native mode) or validates binary (transfer mode), registers systemd service | Edge Node |
+| `install-go.sh` | Downloads and installs Go from official upstream tarball (auto-detects amd64/arm64) | Both |
+| `install-agent.sh` | Creates `/etc/peersight/agent.env` and the systemd unit file (called internally by deploy scripts) | Both |
 
 ---
 
 ## 1. Prerequisites
-Ensure you have completed the basic steps in [DEPLOYMENT.md](DEPLOYMENT.md), including:
-- Cloud Gateway is running and has a VPN address (e.g., `10.8.0.1`)
-- Edge Node is connected to the VPN network (e.g., `10.8.0.2`)
-- The `.env` configuration file has all the necessary variables for PeerSight.
 
-Check your `.env` file and make sure the following lines exist:
+Ensure you have completed the base infrastructure setup described in [DEPLOYMENT.md](DEPLOYMENT.md):
+- Cloud Gateway is running with VPN address `10.8.0.1`
+- Edge Node is connected to the VPN at `10.8.0.2`
+- The `.env` file contains the PeerSight variables (see `.env.example` for reference)
+
+### 1.1 Cloud Gateway Packages
+
 ```bash
-# ── PeerSight ──
-PEERSIGHT_DB_PASSWORD=YourSecureDatabasePassword
-PEERSIGHT_JWT_SECRET=change-me-in-production-min-32-chars
-PEERSIGHT_API_PORT=4000
-PEERSIGHT_APP_PORT=5173
-PEERSIGHT_BROKER_TOKEN=
+# Debian/Ubuntu
+sudo apt-get update -y
+sudo apt-get install -y wireguard-tools git make docker.io docker-compose-v2 curl
+
+# Amazon Linux 2023
+sudo dnf update -y
+sudo dnf install -y wireguard-tools git make docker curl
+sudo systemctl enable --now docker
+```
+
+> **Note:** Go is installed automatically by `deploy-cloud.sh` via `install-go.sh`. No manual Go setup is needed.
+
+### 1.2 Edge Node Packages
+
+`wireguard-tools` should already be installed from the WireGuard bootstrap step. No additional packages are required — `deploy-edge.sh` handles everything.
+
+---
+
+## 2. Firewall Rules (Zero-Trust)
+
+```
+[Edge Node Agent] ──(Outbound over WG)──> [10.8.0.1:4000 (Cloud API)]
+[Admin Browser]  ──(SSH Port-Forward) ──> [10.8.0.1:5173 (Cloud UI)]
+```
+
+### 2.1 Cloud Gateway
+Ports `4000/tcp` (API) and `5173/tcp` (App UI) are restricted to the WireGuard overlay. The `hardening.sh` script handles this automatically:
+
+```bash
+cd ~/wireguard-edge-cloud-5g
+set -a && . ./.env && set +a
+sudo -E ./shared/scripts/hardening.sh
+```
+
+### 2.2 Edge Node
+The `peersight-agent` operates in **outbound-only mode** — no inbound ports need to be opened.
+
+---
+
+## 3. Cloud Gateway Deployment (One Command)
+
+SSH into the Cloud Gateway and run:
+
+```bash
+cd ~/wireguard-edge-cloud-5g
+set -a && . ./.env && set +a
+sudo -E ./peersight/deploy-cloud.sh
+```
+
+This single command will:
+1. ✅ Install Go 1.22 from the official upstream (if not present)
+2. ✅ Build the `peersight-agent` binary for x86_64
+3. ✅ Create `/var/log/peersight` for SIEM broker logs
+4. ✅ Launch the full Docker Compose stack (PostgreSQL, API, Web UI, Broker)
+5. ✅ Wait until the API health check passes
+6. ✅ Print endpoint summary and next steps
+
+After the script completes, bootstrap the first admin account:
+
+```bash
+# Sign up
+curl -X POST http://10.8.0.1:4000/accounts/signup \
+  -H "Content-Type: application/json" \
+  -d '{"email": "admin@edge5g.local", "password": "YourSecurePass123!"}'
+
+# Promote to admin
+sudo docker exec -it peersight-db psql -U peersight -c \
+  "UPDATE users SET role='admin' WHERE email='admin@edge5g.local';"
 ```
 
 ---
 
-## 2. Deploying the Core System on the Cloud Gateway
+## 4. Access the Web UI (SSH Tunnel)
 
-The API, UI, Database, and Broker will be deployed using Docker Compose on the Cloud server (Amazon Linux / Debian).
+On your **local development machine**:
 
-1. **Access the Cloud Gateway:**
-   ```bash
-   ssh -i <your-key.pem> ec2-user@<elastic-ip>
-   ```
+```bash
+ssh -i <your-key.pem> -N \
+  -L 4000:10.8.0.1:4000 \
+  -L 5173:10.8.0.1:5173 \
+  ec2-user@<ELASTIC_IP>
+```
 
-2. **Run the Hardening script to open ports in the VPN network:**
-   *(If you haven't run it yet)*
-   ```bash
-   cd ~/wireguard-edge-cloud-5g
-   set -a && . ./.env && set +a
-   sudo -E ./shared/scripts/hardening.sh
-   ```
+Then open [http://127.0.0.1:5173](http://127.0.0.1:5173) and log in.
 
-3. **Start the PeerSight Stack:**
-   ```bash
-   sudo mkdir -p /var/log/peersight
-   sudo chmod 755 /var/log/peersight
+### Create Host Identities
 
-   cd ~/wireguard-edge-cloud-5g/peersight
-   set -a && . ../.env && set +a
-   sudo -E docker compose --env-file ../.env up -d --build
-   ```
+1. Go to **Hosts** → **Create Host** → name it `cloud-gateway`. Save the **Host ID** and **Agent Token**.
+2. Create another Host → name it `edge-orangepi-01`. Save its **Host ID** and **Agent Token**.
 
-4. **Check the status:**
-   ```bash
-   sudo docker ps | grep peersight
-   curl -s http://10.8.0.1:4000/health
-   ```
+### Register the Cloud Agent
 
-5. **Create the first Administrator account:**
-   ```bash
-   # Register an account
-   curl -X POST http://10.8.0.1:4000/accounts/signup \
-     -H "Content-Type: application/json" \
-     -d '{"email": "admin@edge5g.local", "password": "YourSecurePass123!"}'
+Now that you have the Cloud host credentials, register the agent service:
 
-   # Grant Admin privileges directly via the Database
-   sudo docker exec -it peersight-db psql -U peersight -c \
-     "UPDATE users SET role='admin' WHERE email='admin@edge5g.local';"
-   ```
+```bash
+sudo PEERSIGHT_HOST_ID="<CLOUD_UUID>" \
+     PEERSIGHT_TOKEN="<CLOUD_JWT>" \
+     ~/wireguard-edge-cloud-5g/peersight/install-agent.sh
+```
 
 ---
 
-## 3. Accessing the PeerSight Web UI
+## 5. Edge Node Deployment (One Command)
 
-For security reasons, we do not expose ports to the Public Internet. Instead, access is routed through an SSH Tunnel (Port Forwarding).
+Choose one of two modes depending on your situation:
 
-1. **On your local computer**, create an SSH Tunnel:
-   ```bash
-   ssh -i <your-key.pem> -N \
-     -L 4000:10.8.0.1:4000 \
-     -L 5173:10.8.0.1:5173 \
-     ec2-user@<elastic-ip>
-   ```
-2. **Open your Web Browser**:
-   Navigate to [http://127.0.0.1:5173](http://127.0.0.1:5173). Log in using the `admin@edge5g.local` account you just created.
+### Option A: Native Build on the Edge Device
 
----
+SSH into the Edge node and run everything in a single command:
 
-## 4. Creating New Hosts & Retrieving Tokens from UI
+```bash
+cd ~/wireguard-edge-cloud-5g
+sudo -E BUILD_MODE=native \
+     PEERSIGHT_API_URL="http://10.8.0.1:4000" \
+     PEERSIGHT_HOST_ID="<EDGE_UUID>" \
+     PEERSIGHT_TOKEN="<EDGE_JWT>" \
+     ./peersight/deploy-edge.sh
+```
 
-For the Agents (on Cloud and Edge) to report to the API, you must create a profile for them in the PeerSight UI:
+This will:
+1. ✅ Install Go 1.22 from the official upstream (auto-detects arm64)
+2. ✅ Build the `peersight-agent` natively on the ARM device
+3. ✅ Install and start the systemd service
+4. ✅ Print connection status
 
-1. Log in to the Web UI.
-2. Navigate to the **Hosts** section.
-3. Click **Create Host**.
-4. Create a Host for the Cloud (e.g., name: `cloud-gateway`). Save the **Host ID (UUID)** and **Agent Token**.
-5. Click **Create Host** again.
-6. Create a Host for the Edge (e.g., name: `edge-orangepi-01`). Save the **Host ID (UUID)** and **Agent Token** specific to this Edge node.
+### Option B: Cross-Compile + Transfer (Faster)
 
----
+**On the Cloud Gateway (or your PC):**
+```bash
+cd ~/wireguard-edge-cloud-5g/peersight/peersight-agent
+GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o peersight-agent-arm64 ./cmd/agent
+rsync -avzP peersight-agent-arm64 user@10.8.0.2:/tmp/peersight-agent
+```
 
-## 5. Installing the PeerSight Agent
+**On the Edge Node:**
+```bash
+sudo mv /tmp/peersight-agent /usr/local/bin/peersight-agent
+sudo chmod +x /usr/local/bin/peersight-agent
 
-You need to install the `peersight-agent` on both the Cloud Server and the Edge Node devices. The agent source code is located in the `peersight/peersight-agent` directory.
+cd ~/wireguard-edge-cloud-5g
+sudo -E BUILD_MODE=transfer \
+     PEERSIGHT_API_URL="http://10.8.0.1:4000" \
+     PEERSIGHT_HOST_ID="<EDGE_UUID>" \
+     PEERSIGHT_TOKEN="<EDGE_JWT>" \
+     ./peersight/deploy-edge.sh
+```
 
-### 5.1 Installation on Cloud Gateway (x86_64 / amd64 architecture)
+### Verify Agent Status
 
-1. **Compile the Agent:**
-   ```bash
-   cd ~/wireguard-edge-cloud-5g/peersight
-   make agent
-   sudo cp peersight-agent /usr/local/bin/peersight-agent
-   ```
-2. **Install using the Automation script:**
-   Use the Host ID and Token retrieved from the Web UI (for `cloud-gateway`) to run the installation script:
-   ```bash
-   cd ~/wireguard-edge-cloud-5g
-   sudo PEERSIGHT_API_URL="http://127.0.0.1:4000" \
-        PEERSIGHT_HOST_ID="<your-cloud-host-uuid>" \
-        PEERSIGHT_TOKEN="<your-cloud-agent-jwt>" \
-        ./peersight/install-agent.sh
-   ```
-3. **Check the status:**
-   ```bash
-   sudo systemctl status peersight-agent
-   ```
+```bash
+sudo systemctl status peersight-agent
+sudo journalctl -u peersight-agent -f
+```
 
-### 5.2 Installation on Edge Node (ARM64 architecture)
-
-1. **Cross-compile from the Cloud Server (or your local PC):**
-   ```bash
-   cd ~/wireguard-edge-cloud-5g/peersight/peersight-agent
-   GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o peersight-agent-arm64 ./cmd/agent
-   ```
-2. **Transfer the binary to the Edge Node (via the WireGuard IP):**
-   ```bash
-   rsync -avzP peersight-agent-arm64 user@10.8.0.2:/tmp/peersight-agent
-   ```
-3. **SSH into the Edge Node (`ssh user@10.8.0.2`) and Install:**
-   ```bash
-   # Move the binary to the correct location
-   sudo mv /tmp/peersight-agent /usr/local/bin/peersight-agent
-   sudo chmod +x /usr/local/bin/peersight-agent
-
-   # Clone the repository (if not already present)
-   git clone https://github.com/<your-repo>/wireguard-edge-cloud-5g.git ~/wireguard-edge-cloud-5g
-   
-   cd ~/wireguard-edge-cloud-5g
-   chmod +x peersight/install-agent.sh
-
-   # Install using the Host ID and Token for the Edge Node
-   sudo PEERSIGHT_API_URL="http://10.8.0.1:4000" \
-        PEERSIGHT_HOST_ID="<your-edge-host-uuid>" \
-        PEERSIGHT_TOKEN="<your-edge-agent-jwt>" \
-        ./peersight/install-agent.sh
-   ```
-
-Return to the PeerSight Web UI, and both `cloud-gateway` and `edge-orangepi-01` should now display their status as **Online**.
+Both hosts should now appear **Online** in the PeerSight Web UI.
 
 ---
 
-## 6. (Advanced) Integrating Event Logs into Loki
+## 6. SIEM Bridge & Loki Log Integration
 
-The PeerSight Broker automatically exports events/alerts to the `/var/log/peersight/events.jsonl` log file on the Cloud Server. The system is already configured to parse these logs through Grafana Alloy.
+To pipe security events into Grafana Loki:
 
-To enable the alert log collection system:
-
-1. Log in to the Web UI, and create a **Broker Token** from the API (or use the admin token).
-2. Set `PEERSIGHT_BROKER_TOKEN` in the `.env` file on the Cloud Server.
-3. Restart the PeerSight Broker:
+1. Obtain a **Broker Token** from the PeerSight API.
+2. Set it in `.env` on the Cloud host:
+   ```bash
+   PEERSIGHT_BROKER_TOKEN=<YOUR_BROKER_TOKEN>
+   ```
+3. Restart the Broker and Alloy:
    ```bash
    cd ~/wireguard-edge-cloud-5g/peersight
    sudo docker compose up -d broker
-   ```
-4. Restart the Grafana Alloy process on the Cloud to fetch the latest SIEM Bridge Pipeline configuration file:
-   ```bash
    sudo systemctl restart alloy
    ```
-
-From this point onwards, you can navigate to Grafana UI -> Explore -> select the **Loki** source and query using LogQL:
-```logql
-{job="peersight-alerts"}
-```
-This allows you to view all changes across the WireGuard network (e.g., Adding a new peer, changing AllowedIPs, Endpoint roaming...).
+4. In Grafana → **Explore** → **Loki**, query:
+   ```logql
+   {job="peersight-alerts"}
+   ```

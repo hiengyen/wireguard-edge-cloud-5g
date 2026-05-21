@@ -46,7 +46,7 @@
 
 #### Prerequisites
 
-- Go 1.26+
+- Go 1.22+
 - Docker & Docker Compose v2
 - Node.js 18+ (for app development)
 
@@ -72,20 +72,7 @@ make app     # Build the Vue.js frontend
 make test    # Run all unit tests
 ```
 
-#### Nix Development Shell
-
-```bash
-nix develop
-make test
-```
-
-Or run a one-shot test command without entering the shell:
-
-```bash
-nix develop --command make test
-```
-
-Or individually:
+Or build each module individually:
 
 ```bash
 cd peersight-api   && go build -o peersight-api   ./cmd/api
@@ -250,7 +237,7 @@ MIT
 
 #### Yêu cầu
 
-- Go 1.26+
+- Go 1.22+
 - Docker & Docker Compose v2
 - Node.js 18+ (cho phát triển giao diện)
 
@@ -276,20 +263,7 @@ make app     # Build giao diện Vue.js
 make test    # Chạy tất cả unit test
 ```
 
-#### Môi trường phát triển Nix
-
-```bash
-nix develop
-make test
-```
-
-Hoặc chạy test một lần mà không cần vào shell:
-
-```bash
-nix develop --command make test
-```
-
-Hoặc từng module:
+Hoặc từng module riêng lẻ:
 
 ```bash
 cd peersight-api   && go build -o peersight-api   ./cmd/api
