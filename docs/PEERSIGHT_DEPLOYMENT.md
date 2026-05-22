@@ -22,6 +22,8 @@ The deployment is fully automated via shell scripts in the `peersight/` director
 | `deploy-edge.sh` | Installs Go (native mode) or validates binary (transfer mode), registers systemd service | Edge Node |
 | `install-go.sh` | Downloads and installs Go from official upstream tarball (auto-detects amd64/arm64) | Both |
 | `install-agent.sh` | Creates `/etc/peersight/agent.env` and the systemd unit file (called internally by deploy scripts) | Both |
+| `stop-peersight.sh`| Stops PeerSight Docker services on the Cloud Gateway (preserving data volumes) | Cloud Gateway |
+| `uninstall.sh` | Full uninstaller: stops agent, removes binaries/config/logs, and tears down Docker stack (preserving database volume) | Both |
 
 ---
 
@@ -85,7 +87,7 @@ sudo -E ./peersight/deploy-cloud.sh
 ```
 
 This single command will:
-1. ✅ Install Go 1.22 from the official upstream (if not present)
+1. ✅ Install Go 1.23 from the official upstream (if not present)
 2. ✅ Build the `peersight-agent` binary for x86_64
 3. ✅ Create `/var/log/peersight` for SIEM broker logs
 4. ✅ Launch the full Docker Compose stack (PostgreSQL, API, Web UI, Broker)
@@ -155,7 +157,7 @@ sudo -E BUILD_MODE=native \
 ```
 
 This will:
-1. ✅ Install Go 1.22 from the official upstream (auto-detects arm64)
+1. ✅ Install Go 1.23 from the official upstream (auto-detects arm64)
 2. ✅ Build the `peersight-agent` natively on the ARM device
 3. ✅ Install and start the systemd service
 4. ✅ Print connection status
@@ -212,3 +214,23 @@ To pipe security events into Grafana Loki:
    ```logql
    {job="peersight-alerts"}
    ```
+
+---
+
+## 7. Halting & Uninstalling PeerSight
+
+### 7.1 Stop All PeerSight Containers (Cloud Only)
+To temporarily halt PeerSight services on the Cloud Gateway while keeping your configuration and DB volumes intact, run:
+```bash
+cd ~/wireguard-edge-cloud-5g/peersight
+sudo ./stop-peersight.sh
+```
+*(Alternatively, without using the script, run `docker compose stop` inside the `peersight/` folder).*
+
+### 7.2 Full PeerSight Uninstallation
+To completely remove the PeerSight Agent and (if on Cloud) the Docker container stack while preserving your database volumes (so you don't lose admin accounts or registered host configurations), run:
+```bash
+cd ~/wireguard-edge-cloud-5g/peersight
+sudo ./uninstall.sh
+```
+This script will safely clean up the agent systemd service, log files at `/var/log/peersight`, configuration at `/etc/peersight`, and the binaries at `/usr/local/bin/peersight-agent`.

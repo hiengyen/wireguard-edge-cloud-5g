@@ -5,7 +5,7 @@
 # Run this on both Cloud Gateway and Edge Nodes
 # Usage:
 #   sudo ./install-go.sh
-#   GO_VERSION=1.22.4 sudo ./install-go.sh
+#   GO_VERSION=1.23.0 sudo ./install-go.sh
 # ==============================================================
 
 set -euo pipefail

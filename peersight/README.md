@@ -46,7 +46,7 @@
 
 #### Prerequisites
 
-- Go 1.22+
+- Go 1.23+
 - Docker & Docker Compose v2
 - Node.js 18+ (for app development)
 
@@ -237,7 +237,7 @@ MIT
 
 #### Yêu cầu
 
-- Go 1.22+
+- Go 1.23+
 - Docker & Docker Compose v2
 - Node.js 18+ (cho phát triển giao diện)
 
