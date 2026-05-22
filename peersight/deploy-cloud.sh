@@ -109,7 +109,7 @@ if [[ -z "${PEERSIGHT_HOST_ID:-}" || -z "${PEERSIGHT_TOKEN:-}" ]]; then
     warn "  sudo PEERSIGHT_HOST_ID=<uuid> PEERSIGHT_TOKEN=<jwt> ${SCRIPT_DIR}/install-agent.sh"
 else
     info "Installing peersight-agent systemd service..."
-    PEERSIGHT_API_URL="http://127.0.0.1:${PEERSIGHT_API_PORT}" \
+    PEERSIGHT_API_URL="http://${MONITORING_BIND_ADDRESS}:${PEERSIGHT_API_PORT}" \
     PEERSIGHT_HOST_ID="${PEERSIGHT_HOST_ID}" \
     PEERSIGHT_TOKEN="${PEERSIGHT_TOKEN}" \
     bash "${SCRIPT_DIR}/install-agent.sh"
