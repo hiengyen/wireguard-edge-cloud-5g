@@ -7,7 +7,28 @@
           <span class="material-symbols-outlined" style="font-size:18px">arrow_back</span>
         </router-link>
         <div>
-          <h1 class="page-title">{{ host?.name || 'Loading...' }}</h1>
+          <!-- Inline Name Editing -->
+          <div v-if="editingName" style="display:flex;align-items:center;gap:8px">
+            <input
+              v-model="editNameVal"
+              class="inline-input-lg"
+              @keyup.enter="saveName"
+              @keyup.escape="cancelRename"
+              ref="nameInput"
+            />
+            <button class="icon-btn green-btn" @click="saveName" title="Save">
+              <span class="material-symbols-outlined">check</span>
+            </button>
+            <button class="icon-btn" @click="cancelRename" title="Cancel">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+          <div v-else style="display:flex;align-items:center;gap:8px">
+            <h1 class="page-title">{{ host?.name || 'Loading...' }}</h1>
+            <button v-if="host" class="icon-btn-edit" @click="startRename" title="Rename Host">
+              <span class="material-symbols-outlined" style="font-size:18px">edit</span>
+            </button>
+          </div>
           <code v-if="host" class="host-id">{{ host.id }}</code>
         </div>
       </div>
@@ -18,6 +39,12 @@
         </span>
         <button class="btn btn-secondary" @click="refreshAll">
           <span class="material-symbols-outlined">refresh</span> Refresh
+        </button>
+        <button v-if="host" class="btn btn-secondary" @click="openTokenModal" title="Generate Agent Token" style="display:flex;align-items:center;gap:4px">
+          <span class="material-symbols-outlined" style="font-size:18px">key</span> Token
+        </button>
+        <button v-if="host" class="btn btn-secondary" @click="confirmDelete" title="Delete Host" style="display:flex;align-items:center;gap:4px;color:var(--color-danger);border-color:rgba(239,68,68,0.2)">
+          <span class="material-symbols-outlined" style="font-size:18px;color:var(--color-danger)">delete</span> Delete
         </button>
       </div>
     </div>
@@ -219,16 +246,127 @@
         </table>
       </div>
     </div>
+
+    <!-- Agent Token Modal -->
+    <div v-if="showTokenModal" class="modal-overlay" @click.self="showTokenModal = false">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3>
+            <span class="material-symbols-outlined" style="font-size:19px;vertical-align:middle;margin-right:6px">key</span>
+            Agent Token
+          </h3>
+          <button class="modal-close" @click="showTokenModal = false">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <div v-if="!agentToken" class="modal-body">
+          <p class="hint">Generate a long-lived Agent Token (10 years) to authenticate the <code>peersight-agent</code> daemon for <strong>{{ host?.name }}</strong>.</p>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" @click="showTokenModal = false">Cancel</button>
+            <button class="btn btn-primary" :disabled="tokenLoading" @click="handleGenerateToken">
+              <span v-if="tokenLoading" class="spinner-sm"></span>
+              <span v-else style="display:flex;align-items:center;gap:5px">
+                <span class="material-symbols-outlined" style="font-size:16px">key</span>
+                Generate Agent Token
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <div v-else class="modal-body animate-fade">
+          <div class="success-banner">
+            <span class="material-symbols-outlined">key</span>
+            Token valid for <strong>10 years</strong>
+          </div>
+
+          <div class="info-row">
+            <span class="info-label">Host ID</span>
+            <div class="copy-row">
+              <code class="truncate">{{ host?.id }}</code>
+              <button class="copy-btn" @click="copy(host?.id, 'hostId')">
+                <span class="material-symbols-outlined">{{ copied.hostId ? 'check' : 'content_copy' }}</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="info-row">
+            <span class="info-label">Agent Token</span>
+            <div class="copy-row">
+              <code class="truncate">{{ agentToken }}</code>
+              <button class="copy-btn" @click="copy(agentToken, 'token')">
+                <span class="material-symbols-outlined">{{ copied.token ? 'check' : 'content_copy' }}</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="cmd-block-wrap">
+            <div class="cmd-label">
+              <span class="material-symbols-outlined" style="font-size:13px">terminal</span>
+              Install command
+            </div>
+            <div class="cmd-block">
+              <pre>{{ installCmd }}</pre>
+              <button class="copy-btn cmd-copy" @click="copy(installCmd, 'cmd')">
+                <span class="material-symbols-outlined">{{ copied.cmd ? 'check' : 'content_copy' }}</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="warning-note">
+            <span class="material-symbols-outlined">warning</span>
+            Save this token — it will not be shown again.
+          </div>
+
+          <div class="modal-footer">
+            <button class="btn btn-primary" @click="showTokenModal = false">Done</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div v-if="showDeleteConfirm" class="modal-overlay" @click.self="showDeleteConfirm = false">
+      <div class="modal-card" style="max-width:420px">
+        <div class="modal-header">
+          <h3 style="color:#f87171">
+            <span class="material-symbols-outlined" style="font-size:19px;vertical-align:middle;margin-right:6px">warning</span>
+            Delete Host
+          </h3>
+          <button class="modal-close" @click="showDeleteConfirm = false">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p style="color:var(--color-text-secondary);line-height:1.6;margin:0">
+            Are you sure you want to delete
+            <strong style="color:var(--color-text)">{{ host?.name }}</strong>?<br/>
+            This will permanently remove the host, all its interfaces, endpoints, desired changes, and alerts.
+          </p>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" @click="showDeleteConfirm = false">Cancel</button>
+            <button class="btn btn-danger" :disabled="deleteLoading" @click="executeDelete">
+              <span v-if="deleteLoading" class="spinner-sm"></span>
+              <span v-else>Delete Host</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, computed, onMounted, nextTick } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { api } from '@/plugins/axios.js'
+import { useHostStore } from '@/stores/data.js'
 
 const route = useRoute()
+const router = useRouter()
 const hostId = route.params.id
+
+const hostStore = useHostStore()
 
 const host = ref(null)
 const interfaces = ref([])
@@ -239,6 +377,29 @@ const activeTab = ref('interfaces')
 const newChange = ref({ type: 'add_peer', payload: '' })
 const changeSending = ref(false)
 const changeError = ref('')
+
+// Rename states
+const editingName = ref(false)
+const editNameVal = ref('')
+const nameInput = ref(null)
+
+// Delete states
+const showDeleteConfirm = ref(false)
+const deleteLoading = ref(false)
+
+// Token states
+const showTokenModal = ref(false)
+const tokenLoading = ref(false)
+const agentToken = ref('')
+const copied = ref({ hostId: false, token: false, cmd: false })
+
+const installCmd = computed(() => {
+  if (!host.value || !agentToken.value) return ''
+  return `sudo PEERSIGHT_API_URL="http://127.0.0.1:4000" \\
+     PEERSIGHT_HOST_ID="${host.value.id}" \\
+     PEERSIGHT_TOKEN="${agentToken.value}" \\
+     ~/wireguard-edge-cloud-5g/peersight/install-agent.sh`
+})
 
 const tabs = computed(() => [
   { id: 'interfaces', label: 'Interfaces', icon: 'lan', count: interfaces.value.length },
@@ -259,6 +420,82 @@ async function refreshAll() {
   if (ifaceRes.status === 'fulfilled') interfaces.value = ifaceRes.value.data.data || []
   if (epRes.status === 'fulfilled') endpoints.value = epRes.value.data.data || []
   if (chRes.status === 'fulfilled') changes.value = chRes.value.data.data || []
+}
+
+function startRename() {
+  if (!host.value) return
+  editNameVal.value = host.value.name
+  editingName.value = true
+  nextTick(() => {
+    nameInput.value?.focus()
+  })
+}
+
+function cancelRename() {
+  editingName.value = false
+}
+
+async function saveName() {
+  const val = editNameVal.value.trim()
+  if (!val || val === host.value.name) {
+    editingName.value = false
+    return
+  }
+  try {
+    const updated = await hostStore.updateHost(hostId, val)
+    if (updated) {
+      host.value.name = updated.name
+    }
+  } catch (err) {
+    console.error('Failed to rename host:', err)
+  } finally {
+    editingName.value = false
+  }
+}
+
+function confirmDelete() {
+  showDeleteConfirm.value = true
+}
+
+async function executeDelete() {
+  deleteLoading.value = true
+  try {
+    await hostStore.deleteHost(hostId)
+    router.push('/hosts')
+  } catch (err) {
+    console.error('Failed to delete host:', err)
+  } finally {
+    deleteLoading.value = false
+    showDeleteConfirm.value = false
+  }
+}
+
+function openTokenModal() {
+  agentToken.value = ''
+  showTokenModal.value = true
+}
+
+async function handleGenerateToken() {
+  tokenLoading.value = true
+  try {
+    const token = await hostStore.generateAgentToken()
+    if (token) {
+      agentToken.value = token
+    }
+  } catch (err) {
+    console.error('Failed to generate token:', err)
+  } finally {
+    tokenLoading.value = false
+  }
+}
+
+function copy(value, key) {
+  if (!value) return
+  navigator.clipboard.writeText(value)
+  copied.value[key] = true
+  setTimeout(() => {
+    copied.value[key] = false
+  }, 2000)
 }
 
 async function submitChange() {
@@ -388,4 +625,181 @@ function changeStateIcon(state) {
   border-radius: var(--radius-sm);
   font-family: monospace;
 }
+
+/* Inline edit input */
+.inline-input-lg {
+  background: var(--color-bg-input, #0f0f13);
+  border: 1px solid var(--color-accent, #5865f2);
+  border-radius: var(--radius-md, 8px);
+  color: var(--color-text);
+  padding: 6px 12px;
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(88,101,242,.2);
+}
+
+/* Icon Buttons */
+.icon-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  padding: 6px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  transition: background .15s, color .15s;
+}
+.icon-btn:hover { background: rgba(255,255,255,.06); color: var(--color-text); }
+.icon-btn.green-btn:hover { background: rgba(74,222,128,.12); color: #4ade80; }
+
+.icon-btn-edit {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  padding: 4px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  transition: background 0.15s, color 0.15s;
+}
+.icon-btn-edit:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--color-accent);
+}
+
+/* Modal and utility classes */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.72);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.modal-card {
+  background: var(--color-bg-card, #1e1e24);
+  border: 1px solid var(--color-border, #2d2d34);
+  border-radius: var(--radius-lg, 14px);
+  width: 90%;
+  max-width: 540px;
+  padding: var(--space-xl, 24px);
+  box-shadow: 0 12px 48px rgba(0,0,0,.6);
+  animation: pop .22s cubic-bezier(.16,1,.3,1);
+}
+@keyframes pop {
+  from { transform: scale(.96) translateY(8px); opacity: 0; }
+  to   { transform: scale(1)   translateY(0);   opacity: 1; }
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: var(--space-md, 14px);
+  border-bottom: 1px solid var(--color-border, #2d2d34);
+  margin-bottom: var(--space-lg, 18px);
+}
+.modal-header h3 { margin: 0; font-size: 17px; }
+.modal-close {
+  background: transparent; border: none;
+  color: var(--color-text-muted); cursor: pointer;
+  padding: 4px; border-radius: 50%; display: flex;
+  transition: background .15s, color .15s;
+}
+.modal-close:hover { background: rgba(255,255,255,.06); color: var(--color-text); }
+.modal-body { display: flex; flex-direction: column; gap: var(--space-md, 14px); }
+.modal-footer {
+  display: flex; justify-content: flex-end; gap: 10px;
+  padding-top: var(--space-md, 14px);
+  border-top: 1px solid var(--color-border, #2d2d34);
+  margin-top: var(--space-sm, 8px);
+}
+
+.hint { font-size: var(--font-size-sm, 13px); color: var(--color-text-secondary); margin: 0; line-height: 1.5; }
+.success-banner {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(34,197,94,.08); border: 1px solid rgba(34,197,94,.3);
+  border-radius: var(--radius-md, 8px); padding: 12px 14px;
+  font-size: var(--font-size-sm); color: #4ade80;
+}
+.success-banner .material-symbols-outlined { font-size: 20px; }
+
+.info-row { display: flex; flex-direction: column; gap: 5px; }
+.info-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--color-text-muted); }
+.copy-row {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--color-bg-input, #0f0f13);
+  border: 1px solid var(--color-border, #2d2d34);
+  border-radius: var(--radius-md, 8px); padding: 8px 12px;
+}
+.copy-row code { flex: 1; font-family: monospace; font-size: 12px; color: var(--color-accent); }
+.copy-row .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.copy-btn {
+  background: transparent; border: none; cursor: pointer;
+  color: var(--color-text-muted); display: flex; align-items: center;
+  padding: 2px; border-radius: 4px; flex-shrink: 0; transition: color .15s;
+}
+.copy-btn:hover { color: var(--color-accent); }
+.copy-btn .material-symbols-outlined { font-size: 16px; }
+
+.cmd-block-wrap { display: flex; flex-direction: column; gap: 6px; }
+.cmd-label {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--color-text-muted);
+}
+.cmd-block {
+  position: relative; background: #0a0a0f;
+  border: 1px solid var(--color-border, #2d2d34);
+  border-radius: var(--radius-md, 8px); padding: 12px 40px 12px 14px;
+}
+.cmd-block pre {
+  margin: 0; font-family: monospace; font-size: 11px;
+  color: #a3e635; white-space: pre-wrap; word-break: break-all; line-height: 1.6;
+}
+.cmd-copy { position: absolute; top: 8px; right: 8px; }
+
+.warning-note {
+  display: flex; align-items: center; gap: 8px; font-size: 12px; color: #fbbf24;
+  background: rgba(251,191,36,.07); border: 1px solid rgba(251,191,36,.25);
+  border-radius: var(--radius-md, 8px); padding: 10px 14px;
+}
+.warning-note .material-symbols-outlined { font-size: 18px; }
+
+.spinner-sm {
+  display: inline-block; width: 14px; height: 14px;
+  border: 2px solid rgba(255,255,255,.2); border-top-color: #fff;
+  border-radius: 50%; animation: spin .6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.animate-fade {
+  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.btn-danger {
+  background: #dc2626;
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md, 8px);
+  padding: 8px 18px;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-danger:hover:not(:disabled) { background: #b91c1c; }
+.btn-danger:disabled { opacity: .5; cursor: default; }
 </style>

@@ -32,6 +32,11 @@
         <span>Users</span>
       </router-link>
 
+      <router-link v-if="authStore.isAdmin" to="/settings" class="nav-item" :class="{ active: $route.name === 'Settings' }">
+        <span class="material-symbols-outlined">settings</span>
+        <span>Settings</span>
+      </router-link>
+
       <div style="flex:1"></div>
 
       <div class="nav-item" @click="toggleTheme">

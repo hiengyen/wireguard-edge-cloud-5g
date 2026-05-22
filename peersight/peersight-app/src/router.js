@@ -44,6 +44,12 @@ const routes = [
     name: 'Users',
     component: () => import('@/pages/UsersPage.vue'),
     meta: { requireAdmin: true }
+  },
+  {
+    path: '/settings',
+    name: 'Settings',
+    component: () => import('@/pages/SettingsPage.vue'),
+    meta: { requireAdmin: true }
   }
 ]
 
