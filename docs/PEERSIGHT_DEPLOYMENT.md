@@ -1,41 +1,115 @@
-# PeerSight Deployment Guide (WireGuard Orchestration)
+# PeerSight Reference & Deployment Guide (WireGuard Orchestration)
 
-This document provides instructions for deploying the **PeerSight** system (WireGuard network monitoring and management) into the existing Edge-Cloud 5G infrastructure.
-
-The architecture consists of 4 core parts:
-1. **Database** (PostgreSQL) — Cloud
-2. **API Backend** (Golang) — Cloud
-3. **App UI** (Vue.js via Nginx) — Cloud
-4. **Agent** (Golang daemon) — Running directly on **both** the Cloud Gateway and Edge Nodes
-
-The design implements **Zero-Trust** security principles: all traffic operates inside the WireGuard overlay network (`10.8.0.x`), and no administrative ports are exposed to the public Internet.
+This document is the unified source of truth for deploying, managing, and operating the **PeerSight** system (WireGuard network monitoring, security orchestration, and SIEM logging) within the distributed Edge-Cloud 5G infrastructure.
 
 ---
 
-## Automation Scripts Overview
+## 1. Architectural Overview & Modules
 
-The deployment is fully automated via shell scripts in the `peersight/` directory:
+PeerSight replaces older Python and Elixir-based monitoring stacks (like Procustodibus) with a modern, lightweight **Golang** backend and a **Vue.js 3** frontend. It is designed to run efficiently on resource-constrained ARM edge nodes (Orange Pi) and central Cloud gateways (AWS EC2).
+
+### 1.1 Architecture Diagram
+
+```
+┌──────────────┐       ┌──────────────┐       ┌──────────────┐
+│ peersight-app│       │ peersight-api│       │  PostgreSQL  │
+│  (Vue.js 3)  │◄─────►│   (Go/Gin)   │◄─────►│   Database   │
+│  Port: 5173  │  HTTP │  Port: 4000  │  SQL  │  Port: 5432  │
+└──────────────┘       └──────┬───────┘       └──────────────┘
+                              │ REST
+            ┌─────────────────┼─────────────────┐
+            ▼                 ▼                 ▼
+   ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+   │peersight-agent│  │peersight-agent│  │peersight-broker│
+   │  (Go daemon) │  │  (Go daemon) │  │  (Go daemon)  │
+   │  Host A      │  │  Host B      │  │  SIEM Bridge  │
+   └──────────────┘  └──────────────┘  └───────┬───────┘
+         │                  │                   │
+    ┌────┴────┐        ┌────┴────┐         ┌───┴────┐
+    │WireGuard│        │WireGuard│         │Syslog/ │
+    │ Kernel  │        │ Kernel  │         │ File   │
+    └─────────┘        └─────────┘         └────────┘
+```
+
+### 1.2 Core Modules
+
+| Module | Language | Runtime | Description |
+|---|---|---|---|
+| `peersight-api` | Go (Gin) | Docker Container | Central REST API — manages DB, authenticates agents, registers hosts, and queues alerts. |
+| `peersight-app` | Vue.js 3 | Docker Container | Admin dashboard for configuring peers, visualizing host statuses, and managing alerts. |
+| `peersight-agent` | Go | Systemd Daemon | Runs on both Cloud and Edge nodes. Periodically polls the API for desired peer configurations and runs kernel sync commands. |
+| `peersight-broker` | Go | Docker Container | SIEM Bridge daemon. Polls alert events from the API and pipes them to local logs `/var/log/peersight/events.jsonl` (scraped by Alloy/Loki). |
+
+### 1.3 Project Structure
+
+```text
+peersight/
+├── docker-compose.yml      # DB, API, UI, and Broker orchestration
+├── deploy-cloud.sh         # Complete Go setup, container startup, and cloud agent registration
+├── deploy-edge.sh          # Native compilation or binary-transfer orchestration on Edge
+├── install-go.sh           # Auto-detecting compiler installer (Go 1.23.0+)
+├── install-agent.sh        # Systemd daemon registrar
+├── stop-peersight.sh       # Script to halt Docker containers while keeping volumes
+├── uninstall.sh            # Safe uninstaller (agent + logs + containers, preserves DB)
+├── peersight-api/          # REST API codebase (Gin + pgx + migrations)
+├── peersight-agent/        # Agent daemon codebase (WireGuard kernel sync)
+├── peersight-broker/       # Broker daemon codebase (SIEM bridge)
+└── peersight-app/          # Admin UI codebase (Vue 3 + Nginx)
+```
+
+---
+
+## 2. PeerSight Data Flow
+
+1. **Administration**: An operator adds/updates a peer configuration using the **App UI** (`peersight-app`).
+2. **Persistence**: The **API** (`peersight-api`) stores this as a pending `DesiredChange` in **PostgreSQL**.
+3. **Heartbeat**: The local **Agent** (`peersight-agent`) sends a periodic heartbeat payload to the API (`POST /hosts/:id/ping/:version`).
+4. **Configuration Delivery**: The **API** responds with any pending `DesiredChange` instructions.
+5. **Kernel Enforcement**: The **Agent** runs system calls (equivalent to `wg set`) to update the host's local WireGuard interface. It then reports the status back to the API.
+6. **Alert Processing**: The **API** flags any drift, key mismatches, or down links, and pushes an event into the alert queue.
+7. **SIEM Pipe**: The **Broker** (`peersight-broker`) polls the queue, fetches the alerts, and logs them in JSON Lines format (`/var/log/peersight/events.jsonl`).
+8. **Observability**: **Grafana Alloy** reads `/var/log/peersight/events.jsonl` and streams them into **Grafana Loki** under the `{job="peersight-alerts"}` tag.
+
+---
+
+## 3. Comparison: Procustodibus vs PeerSight
+
+| Metric / Feature | Procustodibus (Legacy) | PeerSight (Current Architecture) |
+|---|---|---|
+| **API Backend** | Elixir / Phoenix | **Go / Gin** |
+| **Agent / Broker** | Python 3 | **Go (v1.23+)** |
+| **Authentication** | Ed25519 Challenge-Signature | **JWT Bearer Token** |
+| **Build Artifacts** | Python wheel + Mix release | **Single static binaries** |
+| **Docker Image Size** | ~150 MB (Python runtime) | **~15 MB (Alpine)** |
+| **Agent Memory Footprint**| ~30–50 MB | **~5–10 MB** (Highly Optimized) |
+| **Cross-Compile** | Complex (Python C dependencies) | **`GOOS=linux GOARCH=arm64 go build`** |
+| **Admin UI** | Vue 3 (Oruga/Bulma) | **Vue 3 (Custom Sleek Dark Mode)** |
+
+---
+
+## 4. Automation Scripts Overview
+
+The deployment lifecycle is fully managed by shell scripts in the `peersight/` directory:
 
 | Script | Purpose | Run on |
 |---|---|---|
-| `deploy-cloud.sh` | Installs Go, builds agent, launches Docker stack, registers systemd service | Cloud Gateway |
-| `deploy-edge.sh` | Installs Go (native mode) or validates binary (transfer mode), registers systemd service | Edge Node |
-| `install-go.sh` | Downloads and installs Go from official upstream tarball (auto-detects amd64/arm64) | Both |
-| `install-agent.sh` | Creates `/etc/peersight/agent.env` and the systemd unit file (called internally by deploy scripts) | Both |
-| `stop-peersight.sh`| Stops PeerSight Docker services on the Cloud Gateway (preserving data volumes) | Cloud Gateway |
-| `uninstall.sh` | Full uninstaller: stops agent, removes binaries/config/logs, and tears down Docker stack (preserving database volume) | Both |
+| `deploy-cloud.sh` | Installs Go 1.23, compiles agent, configures systemd agent, and launches the Docker Compose stack | Cloud Gateway |
+| `deploy-edge.sh` | Sets up Go (native compile on Edge) or validates binary (cross-compiled transfer mode) and starts systemd agent | Edge Node |
+| `install-go.sh` | Portable script to download, verify, and register Go 1.23.0+ from official upstream tarballs | Both |
+| `install-agent.sh` | Internal helper called by deploy scripts to set up the systemd unit and register API tokens | Both |
+| `stop-peersight.sh`| Halts all PeerSight containers while leaving database volumes intact | Cloud Gateway |
+| `uninstall.sh` | Safe uninstaller. Stops agent, removes binaries/logs/configs, and tears down containers (keeps database volumes) | Both |
 
 ---
 
-## 1. Prerequisites
+## 5. Prerequisites
 
 Ensure you have completed the base infrastructure setup described in [DEPLOYMENT.md](DEPLOYMENT.md):
 - Cloud Gateway is running with VPN address `10.8.0.1`
 - Edge Node is connected to the VPN at `10.8.0.2`
 - The `.env` file contains the PeerSight variables (see `.env.example` for reference)
 
-### 1.1 Cloud Gateway Packages
-
+### 5.1 Cloud Gateway Packages
 ```bash
 # Debian/Ubuntu
 sudo apt-get update -y
@@ -46,39 +120,38 @@ sudo dnf update -y
 sudo dnf install -y wireguard-tools git make docker curl
 sudo systemctl enable --now docker
 ```
+> [!NOTE]  
+> Go 1.23 is automatically installed by `deploy-cloud.sh` via `install-go.sh`. No manual Go setup is needed on either node.
 
-> **Note:** Go is installed automatically by `deploy-cloud.sh` via `install-go.sh`. No manual Go setup is needed.
-
-### 1.2 Edge Node Packages
-
-`wireguard-tools` should already be installed from the WireGuard bootstrap step. No additional packages are required — `deploy-edge.sh` handles everything.
+### 5.2 Edge Node Packages
+`wireguard-tools` must be installed. No additional compiler tools are needed if using the recommended **transfer** build mode.
 
 ---
 
-## 2. Firewall Rules (Zero-Trust)
+## 6. Zero-Trust Firewall Configuration
+
+PeerSight enforces a strict **Zero-Trust** network overlay.
 
 ```
 [Edge Node Agent] ──(Outbound over WG)──> [10.8.0.1:4000 (Cloud API)]
 [Admin Browser]  ──(SSH Port-Forward) ──> [10.8.0.1:5173 (Cloud UI)]
 ```
 
-### 2.1 Cloud Gateway
-Ports `4000/tcp` (API) and `5173/tcp` (App UI) are restricted to the WireGuard overlay. The `hardening.sh` script handles this automatically:
+- **Cloud Gateway**: Port `4000/tcp` (API) and `5173/tcp` (App UI) are bound only to the WireGuard `wg0` interface. The `hardening.sh` script applies these restrictions automatically.
+- **Edge Node**: The `peersight-agent` operates in **outbound-only mode** — no inbound ports are exposed to the public Internet.
 
+To apply the hardening configuration:
 ```bash
 cd ~/wireguard-edge-cloud-5g
 set -a && . ./.env && set +a
 sudo -E ./shared/scripts/hardening.sh
 ```
 
-### 2.2 Edge Node
-The `peersight-agent` operates in **outbound-only mode** — no inbound ports need to be opened.
-
 ---
 
-## 3. Cloud Gateway Deployment (One Command)
+## 7. Cloud Gateway Deployment (One Command)
 
-SSH into the Cloud Gateway and run:
+SSH into the Cloud Gateway and run the automated orchestrator:
 
 ```bash
 cd ~/wireguard-edge-cloud-5g
@@ -87,31 +160,32 @@ sudo -E ./peersight/deploy-cloud.sh
 ```
 
 This single command will:
-1. ✅ Install Go 1.23 from the official upstream (if not present)
-2. ✅ Build the `peersight-agent` binary for x86_64
-3. ✅ Create `/var/log/peersight` for SIEM broker logs
-4. ✅ Launch the full Docker Compose stack (PostgreSQL, API, Web UI, Broker)
-5. ✅ Wait until the API health check passes
-6. ✅ Print endpoint summary and next steps
+1. ✅ Download and install **Go 1.23.0** to `/usr/local/go`
+2. ✅ Compile the `peersight-agent` binary for `x86_64`
+3. ✅ Create `/var/log/peersight` for event broker logging
+4. ✅ Build and launch the Docker stack (`postgres`, `peersight-api`, `peersight-app`, `peersight-broker`)
+5. ✅ Perform health checks on the REST API
 
-After the script completes, bootstrap the first admin account:
+### 7.1 Registering the Admin Account
+Once deployment is finished, register your first administrative login:
 
 ```bash
-# Sign up
+# Register user account
 curl -X POST http://10.8.0.1:4000/accounts/signup \
   -H "Content-Type: application/json" \
   -d '{"email": "admin@edge5g.local", "password": "YourSecurePass123!"}'
 
-# Promote to admin
+# Elevate account to Admin in PostgreSQL
 sudo docker exec -it peersight-db psql -U peersight -c \
   "UPDATE users SET role='admin' WHERE email='admin@edge5g.local';"
 ```
 
 ---
 
-## 4. Access the Web UI (SSH Tunnel)
+## 8. Managing Hosts & Registering Agents
 
-On your **local development machine**:
+### 8.1 Establish the SSH Tunnel
+Since ports `4000` and `5173` are secured within the WireGuard interface, open an SSH tunnel from your local PC to access the Web UI:
 
 ```bash
 ssh -i <your-key.pem> -N \
@@ -119,17 +193,14 @@ ssh -i <your-key.pem> -N \
   -L 5173:10.8.0.1:5173 \
   ec2-user@<ELASTIC_IP>
 ```
+Open [http://127.0.0.1:5173](http://127.0.0.1:5173) in your browser and log in with your admin credentials.
 
-Then open [http://127.0.0.1:5173](http://127.0.0.1:5173) and log in.
+### 8.2 Generate Host Identifiers
+1. Navigate to **Hosts** → **Create Host** → Name it `cloud-gateway`. Save the generated **Host ID** and **Agent Token**.
+2. Navigate to **Hosts** → **Create Host** → Name it `edge-orangepi-01`. Save the generated **Host ID** and **Agent Token**.
 
-### Create Host Identities
-
-1. Go to **Hosts** → **Create Host** → name it `cloud-gateway`. Save the **Host ID** and **Agent Token**.
-2. Create another Host → name it `edge-orangepi-01`. Save its **Host ID** and **Agent Token**.
-
-### Register the Cloud Agent
-
-Now that you have the Cloud host credentials, register the agent service:
+### 8.3 Configure the Cloud Agent Service
+Once you have the `cloud-gateway` credentials, run the service installer:
 
 ```bash
 sudo PEERSIGHT_HOST_ID="<CLOUD_UUID>" \
@@ -139,13 +210,12 @@ sudo PEERSIGHT_HOST_ID="<CLOUD_UUID>" \
 
 ---
 
-## 5. Edge Node Deployment (One Command)
+## 9. Edge Node Deployment (One Command)
 
-Choose one of two modes depending on your situation:
+Choose one of the two modes for setting up the Edge Node Agent.
 
-### Option A: Native Build on the Edge Device
-
-SSH into the Edge node and run everything in a single command:
+### Option A: Native On-Device Compilation (Slower)
+SSH to the Edge node and run:
 
 ```bash
 cd ~/wireguard-edge-cloud-5g
@@ -156,51 +226,38 @@ sudo -E BUILD_MODE=native \
      ./peersight/deploy-edge.sh
 ```
 
-This will:
-1. ✅ Install Go 1.23 from the official upstream (auto-detects arm64)
-2. ✅ Build the `peersight-agent` natively on the ARM device
-3. ✅ Install and start the systemd service
-4. ✅ Print connection status
+### Option B: Cross-Compilation & Transfer (Recommended & Faster)
+1. **On your PC / Cloud Gateway**, cross-compile for ARM64:
+   ```bash
+   cd ~/wireguard-edge-cloud-5g/peersight/peersight-agent
+   GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o peersight-agent-arm64 ./cmd/agent
+   rsync -avzP peersight-agent-arm64 user@10.8.0.2:/tmp/peersight-agent
+   ```
+2. **On the Edge Node**, install and register:
+   ```bash
+   sudo mv /tmp/peersight-agent /usr/local/bin/peersight-agent
+   sudo chmod +x /usr/local/bin/peersight-agent
 
-### Option B: Cross-Compile + Transfer (Faster)
+   cd ~/wireguard-edge-cloud-5g
+   sudo -E BUILD_MODE=transfer \
+        PEERSIGHT_API_URL="http://10.8.0.1:4000" \
+        PEERSIGHT_HOST_ID="<EDGE_UUID>" \
+        PEERSIGHT_TOKEN="<EDGE_JWT>" \
+        ./peersight/deploy-edge.sh
+   ```
 
-**On the Cloud Gateway (or your PC):**
-```bash
-cd ~/wireguard-edge-cloud-5g/peersight/peersight-agent
-GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o peersight-agent-arm64 ./cmd/agent
-rsync -avzP peersight-agent-arm64 user@10.8.0.2:/tmp/peersight-agent
-```
-
-**On the Edge Node:**
-```bash
-sudo mv /tmp/peersight-agent /usr/local/bin/peersight-agent
-sudo chmod +x /usr/local/bin/peersight-agent
-
-cd ~/wireguard-edge-cloud-5g
-sudo -E BUILD_MODE=transfer \
-     PEERSIGHT_API_URL="http://10.8.0.1:4000" \
-     PEERSIGHT_HOST_ID="<EDGE_UUID>" \
-     PEERSIGHT_TOKEN="<EDGE_JWT>" \
-     ./peersight/deploy-edge.sh
-```
-
-### Verify Agent Status
-
+### 9.1 Verification
 ```bash
 sudo systemctl status peersight-agent
 sudo journalctl -u peersight-agent -f
 ```
 
-Both hosts should now appear **Online** in the PeerSight Web UI.
-
 ---
 
-## 6. SIEM Bridge & Loki Log Integration
+## 10. SIEM Bridge & Loki Integration
 
-To pipe security events into Grafana Loki:
-
-1. Obtain a **Broker Token** from the PeerSight API.
-2. Set it in `.env` on the Cloud host:
+1. In the Web UI, go to settings and generate a **Broker Token**.
+2. Add it to the Cloud Gateway's `.env` file:
    ```bash
    PEERSIGHT_BROKER_TOKEN=<YOUR_BROKER_TOKEN>
    ```
@@ -210,27 +267,88 @@ To pipe security events into Grafana Loki:
    sudo docker compose up -d broker
    sudo systemctl restart alloy
    ```
-4. In Grafana → **Explore** → **Loki**, query:
+4. Query Loki in Grafana:
    ```logql
    {job="peersight-alerts"}
    ```
 
 ---
 
-## 7. Halting & Uninstalling PeerSight
+## 11. Halting & Uninstalling PeerSight
 
-### 7.1 Stop All PeerSight Containers (Cloud Only)
-To temporarily halt PeerSight services on the Cloud Gateway while keeping your configuration and DB volumes intact, run:
+### 11.1 Stop PeerSight Containers (Cloud Only)
+To suspend service containers on the Cloud node while retaining all Postgres database metrics and accounts:
 ```bash
 cd ~/wireguard-edge-cloud-5g/peersight
 sudo ./stop-peersight.sh
 ```
-*(Alternatively, without using the script, run `docker compose stop` inside the `peersight/` folder).*
 
-### 7.2 Full PeerSight Uninstallation
-To completely remove the PeerSight Agent and (if on Cloud) the Docker container stack while preserving your database volumes (so you don't lose admin accounts or registered host configurations), run:
+### 11.2 Complete PeerSight Clean-Up
+To fully erase all PeerSight files (systemd configurations, log queues, configurations, and binaries) while **preserving your DB volumes**:
 ```bash
 cd ~/wireguard-edge-cloud-5g/peersight
 sudo ./uninstall.sh
 ```
-This script will safely clean up the agent systemd service, log files at `/var/log/peersight`, configuration at `/etc/peersight`, and the binaries at `/usr/local/bin/peersight-agent`.
+
+---
+
+## 12. Detailed Configuration Reference
+
+These variables are defined in `.env` and consumed by the PeerSight modules.
+
+### 12.1 API Server Variables (`peersight-api`)
+
+| Variable | Default | Description |
+|---|---|---|
+| `DATABASE_URL` | `postgres://peersight:...@localhost:5432/peersight` | pgx connection string. |
+| `JWT_SECRET` | `change-me-in-production` | Secret key used to sign session & agent tokens. |
+| `PORT` | `4000` | Port for the central API server. |
+| `ENV` | `development` | Set to `production` in live environments. |
+| `ALLOWED_ORIGINS`| `http://localhost:5173` | CORS allowed origins. |
+
+### 12.2 Agent Variables (`peersight-agent`)
+
+| Variable | Default | Description |
+|---|---|---|
+| `PEERSIGHT_API_URL` | — | Target URL of the central API (`http://10.8.0.1:4000`). |
+| `PEERSIGHT_HOST_ID` | — | UUID identifying this specific node. |
+| `PEERSIGHT_TOKEN` | — | JWT token issued in Web UI for the Host. |
+| `PEERSIGHT_LOOP_INTERVAL` | `30` | Interval in seconds between heartbeats. |
+| `PEERSIGHT_READ_ONLY` | `false` | If true, only reports stats and doesn't run sync actions. |
+| `PEERSIGHT_WG_BINARY` | `wg` | Absolute or relative path to the WireGuard CLI. |
+
+### 12.3 Broker Variables (`peersight-broker`)
+
+| Variable | Default | Description |
+|---|---|---|
+| `PEERSIGHT_API_URL` | — | Target URL of the central API. |
+| `PEERSIGHT_TOKEN` | — | Broker JWT token for polling. |
+| `PEERSIGHT_LOOP_INTERVAL` | `30` | Interval in seconds to poll events. |
+| `PEERSIGHT_PIPE_1_TO` | `file` | Pipe output target (`file` or `syslog`). |
+| `PEERSIGHT_PIPE_1_FILE` | `/var/log/peersight/events.jsonl` | Output file for events. |
+
+---
+
+## 13. API Endpoints Reference
+
+### 13.1 Public Endpoints
+- `GET /health` — Health check (Uptime, Postgres connectivity status).
+- `GET /version` — Version output.
+- `POST /sessions` — Login credentials (Email + Password) returning Access/Refresh JWTs.
+- `POST /sessions/refresh` — Standard token refresher.
+- `POST /accounts/signup` — Registers a new user.
+
+### 13.2 Host Management
+- `GET /hosts` — Lists all registered nodes.
+- `GET /hosts/:id` — Details of a specific host.
+- `GET /hosts/:id/interfaces` — Network interfaces per host.
+- `GET /hosts/:id/changes` — Pending configuration changes for the agent.
+
+### 13.3 Agent Communication
+- `POST /hosts/:host_id/ping/:version` — Reciprocal agent ping for heartbeats and state reporting.
+
+### 13.4 Alerts & Queues
+- `GET /alerts` — List of active system alarms.
+- `POST /alerts/:id/resolve` — Mark alert as resolved.
+- `POST /queues/:type/next` — Polled by the Broker to retrieve events.
+- `POST /queues/:type/ack` — Acknowledge successful processing of events.

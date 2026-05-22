@@ -94,7 +94,8 @@ wireguard-edge-cloud-5g/
 │   ├── peersight-api/        # Go REST API (Gin + pgx + JWT)
 │   ├── peersight-app/        # Vue.js 3 Admin Dashboard
 │   ├── peersight-agent/      # Go daemon — syncs WireGuard state
-│   └── peersight-broker/     # Go daemon — SIEM bridge (alerts → Loki)
+│   ├── peersight-broker/     # Go daemon — SIEM bridge (alerts → Loki)
+│   └── README.md             # Pointer to central PEERSIGHT_DEPLOYMENT.md
 ```
 
 ## 🔐 Key Features
@@ -420,7 +421,8 @@ wireguard-edge-cloud-5g/
 │   ├── peersight-api/        # Go REST API (Gin + pgx + JWT)
 │   ├── peersight-app/        # Vue.js 3 Admin Dashboard
 │   ├── peersight-agent/      # Go daemon — syncs WireGuard state
-│   └── peersight-broker/     # Go daemon — SIEM bridge (alerts → Loki)
+│   ├── peersight-broker/     # Go daemon — SIEM bridge (alerts → Loki)
+│   └── README.md             # Con trỏ dẫn đến PEERSIGHT_DEPLOYMENT.md trung tâm
 ```
 
 ## 🔐 Tính Năng Chính
