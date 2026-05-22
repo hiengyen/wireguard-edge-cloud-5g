@@ -58,7 +58,7 @@ router.beforeEach((to) => {
   if (!to.meta.public && !authStore.isLoggedIn) {
     return { name: 'Login' }
   }
-  if (to.meta.requireAdmin && authStore.userRole !== 'admin') {
+  if (to.meta.requireAdmin && !authStore.isAdmin) {
     return { name: 'Dashboard' }
   }
 })

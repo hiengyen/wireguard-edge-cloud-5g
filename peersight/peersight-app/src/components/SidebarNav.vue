@@ -27,7 +27,7 @@
         <span v-if="unresolvedCount > 0" class="alert-count">{{ unresolvedCount }}</span>
       </router-link>
 
-      <router-link v-if="authStore.userRole === 'admin'" to="/users" class="nav-item" :class="{ active: $route.name === 'Users' }">
+      <router-link v-if="authStore.isAdmin" to="/users" class="nav-item" :class="{ active: $route.name === 'Users' }">
         <span class="material-symbols-outlined">group</span>
         <span>Users</span>
       </router-link>

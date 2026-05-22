@@ -118,6 +118,7 @@
             <th>Port</th>
             <th>Allowed IPs</th>
             <th>Keepalive</th>
+            <th>Last Handshake</th>
             <th>RX / TX</th>
             <th>Status</th>
           </tr>
@@ -133,6 +134,9 @@
             <td>{{ ep.port || '—' }}</td>
             <td><code class="mono-val" style="font-size:11px">{{ ep.allowed_ips || '—' }}</code></td>
             <td>{{ ep.keepalive > 0 ? ep.keepalive + 's' : '—' }}</td>
+            <td style="color:var(--color-text-secondary);font-size:var(--font-size-xs);white-space:nowrap">
+              {{ formatTime(ep.last_handshake) }}
+            </td>
             <td style="font-size:var(--font-size-xs)">
               <span style="color:var(--color-success)">↓{{ formatBytes(ep.rx_bytes) }}</span>
               <span style="color:var(--color-text-muted);margin:0 4px">/</span>

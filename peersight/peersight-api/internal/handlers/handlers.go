@@ -2,16 +2,18 @@ package handlers
 
 import (
 	"fmt"
+	"net"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/peersight/api/internal/middleware"
 	"github.com/peersight/api/internal/models"
 	"github.com/peersight/api/internal/repository"
 	"golang.org/x/crypto/bcrypt"
-	"github.com/peersight/api/internal/middleware"
-	"strings"
 )
 
 // AuthHandler handles user authentication.
@@ -328,7 +330,6 @@ func (h *HostHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"data": host})
 }
 
-
 // Show returns a single host by ID.
 func (h *HostHandler) Show(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
@@ -609,7 +610,11 @@ func (h *PingHandler) Ping(c *gin.Context) {
 
 	// 4. Upsert interfaces and endpoints
 	for _, iface := range req.Interfaces {
-		peer, err := h.DB.FindOrCreatePeer(ctx, host.OrgID, iface.PublicKey, "peer-"+iface.PublicKey[:8])
+		if iface.PublicKey == "" {
+			continue
+		}
+
+		peer, err := h.DB.FindOrCreatePeer(ctx, host.OrgID, iface.PublicKey, peerNameFromPublicKey(iface.PublicKey))
 		if err != nil {
 			continue
 		}
@@ -630,24 +635,32 @@ func (h *PingHandler) Ping(c *gin.Context) {
 		}
 
 		for _, p := range iface.Peers {
-			remotePeer, err := h.DB.FindOrCreatePeer(ctx, host.OrgID, p.PublicKey, "peer-"+p.PublicKey[:8])
+			if p.PublicKey == "" {
+				continue
+			}
+
+			remotePeer, err := h.DB.FindOrCreatePeer(ctx, host.OrgID, p.PublicKey, peerNameFromPublicKey(p.PublicKey))
 			if err != nil {
 				continue
 			}
 
-			var lastHandshake *interface{}
-			_ = lastHandshake // handled below
+			var lastHandshake *time.Time
+			if p.LatestHandshake > 0 {
+				t := time.Unix(p.LatestHandshake, 0).UTC()
+				lastHandshake = &t
+			}
 
 			ep := &models.Endpoint{
-				InterfaceID: dbIface.ID,
-				PeerID:      remotePeer.ID,
-				IP:          extractIP(p.Endpoint),
-				Port:        extractPort(p.Endpoint),
-				AllowedIPs:  joinIPs(p.AllowedIPs),
-				Keepalive:   p.PersistentKeepalive,
-				Available:   p.Available,
-				RxBytes:     p.TransferRx,
-				TxBytes:     p.TransferTx,
+				InterfaceID:   dbIface.ID,
+				PeerID:        remotePeer.ID,
+				IP:            extractIP(p.Endpoint),
+				Port:          extractPort(p.Endpoint),
+				AllowedIPs:    joinIPs(p.AllowedIPs),
+				Keepalive:     p.PersistentKeepalive,
+				Available:     p.Available,
+				LastHandshake: lastHandshake,
+				RxBytes:       p.TransferRx,
+				TxBytes:       p.TransferTx,
 			}
 			_, _ = h.DB.UpsertEndpoint(ctx, ep)
 		}
@@ -753,35 +766,39 @@ func getOrgID(c *gin.Context) uuid.UUID {
 	return uuid.MustParse("00000000-0000-0000-0000-000000000001")
 }
 
+func peerNameFromPublicKey(publicKey string) string {
+	if len(publicKey) <= 8 {
+		return "peer-" + publicKey
+	}
+	return "peer-" + publicKey[:8]
+}
+
 func extractIP(endpoint string) string {
-	for i := len(endpoint) - 1; i >= 0; i-- {
-		if endpoint[i] == ':' {
-			return endpoint[:i]
-		}
+	if endpoint == "" {
+		return ""
+	}
+	host, _, err := net.SplitHostPort(endpoint)
+	if err == nil {
+		return strings.Trim(host, "[]")
+	}
+	if strings.HasPrefix(endpoint, "[") && strings.Contains(endpoint, "]") {
+		return strings.Trim(endpoint, "[]")
 	}
 	return endpoint
 }
 
 func extractPort(endpoint string) int {
-	for i := len(endpoint) - 1; i >= 0; i-- {
-		if endpoint[i] == ':' {
-			port := 0
-			for _, ch := range endpoint[i+1:] {
-				port = port*10 + int(ch-'0')
-			}
-			return port
-		}
+	_, port, err := net.SplitHostPort(endpoint)
+	if err != nil {
+		return 0
 	}
-	return 0
+	value, err := strconv.Atoi(port)
+	if err != nil {
+		return 0
+	}
+	return value
 }
 
 func joinIPs(ips []string) string {
-	result := ""
-	for i, ip := range ips {
-		if i > 0 {
-			result += ","
-		}
-		result += ip
-	}
-	return result
+	return strings.Join(ips, ",")
 }

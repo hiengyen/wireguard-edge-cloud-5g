@@ -76,7 +76,7 @@
         </div>
         <div class="modal-body">
           <p style="color:var(--color-text-secondary);font-size:var(--font-size-sm);margin-bottom:var(--space-lg)">
-            Create a host profile to generate a unique **Host ID**. You will need this ID to configure the local peersight-agent.
+            Create a host profile to generate a unique <strong>Host ID</strong>. You will need this ID to configure the local peersight-agent.
           </p>
           <div class="form-group" v-if="!createdHost">
             <label for="host-name" style="display:block;margin-bottom:6px;font-weight:600;font-size:var(--font-size-sm)">Host Name</label>
@@ -100,16 +100,22 @@
                 <span class="label">Host ID (UUID):</span>
                 <div class="copy-box">
                   <code>{{ createdHost.id }}</code>
+                  <button class="copy-action" @click="copyValue(createdHost.id)" title="Copy Host ID">
+                    <span class="material-symbols-outlined">content_copy</span>
+                  </button>
                 </div>
               </div>
               <div style="margin-bottom:12px">
                 <span class="label">Organization ID:</span>
                 <div class="copy-box">
                   <code>{{ createdHost.org_id }}</code>
+                  <button class="copy-action" @click="copyValue(createdHost.org_id)" title="Copy Organization ID">
+                    <span class="material-symbols-outlined">content_copy</span>
+                  </button>
                 </div>
               </div>
               <p style="font-size:12px;color:var(--color-text-muted);margin:0">
-                Use this **Host ID** to initialize the peersight-agent on your device.
+                Use this <strong>Host ID</strong> to initialize the peersight-agent on your device.
               </p>
             </div>
           </div>
@@ -151,6 +157,10 @@ function closeModal() {
   showCreateModal.value = false
   newHostName.value = ''
   createdHost.value = null
+}
+
+function copyValue(value) {
+  if (value) navigator.clipboard.writeText(value)
 }
 </script>
 
@@ -259,9 +269,29 @@ function closeModal() {
   margin-top: 4px;
   border: 1px solid var(--color-border, #2d2d34);
 }
+
 .copy-box code {
+  min-width: 0;
+  overflow-wrap: anywhere;
   color: var(--color-accent, #5865f2);
   font-family: monospace;
   font-size: var(--font-size-xs, 12px);
+}
+
+.copy-action {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  padding: 2px;
+}
+
+.copy-action:hover {
+  color: var(--color-accent);
+}
+
+.copy-action .material-symbols-outlined {
+  font-size: 16px;
 }
 </style>

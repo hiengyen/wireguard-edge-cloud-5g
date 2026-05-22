@@ -10,6 +10,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isLoggedIn = computed(() => !!token.value)
   const isAdmin = computed(() => role.value === 'admin')
+  const userRole = computed(() => role.value)
 
   function setTokens(data) {
     token.value = data.token
@@ -47,5 +48,5 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('peersight_role')
   }
 
-  return { token, refreshToken, userId, role, isLoggedIn, isAdmin, login, refresh, logout, setTokens }
+  return { token, refreshToken, userId, role, userRole, isLoggedIn, isAdmin, login, refresh, logout, setTokens }
 })

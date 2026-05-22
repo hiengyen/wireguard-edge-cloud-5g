@@ -97,11 +97,22 @@ export const useUserStore = defineStore('users', () => {
     if (user) user.role = role
   }
 
+  async function createUser(payload) {
+    const res = await api.post('/admin/users', payload)
+    if (res.data) {
+      users.value.unshift({
+        id: res.data.user_id,
+        email: res.data.email,
+        role: res.data.role,
+        created_at: new Date().toISOString()
+      })
+    }
+  }
+
   async function deleteUser(id) {
     await api.delete(`/admin/users/${id}`)
     users.value = users.value.filter(u => u.id !== id)
   }
 
-  return { users, loading, fetchUsers, updateUserRole, deleteUser }
+  return { users, loading, fetchUsers, createUser, updateUserRole, deleteUser }
 })
-

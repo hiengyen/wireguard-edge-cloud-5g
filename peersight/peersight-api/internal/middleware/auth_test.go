@@ -53,11 +53,11 @@ func TestGenerateToken_Expiry(t *testing.T) {
 		return []byte(secret), nil
 	})
 
-	// Token should expire in ~24 hours
+	// Access tokens should expire in ~30 minutes.
 	expires := claims.ExpiresAt.Time
 	diff := time.Until(expires)
-	if diff < 23*time.Hour || diff > 25*time.Hour {
-		t.Errorf("expected ~24h expiry, got %v", diff)
+	if diff < 29*time.Minute || diff > 31*time.Minute {
+		t.Errorf("expected ~30m expiry, got %v", diff)
 	}
 }
 
