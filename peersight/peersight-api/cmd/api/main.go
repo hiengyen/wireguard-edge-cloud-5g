@@ -126,8 +126,9 @@ func setupRouter(db *repository.DB, cfg *config.Config) *gin.Engine {
 	api := r.Group("/")
 	api.Use(middleware.AuthMiddleware(cfg.JWTSecret))
 	{
-		// Hosts (read)
+		// Hosts
 		api.GET("/hosts", hostH.List)
+		api.POST("/hosts", hostH.Create)
 		api.GET("/hosts/:id", hostH.Show)
 		api.GET("/hosts/:id/interfaces", hostH.ListInterfaces)
 		api.GET("/hosts/:id/endpoints", hostH.ListEndpoints)

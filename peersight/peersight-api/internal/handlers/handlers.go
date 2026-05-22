@@ -301,6 +301,34 @@ func (h *HostHandler) List(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": hosts})
 }
 
+// CreateHostRequest is the JSON body for creating a host.
+type CreateHostRequest struct {
+	Name string `json:"name" binding:"required"`
+}
+
+// Create creates a new host.
+func (h *HostHandler) Create(c *gin.Context) {
+	var req CreateHostRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	orgID := getOrgID(c)
+	host := &models.Host{
+		OrgID: orgID,
+		Name:  req.Name,
+	}
+
+	if err := h.DB.CreateHost(c.Request.Context(), host); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"data": host})
+}
+
+
 // Show returns a single host by ID.
 func (h *HostHandler) Show(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))

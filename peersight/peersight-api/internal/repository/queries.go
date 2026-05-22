@@ -47,6 +47,22 @@ func (db *DB) ListHosts(ctx context.Context, orgID uuid.UUID) ([]models.Host, er
 	return hosts, nil
 }
 
+// CreateHost inserts a new host.
+func (db *DB) CreateHost(ctx context.Context, host *models.Host) error {
+	if host.ID == uuid.Nil {
+		host.ID = uuid.New()
+	}
+	now := time.Now().UTC()
+	host.CreatedAt = now
+	host.UpdatedAt = now
+	_, err := db.Pool.Exec(ctx,
+		`INSERT INTO hosts (id, org_id, name, last_ping, agent_ver, created_at, updated_at)
+		 VALUES ($1, $2, $3, NULL, '', $4, $4)`,
+		host.ID, host.OrgID, host.Name, now)
+	return err
+}
+
+
 // RecordPing updates the host's last ping time and agent version.
 func (db *DB) RecordPing(ctx context.Context, hostID uuid.UUID, agentVer string) error {
 	now := time.Now().UTC()

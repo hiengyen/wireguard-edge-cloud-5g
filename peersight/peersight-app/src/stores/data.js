@@ -16,7 +16,20 @@ export const useHostStore = defineStore('hosts', () => {
     }
   }
 
-  return { hosts, loading, fetchHosts }
+  async function createHost(name) {
+    loading.value = true
+    try {
+      const res = await api.post('/hosts', { name })
+      if (res.data && res.data.data) {
+        hosts.value.unshift(res.data.data)
+        return res.data.data
+      }
+    } finally {
+      loading.value = false
+    }
+  }
+
+  return { hosts, loading, fetchHosts, createHost }
 })
 
 export const usePeerStore = defineStore('peers', () => {
