@@ -30,10 +30,12 @@ func NewClient(cfg *config.Config) *Client {
 
 // Event represents a single event returned from the queue.
 type Event struct {
-	ID         string          `json:"id"`
-	Type       string          `json:"type"`
-	Payload    json.RawMessage `json:"payload"`
-	CreatedAt  string          `json:"created_at"`
+	ID          string          `json:"id"`
+	Type        string          `json:"type"`
+	Payload     json.RawMessage `json:"payload"`
+	Attempts    int             `json:"attempts"`
+	LockedUntil string          `json:"locked_until,omitempty"`
+	CreatedAt   string          `json:"created_at"`
 }
 
 // PollResponse is the response from POST /queues/:type/next.
@@ -44,8 +46,10 @@ type PollResponse struct {
 // PollQueue fetches the next batch of events for a given type.
 func (c *Client) PollQueue(eventType string, max int) (*PollResponse, error) {
 	body := struct {
-		Max int `json:"max"`
-	}{Max: max}
+		Max          int    `json:"max"`
+		LeaseSeconds int    `json:"lease_seconds"`
+		LockedBy     string `json:"locked_by"`
+	}{Max: max, LeaseSeconds: c.cfg.LeaseSeconds, LockedBy: c.cfg.BrokerID}
 
 	data, err := json.Marshal(body)
 	if err != nil {
@@ -78,6 +82,27 @@ func (c *Client) AckEvents(eventType string, eventIDs []string) error {
 	}
 
 	url := fmt.Sprintf("%s/queues/%s/ack", c.cfg.APIURL, eventType)
+	resp, err := c.doRequest("POST", url, data)
+	if err != nil {
+		return err
+	}
+	resp.Body.Close()
+	return nil
+}
+
+// FailEvents releases leased events after delivery failed.
+func (c *Client) FailEvents(eventType string, eventIDs []string, message string) error {
+	body := struct {
+		EventIDs []string `json:"event_ids"`
+		Error    string   `json:"error"`
+	}{EventIDs: eventIDs, Error: message}
+
+	data, err := json.Marshal(body)
+	if err != nil {
+		return fmt.Errorf("marshal fail body: %w", err)
+	}
+
+	url := fmt.Sprintf("%s/queues/%s/fail", c.cfg.APIURL, eventType)
 	resp, err := c.doRequest("POST", url, data)
 	if err != nil {
 		return err

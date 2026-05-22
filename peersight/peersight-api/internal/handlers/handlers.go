@@ -170,29 +170,116 @@ func (h *AuthHandler) Signup(c *gin.Context) {
 // This token is stored in /etc/peersight/agent.env and used by the agent to authenticate pings.
 // Admin-only: requires "admin" role in the caller's JWT.
 func (h *AuthHandler) IssueAgentToken(c *gin.Context) {
-	userID, _ := c.Get("user_id")
-	role, _ := c.Get("user_role")
-
-	uid, ok := userID.(uuid.UUID)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user context"})
-		return
-	}
-
-	roleStr, _ := role.(string)
-	agentToken, err := middleware.GenerateAgentToken(h.JWTSecret, uid, roleStr)
+	token, record, err := h.issueServiceToken(c, "agent", nil, []string{"hosts:ping"}, 10*365*24*time.Hour)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate agent token"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"agent_token": agentToken,
-		"note":        "This token is valid for 10 years. Store it in PEERSIGHT_TOKEN in /etc/peersight/agent.env.",
+		"agent_token": token,
+		"token":       record,
+		"deprecated":  true,
+		"note":        "Deprecated unbound agent token. Prefer POST /hosts/:id/agent-tokens for host-scoped tokens.",
 	})
 }
 
+// IssueHostAgentToken generates a long-lived token bound to one host.
+func (h *AuthHandler) IssueHostAgentToken(c *gin.Context) {
+	hostID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid host id"})
+		return
+	}
 
+	host, err := h.DB.GetHost(c.Request.Context(), hostID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "host not found"})
+		return
+	}
+
+	token, record, err := h.issueServiceToken(c, "agent", &host.ID, []string{"hosts:ping"}, 10*365*24*time.Hour)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"agent_token": token,
+		"token":       record,
+		"note":        "This host-scoped token is shown once. Store it in PEERSIGHT_TOKEN.",
+	})
+}
+
+// IssueBrokerToken generates a scoped token for peersight-broker queue polling.
+func (h *AuthHandler) IssueBrokerToken(c *gin.Context) {
+	token, record, err := h.issueServiceToken(c, "broker", nil, []string{"queues:poll"}, 10*365*24*time.Hour)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"broker_token": token,
+		"token":        record,
+		"note":         "This broker token is shown once. Store it in PEERSIGHT_BROKER_TOKEN.",
+	})
+}
+
+// ListServiceTokens returns token metadata without plaintext token values.
+func (h *AuthHandler) ListServiceTokens(c *gin.Context) {
+	limit := parseLimit(c, 100, 500)
+	tokens, err := h.DB.ListServiceTokens(c.Request.Context(), getOrgID(c), limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list service tokens"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": tokens})
+}
+
+// RevokeServiceToken revokes a daemon token by ID.
+func (h *AuthHandler) RevokeServiceToken(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid token id"})
+		return
+	}
+	if err := h.DB.RevokeServiceToken(c.Request.Context(), id); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "service token revoked"})
+}
+
+func (h *AuthHandler) issueServiceToken(c *gin.Context, kind string, hostID *uuid.UUID, scopes []string, ttl time.Duration) (string, *models.ServiceToken, error) {
+	userID, _ := c.Get("user_id")
+	uid, ok := userID.(uuid.UUID)
+	if !ok {
+		return "", nil, fmt.Errorf("invalid user context")
+	}
+
+	tokenID, tokenString, err := middleware.GenerateServiceToken(h.JWTSecret, kind, hostID, scopes, ttl)
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to generate service token")
+	}
+
+	record := &models.ServiceToken{
+		ID:          tokenID,
+		OrgID:       getOrgID(c),
+		TokenHash:   middleware.HashToken(tokenString),
+		TokenPrefix: middleware.TokenPrefix(tokenString),
+		Kind:        kind,
+		HostID:      hostID,
+		Scopes:      scopes,
+		ExpiresAt:   time.Now().UTC().Add(ttl),
+		CreatedBy:   &uid,
+	}
+	if err := h.DB.CreateServiceToken(c.Request.Context(), record); err != nil {
+		return "", nil, err
+	}
+	record.TokenHash = ""
+	return tokenString, record, nil
+}
 
 // CreateUserRequest is the JSON body for admin-only user creation.
 type CreateUserRequest struct {
@@ -445,7 +532,6 @@ func (h *HostHandler) Delete(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "host deleted"})
 }
 
-
 // ListInterfaces returns all interfaces for a host.
 func (h *HostHandler) ListInterfaces(c *gin.Context) {
 	hostID, err := uuid.Parse(c.Param("id"))
@@ -493,7 +579,11 @@ func (h *HostHandler) ListChanges(c *gin.Context) {
 
 // ListGlobalChanges returns desired changes across all hosts.
 func (h *HostHandler) ListGlobalChanges(c *gin.Context) {
-	changes, err := h.DB.ListGlobalChanges(c.Request.Context(), 100)
+	changes, err := h.DB.ListGlobalChangesFiltered(c.Request.Context(), repository.ChangeFilter{
+		State:  c.Query("state"),
+		Limit:  parseLimit(c, 100, 500),
+		Offset: parseOffset(c),
+	})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -618,7 +708,27 @@ type AlertHandler struct {
 // List returns alerts for the org.
 func (h *AlertHandler) List(c *gin.Context) {
 	orgID := getOrgID(c)
-	alerts, err := h.DB.ListAlerts(c.Request.Context(), orgID, 100)
+	filter := repository.AlertFilter{
+		Level:  c.Query("level"),
+		Type:   c.Query("type"),
+		Limit:  parseLimit(c, 100, 500),
+		Offset: parseOffset(c),
+	}
+	if status := c.Query("status"); status != "" {
+		resolved := status == "resolved"
+		if status == "active" || status == "resolved" {
+			filter.Resolved = &resolved
+		}
+	}
+	if hostID := c.Query("host_id"); hostID != "" {
+		id, err := uuid.Parse(hostID)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid host_id"})
+			return
+		}
+		filter.HostID = &id
+	}
+	alerts, err := h.DB.ListAlertsFiltered(c.Request.Context(), orgID, filter)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -672,13 +782,15 @@ func (h *QueueHandler) PollNext(c *gin.Context) {
 	eventType := c.Param("type")
 
 	var body struct {
-		Max int `json:"max"`
+		Max          int    `json:"max"`
+		LeaseSeconds int    `json:"lease_seconds"`
+		LockedBy     string `json:"locked_by"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil || body.Max <= 0 {
 		body.Max = 10
 	}
 
-	events, err := h.DB.PollQueue(c.Request.Context(), orgID, eventType, body.Max)
+	events, err := h.DB.PollQueueLease(c.Request.Context(), orgID, eventType, body.Max, body.LockedBy, body.LeaseSeconds)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -718,6 +830,36 @@ func (h *QueueHandler) AckEvents(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "events acknowledged", "count": len(ids)})
 }
 
+// FailEvents releases leased queue events after broker delivery failed.
+func (h *QueueHandler) FailEvents(c *gin.Context) {
+	var req struct {
+		EventIDs []string `json:"event_ids" binding:"required"`
+		Error    string   `json:"error"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var ids []uuid.UUID
+	for _, idStr := range req.EventIDs {
+		id, err := uuid.Parse(idStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid event_id: " + idStr})
+			return
+		}
+		ids = append(ids, id)
+	}
+	if req.Error == "" {
+		req.Error = "broker delivery failed"
+	}
+	if err := h.DB.FailQueueEvents(c.Request.Context(), ids, req.Error); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "events released", "count": len(ids)})
+}
+
 // ────────────────────────────────────────────────
 // Agent Ping handler
 // ────────────────────────────────────────────────
@@ -755,7 +897,18 @@ func (h *PingHandler) Ping(c *gin.Context) {
 		if parseErr != nil {
 			continue
 		}
-		_ = h.DB.MarkChangeExecuted(ctx, changeID, exec.Success, exec.Output)
+		change, markErr := h.DB.MarkChangeExecuted(ctx, changeID, exec.Success, exec.Output)
+		if markErr == nil && !exec.Success {
+			hostIDCopy := hostID
+			_ = h.DB.CreateAlert(ctx, &models.Alert{
+				OrgID:    getOrgID(c),
+				HostID:   &hostIDCopy,
+				Type:     "desired_change_failed",
+				Level:    "warning",
+				Message:  fmt.Sprintf("Desired change %s failed: %s", change.Type, exec.Output),
+				Resolved: false,
+			})
+		}
 	}
 
 	// 3. Get the host for org_id lookup
@@ -865,13 +1018,45 @@ func (h *HealthHandler) Check(c *gin.Context) {
 	})
 }
 
+// Live returns process liveness without checking downstream dependencies.
+func (h *HealthHandler) Live(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"status": "alive", "uptime": time.Since(h.StartedAt).Round(time.Second).String()})
+}
+
+// Ready returns readiness based on database reachability.
+func (h *HealthHandler) Ready(c *gin.Context) {
+	if err := h.DB.Pool.Ping(c.Request.Context()); err != nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"status": "not_ready", "error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "ready"})
+}
+
+// Metrics emits a small Prometheus-compatible metrics surface.
+func (h *HealthHandler) Metrics(c *gin.Context) {
+	stats := h.DB.Pool.Stat()
+	orgID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	backlog, _ := h.DB.QueueBacklog(c.Request.Context(), orgID)
+
+	c.Header("Content-Type", "text/plain; version=0.0.4")
+	c.String(http.StatusOK,
+		"peersight_uptime_seconds %.0f\npeersight_db_total_conns %d\npeersight_db_idle_conns %d\npeersight_db_acquired_conns %d\npeersight_queue_backlog %d\n",
+		time.Since(h.StartedAt).Seconds(),
+		stats.TotalConns(),
+		stats.IdleConns(),
+		stats.AcquiredConns(),
+		backlog,
+	)
+}
+
 // ────────────────────────────────────────────────
 // SSE Stream handler (#10)
 // ────────────────────────────────────────────────
 
 // SSEHandler provides Server-Sent Events for realtime notifications.
 type SSEHandler struct {
-	DB *repository.DB
+	DB        *repository.DB
+	JWTSecret string
 }
 
 // Stream opens an SSE connection and sends alert/ping events.
@@ -882,11 +1067,14 @@ func (h *SSEHandler) Stream(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing token"})
 		return
 	}
+	if _, err := middleware.ValidateUserQueryToken(tokenStr, h.JWTSecret); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid or expired token"})
+		return
+	}
 
 	c.Writer.Header().Set("Content-Type", "text/event-stream")
 	c.Writer.Header().Set("Cache-Control", "no-cache")
 	c.Writer.Header().Set("Connection", "keep-alive")
-	c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 	c.Writer.Flush()
 
 	ticker := time.NewTicker(15 * time.Second)
@@ -921,6 +1109,25 @@ func getOrgID(c *gin.Context) uuid.UUID {
 	}
 	// Default org for single-tenant setup
 	return uuid.MustParse("00000000-0000-0000-0000-000000000001")
+}
+
+func parseLimit(c *gin.Context, defaultLimit int, maxLimit int) int {
+	limit, err := strconv.Atoi(c.DefaultQuery("limit", strconv.Itoa(defaultLimit)))
+	if err != nil || limit <= 0 {
+		return defaultLimit
+	}
+	if limit > maxLimit {
+		return maxLimit
+	}
+	return limit
+}
+
+func parseOffset(c *gin.Context) int {
+	offset, err := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	if err != nil || offset < 0 {
+		return 0
+	}
+	return offset
 }
 
 func peerNameFromPublicKey(publicKey string) string {

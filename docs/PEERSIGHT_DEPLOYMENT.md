@@ -203,9 +203,11 @@ The system creates a database record and returns the **Host ID (UUID)** — copy
 
 > **Note:** Hosts can also self-register automatically on first ping if the agent is pre-configured with a valid UUID and token (see Section 8.3).
 
-### 8.3 Generate a Long-Lived Agent Token (PEERSIGHT_TOKEN)
+### 8.3 Generate a Host-Scoped Agent Token (PEERSIGHT_TOKEN)
 
-`PEERSIGHT_TOKEN` is a **JWT signed with your `PEERSIGHT_JWT_SECRET`**. Because the agent runs as a systemd service 24/7, you need a **long-lived token (10 years)** — not the standard 30-minute UI session token.
+`PEERSIGHT_TOKEN` is a **host-scoped service token** signed with your `PEERSIGHT_JWT_SECRET` and tracked in PostgreSQL by hash. Because the agent runs as a systemd service 24/7, you need a **long-lived token (10 years)** — not the standard 30-minute UI session token.
+
+The token is bound to one `Host ID`. If an edge node tries to ping a different host record, the API returns `403 token_host_mismatch`.
 
 **Step 1 — Login and get a short-lived admin token:**
 ```bash
@@ -217,15 +219,26 @@ ADMIN_TOKEN=$(curl -s -X POST http://10.8.0.1:4000/sessions \
 echo "Admin token: $ADMIN_TOKEN"
 ```
 
-**Step 2 — Exchange for a long-lived agent token:**
+**Step 2 — Exchange for a long-lived token for one host:**
 ```bash
-AGENT_TOKEN=$(curl -s -X POST http://10.8.0.1:4000/admin/agent-tokens \
+AGENT_TOKEN=$(curl -s -X POST http://10.8.0.1:4000/hosts/<HOST_UUID>/agent-tokens \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   | jq -r '.agent_token')
 echo "Agent token (save this!): $AGENT_TOKEN"
 ```
 
-This `AGENT_TOKEN` is valid for **10 years** and can be safely stored in `/etc/peersight/agent.env`.
+This `AGENT_TOKEN` is valid for **10 years**, is shown only once, and can be safely stored in `/etc/peersight/agent.env`. Admins can list or revoke token metadata with:
+
+```bash
+curl -s http://10.8.0.1:4000/admin/service-tokens \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | jq
+
+curl -X POST http://10.8.0.1:4000/admin/service-tokens/<TOKEN_ID>/revoke \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+> [!NOTE]
+> `POST /admin/agent-tokens` remains available for one migration cycle, but it creates a deprecated unbound token. Use `/hosts/:id/agent-tokens` for new deployments.
 
 ### 8.4 Configure the Cloud Agent Service
 
@@ -297,10 +310,18 @@ sudo journalctl -u peersight-agent -f
 
 ## 10. SIEM Bridge & Loki Integration
 
-1. In the Web UI, go to settings and generate a **Broker Token**.
+1. Generate a scoped **Broker Token**:
+   ```bash
+   BROKER_TOKEN=$(curl -s -X POST http://10.8.0.1:4000/admin/broker-tokens \
+     -H "Authorization: Bearer $ADMIN_TOKEN" \
+     | jq -r '.broker_token')
+   echo "$BROKER_TOKEN"
+   ```
 2. Add it to the Cloud Gateway's `.env` file:
    ```bash
    PEERSIGHT_BROKER_TOKEN=<YOUR_BROKER_TOKEN>
+   PEERSIGHT_BROKER_ID=cloud-broker-1
+   PEERSIGHT_QUEUE_LEASE_SECONDS=60
    ```
 3. Restart the Broker and Alloy:
    ```bash
@@ -346,6 +367,9 @@ These variables are defined in `.env` and consumed by the PeerSight modules.
 | `PORT` | `4000` | Port for the central API server. |
 | `ENV` | `development` | Set to `production` in live environments. |
 | `ALLOWED_ORIGINS`| `http://localhost:5173` | CORS allowed origins. |
+| `PEERSIGHT_HOST_STALE_SECONDS` | `120` | Creates an operational alert when a host misses this heartbeat window. |
+| `PEERSIGHT_HANDSHAKE_STALE_SECONDS` | `180` | Creates an operational alert for stale or unavailable WireGuard endpoint handshakes. |
+| `PEERSIGHT_QUEUE_BACKLOG_ALERT_THRESHOLD` | `1000` | Creates an operational alert when unacked broker events exceed this count. |
 
 ### 12.2 Agent Variables (`peersight-agent`)
 
@@ -364,7 +388,9 @@ These variables are defined in `.env` and consumed by the PeerSight modules.
 |---|---|---|
 | `PEERSIGHT_API_URL` | — | Target URL of the central API. |
 | `PEERSIGHT_TOKEN` | — | Broker JWT token for polling. |
+| `PEERSIGHT_BROKER_ID` | `cloud-broker-1` | Stable broker identity written into queue leases. |
 | `PEERSIGHT_LOOP_INTERVAL` | `30` | Interval in seconds to poll events. |
+| `PEERSIGHT_QUEUE_LEASE_SECONDS` | `60` | Retry timeout for leased queue events not acknowledged by the broker. |
 | `PEERSIGHT_PIPE_1_TO` | `file` | Pipe output target (`file` or `syslog`). |
 | `PEERSIGHT_PIPE_1_FILE` | `/var/log/peersight/events.jsonl` | Output file for events. |
 
@@ -387,9 +413,14 @@ These variables are defined in `.env` and consumed by the PeerSight modules.
 
 ### 13.3 Agent Communication
 - `POST /hosts/:host_id/ping/:version` — Reciprocal agent ping for heartbeats and state reporting.
+- `POST /hosts/:id/agent-tokens` — Admin-only host-scoped agent token creation.
 
 ### 13.4 Alerts & Queues
 - `GET /alerts` — List of active system alarms.
 - `POST /alerts/:id/resolve` — Mark alert as resolved.
 - `POST /queues/:type/next` — Polled by the Broker to retrieve events.
 - `POST /queues/:type/ack` — Acknowledge successful processing of events.
+- `POST /queues/:type/fail` — Release leased events for retry after broker delivery failure.
+- `POST /admin/broker-tokens` — Admin-only scoped broker token creation.
+- `GET /admin/service-tokens` — Admin-only token metadata listing.
+- `POST /admin/service-tokens/:id/revoke` — Admin-only service token revocation.

@@ -70,6 +70,12 @@ func Run(cfg *config.Config) {
 func poll(client *api.Client, pipes []*pipe.Pipe, eventTypes []string, cfg *config.Config) {
 	// 1. Poll each event type from the API
 	allEvents := make(map[string][]api.Event)
+	requiredDeliveries := make(map[string]int)
+	for _, p := range pipes {
+		for _, from := range p.Config.From {
+			requiredDeliveries[from]++
+		}
+	}
 	for _, et := range eventTypes {
 		maxForType := getMaxForType(cfg.Pipes, et)
 		resp, err := client.PollQueue(et, maxForType)
@@ -84,6 +90,8 @@ func poll(client *api.Client, pipes []*pipe.Pipe, eventTypes []string, cfg *conf
 	}
 
 	// 2. Distribute events to pipes based on their subscription
+	delivered := make(map[string]map[string]int)
+	failed := make(map[string]map[string]string)
 	for _, p := range pipes {
 		var eventsForPipe []api.Event
 		for _, from := range p.Config.From {
@@ -98,18 +106,46 @@ func poll(client *api.Client, pipes []*pipe.Pipe, eventTypes []string, cfg *conf
 
 		if err := p.Send(eventsForPipe); err != nil {
 			log.Printf("[broker] Pipe %q send failed: %v", p.Config.Name, err)
+			for _, e := range eventsForPipe {
+				if failed[e.Type] == nil {
+					failed[e.Type] = make(map[string]string)
+				}
+				failed[e.Type][e.ID] = err.Error()
+			}
 		} else {
 			log.Printf("[broker] Pipe %q: sent %d events", p.Config.Name, len(eventsForPipe))
-
-			// Ack successfully delivered events
-			var ackIDs []string
 			for _, e := range eventsForPipe {
+				if delivered[e.Type] == nil {
+					delivered[e.Type] = make(map[string]int)
+				}
+				delivered[e.Type][e.ID]++
+			}
+		}
+	}
+
+	// 3. Ack events only after every subscribed pipe delivered them; release failures for retry.
+	for eventType, events := range allEvents {
+		var ackIDs []string
+		var failIDs []string
+		failMessage := "broker delivery failed"
+		for _, e := range events {
+			if msg, ok := failed[eventType][e.ID]; ok {
+				failIDs = append(failIDs, e.ID)
+				failMessage = msg
+				continue
+			}
+			if delivered[eventType][e.ID] >= requiredDeliveries[eventType] {
 				ackIDs = append(ackIDs, e.ID)
 			}
-			for _, from := range p.Config.From {
-				if err := client.AckEvents(from, ackIDs); err != nil {
-					log.Printf("[broker] Failed to ack %d events for type %q: %v", len(ackIDs), from, err)
-				}
+		}
+		if len(ackIDs) > 0 {
+			if err := client.AckEvents(eventType, ackIDs); err != nil {
+				log.Printf("[broker] Failed to ack %d events for type %q: %v", len(ackIDs), eventType, err)
+			}
+		}
+		if len(failIDs) > 0 {
+			if err := client.FailEvents(eventType, failIDs, failMessage); err != nil {
+				log.Printf("[broker] Failed to release %d events for type %q: %v", len(failIDs), eventType, err)
 			}
 		}
 	}

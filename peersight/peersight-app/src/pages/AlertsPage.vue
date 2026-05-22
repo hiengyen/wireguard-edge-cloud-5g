@@ -8,6 +8,19 @@
           <option value="active">{{ t('alerts.activeAlerts') }}</option>
           <option value="resolved">{{ t('alerts.resolvedAlerts') }}</option>
         </select>
+        <select v-model="levelFilter" class="form-input" style="width:auto;margin:0" @change="selectedIds = []">
+          <option value="">All levels</option>
+          <option value="critical">Critical</option>
+          <option value="warning">Warning</option>
+          <option value="info">Info</option>
+        </select>
+        <input
+          v-model.trim="typeFilter"
+          class="form-input"
+          style="width:180px;margin:0"
+          placeholder="Type"
+          @input="selectedIds = []"
+        />
         
         <button
           v-if="hasActiveAlerts"
@@ -19,7 +32,7 @@
           {{ t('alerts.resolveAllActive') }}
         </button>
 
-        <button class="btn btn-secondary" @click="alertStore.fetchAlerts()">
+        <button class="btn btn-secondary" @click="fetchAlertsWithFilters">
           <span class="material-symbols-outlined">refresh</span>
           {{ t('common.refresh') }}
         </button>
@@ -133,7 +146,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useAlertStore } from '@/stores/data.js'
 import { formatTime, alertClass as levelClass, alertIcon as levelIcon } from '@/utils/format.js'
 import { useI18n } from '@/utils/i18n.js'
@@ -141,15 +154,27 @@ import { useI18n } from '@/utils/i18n.js'
 const alertStore = useAlertStore()
 const { t } = useI18n()
 const filter = ref('all')
+const levelFilter = ref('')
+const typeFilter = ref('')
 const selectedIds = ref([])
 
-onMounted(() => alertStore.fetchAlerts())
+onMounted(() => fetchAlertsWithFilters())
+
+watch([filter, levelFilter, typeFilter], () => {
+  fetchAlertsWithFilters()
+})
 
 const filteredAlerts = computed(() => {
-  if (filter.value === 'active') return alertStore.alerts.filter(a => !a.resolved)
-  if (filter.value === 'resolved') return alertStore.alerts.filter(a => a.resolved)
   return alertStore.alerts
 })
+
+function fetchAlertsWithFilters() {
+  const params = { limit: 200 }
+  if (filter.value !== 'all') params.status = filter.value
+  if (levelFilter.value) params.level = levelFilter.value
+  if (typeFilter.value) params.type = typeFilter.value
+  return alertStore.fetchAlerts(params)
+}
 
 const unselectedFilteredAlerts = computed(() => {
   return filteredAlerts.value.filter(a => !a.resolved)

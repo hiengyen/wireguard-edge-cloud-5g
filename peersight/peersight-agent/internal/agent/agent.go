@@ -38,12 +38,27 @@ func Run(cfg *config.Config) {
 
 	// Execute first ping immediately
 	var pending []api.ExecReport
-	pending = ping(cfg, client, pending)
+	var ok bool
+	var failureCount int
+	pending, ok = ping(cfg, client, pending)
+	if ok {
+		failureCount = 0
+	} else {
+		failureCount = 1
+	}
 
 	for {
 		select {
 		case <-ticker.C:
-			pending = ping(cfg, client, pending)
+			pending, ok = ping(cfg, client, pending)
+			if ok {
+				failureCount = 0
+				continue
+			}
+			failureCount++
+			backoff := backoffDelay(cfg.LoopInterval, failureCount)
+			log.Printf("[agent] backing off for %s after %d failed cycle(s)", backoff, failureCount)
+			time.Sleep(backoff)
 
 		case sig := <-stop:
 			log.Printf("[agent] Received signal %v, shutting down", sig)
@@ -53,31 +68,34 @@ func Run(cfg *config.Config) {
 }
 
 // ping performs one full cycle: interrogate WG → send to API → execute changes.
-func ping(cfg *config.Config, client *api.Client, previousExecuted []api.ExecReport) []api.ExecReport {
+func ping(cfg *config.Config, client *api.Client, previousExecuted []api.ExecReport) ([]api.ExecReport, bool) {
 	// 1. Interrogate local WireGuard state
 	interfaces, err := interrogate(cfg)
 	if err != nil {
 		log.Printf("[agent] interrogate failed: %v", err)
-		return nil
+		return nil, false
 	}
 
 	// 2. Marshal interfaces to JSON
 	ifaceJSON, err := json.Marshal(interfacesToSlice(interfaces))
 	if err != nil {
 		log.Printf("[agent] marshal interfaces: %v", err)
-		return nil
+		return nil, false
 	}
 
 	// 3. Send ping to API
 	resp, err := client.Ping(version, ifaceJSON, previousExecuted)
 	if err != nil {
+		if api.IsAuthError(err) {
+			log.Printf("[agent] authentication rejected; check PEERSIGHT_TOKEN and PEERSIGHT_HOST_ID: %v", err)
+		}
 		log.Printf("[agent] ping API failed: %v", err)
-		return nil
+		return nil, false
 	}
 
 	// 4. Execute desired changes (if not read-only)
 	if cfg.ReadOnly || len(resp.Data) == 0 {
-		return nil
+		return nil, true
 	}
 
 	var executed []api.ExecReport
@@ -91,7 +109,7 @@ func ping(cfg *config.Config, client *api.Client, previousExecuted []api.ExecRep
 		time.Sleep(2 * time.Second)
 	}
 
-	return executed
+	return executed, true
 }
 
 // interrogate reads the current WireGuard state from the OS.
@@ -139,11 +157,11 @@ func executeChange(cfg *config.Config, change api.DesiredChange) api.ExecReport 
 // executeAddPeer adds a new peer to a WireGuard interface.
 func executeAddPeer(cfg *config.Config, payload string) error {
 	var p struct {
-		Interface  string   `json:"interface"`
-		PublicKey  string   `json:"public_key"`
-		AllowedIPs string   `json:"allowed_ips"`
-		Endpoint   string   `json:"endpoint"`
-		Keepalive  int      `json:"keepalive"`
+		Interface  string `json:"interface"`
+		PublicKey  string `json:"public_key"`
+		AllowedIPs string `json:"allowed_ips"`
+		Endpoint   string `json:"endpoint"`
+		Keepalive  int    `json:"keepalive"`
 	}
 	if err := json.Unmarshal([]byte(payload), &p); err != nil {
 		return err
@@ -213,4 +231,25 @@ func interfacesToSlice(ifaces map[string]*wg.InterfaceInfo) []*wg.InterfaceInfo 
 
 func intToStr(i int) string {
 	return strconv.Itoa(i)
+}
+
+func backoffDelay(loopInterval int, failures int) time.Duration {
+	if failures < 1 {
+		failures = 1
+	}
+	seconds := loopInterval * (1 << min(failures-1, 4))
+	if seconds < loopInterval {
+		seconds = loopInterval
+	}
+	if seconds > 300 {
+		seconds = 300
+	}
+	return time.Duration(seconds) * time.Second
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }

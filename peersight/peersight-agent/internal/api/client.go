@@ -16,14 +16,30 @@ const httpTimeout = 16 * time.Second
 
 // Client talks to the peersight API server.
 type Client struct {
-	cfg    *config.Config
-	http   *http.Client
+	cfg  *config.Config
+	http *http.Client
+}
+
+// Error describes a non-2xx API response.
+type Error struct {
+	StatusCode int
+	Body       string
+}
+
+func (e *Error) Error() string {
+	return fmt.Sprintf("API returned %d: %s", e.StatusCode, e.Body)
+}
+
+// IsAuthError reports whether the API rejected the agent token.
+func IsAuthError(err error) bool {
+	apiErr, ok := err.(*Error)
+	return ok && (apiErr.StatusCode == http.StatusUnauthorized || apiErr.StatusCode == http.StatusForbidden)
 }
 
 // NewClient creates a new API client.
 func NewClient(cfg *config.Config) *Client {
 	return &Client{
-		cfg: cfg,
+		cfg:  cfg,
 		http: &http.Client{Timeout: httpTimeout},
 	}
 }
@@ -129,7 +145,7 @@ func (c *Client) doRequest(method, url string, body []byte) (*http.Response, err
 	if resp.StatusCode >= 400 {
 		respBody, _ := io.ReadAll(resp.Body)
 		resp.Body.Close()
-		return nil, fmt.Errorf("API returned %d: %s", resp.StatusCode, string(respBody))
+		return nil, &Error{StatusCode: resp.StatusCode, Body: string(respBody)}
 	}
 
 	return resp, nil

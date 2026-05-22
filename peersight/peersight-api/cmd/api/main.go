@@ -2,19 +2,23 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/peersight/api/internal/config"
 	"github.com/peersight/api/internal/handlers"
 	"github.com/peersight/api/internal/logger"
 	"github.com/peersight/api/internal/middleware"
 	"github.com/peersight/api/internal/migrate"
+	"github.com/peersight/api/internal/models"
 	"github.com/peersight/api/internal/repository"
 )
 
@@ -43,6 +47,7 @@ func main() {
 	}
 
 	router := setupRouter(db, cfg)
+	go runOperationalAlertLoop(db, cfg)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,
@@ -74,13 +79,75 @@ func main() {
 	log.Println("[api] Server stopped")
 }
 
+func runOperationalAlertLoop(db *repository.DB, cfg *config.Config) {
+	ticker := time.NewTicker(60 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		runOperationalAlertCheck(db, cfg)
+		<-ticker.C
+	}
+}
+
+func runOperationalAlertCheck(db *repository.DB, cfg *config.Config) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	orgID := uuidDefaultOrg()
+	staleHosts, err := db.ListStaleHosts(ctx, orgID, cfg.HostStaleSeconds, 100)
+	if err == nil {
+		for _, host := range staleHosts {
+			hostID := host.ID
+			createOpenAlertOnce(ctx, db, orgID, &hostID, "host_stale", "warning",
+				fmt.Sprintf("Host %s has not pinged within %d seconds", host.Name, cfg.HostStaleSeconds))
+		}
+	}
+
+	staleEndpoints, err := db.ListStaleEndpoints(ctx, orgID, cfg.HandshakeStaleSeconds, 100)
+	if err == nil {
+		for _, endpoint := range staleEndpoints {
+			createOpenAlertOnce(ctx, db, orgID, endpoint.HostID, "endpoint_handshake_stale", "warning",
+				fmt.Sprintf("Endpoint %s on host %s has a stale or unavailable WireGuard handshake", endpoint.IP, endpoint.HostName))
+		}
+	}
+
+	backlog, err := db.QueueBacklog(ctx, orgID)
+	if err == nil && cfg.QueueBacklogThreshold > 0 && backlog >= cfg.QueueBacklogThreshold {
+		createOpenAlertOnce(ctx, db, orgID, nil, "broker_backlog_high", "warning",
+			fmt.Sprintf("Broker queue backlog is %d events", backlog))
+	}
+}
+
+func createOpenAlertOnce(ctx context.Context, db *repository.DB, orgID uuid.UUID, hostID *uuid.UUID, alertType string, level string, message string) {
+	exists, err := db.OpenAlertExists(ctx, orgID, hostID, alertType)
+	if err != nil || exists {
+		return
+	}
+	_ = db.CreateAlert(ctx, &models.Alert{
+		OrgID:    orgID,
+		HostID:   hostID,
+		Type:     alertType,
+		Level:    level,
+		Message:  message,
+		Resolved: false,
+	})
+}
+
+func uuidDefaultOrg() uuid.UUID {
+	return uuid.MustParse("00000000-0000-0000-0000-000000000001")
+}
+
 func setupRouter(db *repository.DB, cfg *config.Config) *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery())
 
 	// CORS
 	r.Use(func(c *gin.Context) {
-		c.Header("Access-Control-Allow-Origin", cfg.AllowedOrigins)
+		origin := c.GetHeader("Origin")
+		if isAllowedOrigin(origin, cfg.AllowedOrigins) {
+			c.Header("Access-Control-Allow-Origin", origin)
+			c.Header("Vary", "Origin")
+		}
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		c.Header("Access-Control-Allow-Headers", "Authorization, Content-Type")
 		if c.Request.Method == "OPTIONS" {
@@ -99,10 +166,13 @@ func setupRouter(db *repository.DB, cfg *config.Config) *gin.Engine {
 	peerH := &handlers.PeerHandler{DB: db}
 	alertH := &handlers.AlertHandler{DB: db}
 	queueH := &handlers.QueueHandler{DB: db}
-	sseH := &handlers.SSEHandler{DB: db}
+	sseH := &handlers.SSEHandler{DB: db, JWTSecret: cfg.JWTSecret}
 
 	// ── Public routes ──
 	r.GET("/health", healthH.Check)
+	r.GET("/health/live", healthH.Live)
+	r.GET("/health/ready", healthH.Ready)
+	r.GET("/metrics", healthH.Metrics)
 	r.GET("/version", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"version": "0.1.0", "name": "peersight-api"})
 	})
@@ -117,9 +187,18 @@ func setupRouter(db *repository.DB, cfg *config.Config) *gin.Engine {
 
 	// ── Agent routes (agent auth) ──
 	agent := r.Group("/")
-	agent.Use(middleware.AgentAuthMiddleware(cfg.JWTSecret))
+	agent.Use(middleware.AgentAuthMiddleware(cfg.JWTSecret, db))
 	{
 		agent.POST("/hosts/:id/ping/:version", pingH.Ping)
+	}
+
+	// ── Broker routes (broker service-token auth) ──
+	broker := r.Group("/")
+	broker.Use(middleware.BrokerAuthMiddleware(cfg.JWTSecret, db))
+	{
+		broker.POST("/queues/:type/next", queueH.PollNext)
+		broker.POST("/queues/:type/ack", queueH.AckEvents)
+		broker.POST("/queues/:type/fail", queueH.FailEvents)
 	}
 
 	// ── Authenticated routes (all roles) ──
@@ -148,9 +227,6 @@ func setupRouter(db *repository.DB, cfg *config.Config) *gin.Engine {
 		api.POST("/alerts/:id/resolve", alertH.Resolve)
 		api.POST("/alerts/resolve-bulk", alertH.ResolveBulk)
 
-		// Queues (for broker)
-		api.POST("/queues/:type/next", queueH.PollNext)
-		api.POST("/queues/:type/ack", queueH.AckEvents)
 	}
 
 	// ── Admin-only routes (destructive operations) ──
@@ -166,6 +242,10 @@ func setupRouter(db *repository.DB, cfg *config.Config) *gin.Engine {
 
 		// Issue long-lived agent token (for use in PEERSIGHT_TOKEN env var)
 		admin.POST("/admin/agent-tokens", authH.IssueAgentToken)
+		admin.POST("/hosts/:id/agent-tokens", authH.IssueHostAgentToken)
+		admin.POST("/admin/broker-tokens", authH.IssueBrokerToken)
+		admin.GET("/admin/service-tokens", authH.ListServiceTokens)
+		admin.POST("/admin/service-tokens/:id/revoke", authH.RevokeServiceToken)
 
 		// Global change log audit
 		admin.GET("/admin/changes", hostH.ListGlobalChanges)
@@ -177,4 +257,17 @@ func setupRouter(db *repository.DB, cfg *config.Config) *gin.Engine {
 	}
 
 	return r
+}
+
+func isAllowedOrigin(origin string, allowedOrigins string) bool {
+	if origin == "" {
+		return false
+	}
+	for _, allowed := range strings.Split(allowedOrigins, ",") {
+		allowed = strings.TrimSpace(allowed)
+		if allowed == "*" || allowed == origin {
+			return true
+		}
+	}
+	return false
 }

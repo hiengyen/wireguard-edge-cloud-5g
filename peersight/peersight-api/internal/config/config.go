@@ -8,21 +8,27 @@ import (
 
 // Config holds all application configuration.
 type Config struct {
-	DatabaseURL    string
-	JWTSecret      string
-	Port           string
-	Environment    string
-	AllowedOrigins string
+	DatabaseURL           string
+	JWTSecret             string
+	Port                  string
+	Environment           string
+	AllowedOrigins        string
+	HostStaleSeconds      int
+	HandshakeStaleSeconds int
+	QueueBacklogThreshold int64
 }
 
 // Load reads environment variables and returns a Config.
 func Load() *Config {
 	cfg := &Config{
-		DatabaseURL:    getEnv("DATABASE_URL", "postgres://peersight:peersight@localhost:5432/peersight?sslmode=disable"),
-		JWTSecret:      getEnv("JWT_SECRET", "change-me-in-production"),
-		Port:           getEnv("PORT", "4000"),
-		Environment:    getEnv("ENV", "development"),
-		AllowedOrigins: getEnv("ALLOWED_ORIGINS", "http://localhost:5173"),
+		DatabaseURL:           getEnv("DATABASE_URL", "postgres://peersight:peersight@localhost:5432/peersight?sslmode=disable"),
+		JWTSecret:             getEnv("JWT_SECRET", "change-me-in-production"),
+		Port:                  getEnv("PORT", "4000"),
+		Environment:           getEnv("ENV", "development"),
+		AllowedOrigins:        getEnv("ALLOWED_ORIGINS", "http://localhost:5173"),
+		HostStaleSeconds:      getEnvInt("PEERSIGHT_HOST_STALE_SECONDS", 120),
+		HandshakeStaleSeconds: getEnvInt("PEERSIGHT_HANDSHAKE_STALE_SECONDS", 180),
+		QueueBacklogThreshold: int64(getEnvInt("PEERSIGHT_QUEUE_BACKLOG_ALERT_THRESHOLD", 1000)),
 	}
 
 	if cfg.JWTSecret == "change-me-in-production" && cfg.Environment == "production" {

@@ -16,6 +16,7 @@ type Config struct {
 
 	// Polling behavior
 	LoopInterval int // seconds between polls
+	LeaseSeconds int // seconds before leased queue events are retried
 
 	// Pipe configurations
 	Pipes []PipeConfig
@@ -23,10 +24,10 @@ type Config struct {
 
 // PipeConfig defines how events are forwarded.
 type PipeConfig struct {
-	Name     string   // pipe name (e.g. "alerts-file")
-	To       string   // destination type: "file" | "syslog"
-	From     []string // event types to subscribe: ["alerts", "changes"]
-	Max      int      // max events per poll
+	Name string   // pipe name (e.g. "alerts-file")
+	To   string   // destination type: "file" | "syslog"
+	From []string // event types to subscribe: ["alerts", "changes"]
+	Max  int      // max events per poll
 
 	// File pipe settings
 	FilePath string
@@ -42,9 +43,10 @@ type PipeConfig struct {
 func Load() *Config {
 	cfg := &Config{
 		APIURL:       getEnv("PEERSIGHT_API_URL", "https://api.peersight.local:4000"),
-		BrokerID:     getEnv("PEERSIGHT_BROKER_ID", ""),
+		BrokerID:     getEnv("PEERSIGHT_BROKER_ID", "peersight-broker"),
 		Token:        getEnv("PEERSIGHT_TOKEN", ""),
 		LoopInterval: getEnvInt("PEERSIGHT_LOOP_INTERVAL", 30),
+		LeaseSeconds: getEnvInt("PEERSIGHT_QUEUE_LEASE_SECONDS", 60),
 	}
 
 	// Parse pipe configurations from environment
@@ -88,9 +90,6 @@ func Load() *Config {
 func (c *Config) Validate() error {
 	if c.APIURL == "" {
 		return fmt.Errorf("PEERSIGHT_API_URL is required")
-	}
-	if c.BrokerID == "" {
-		return fmt.Errorf("PEERSIGHT_BROKER_ID is required")
 	}
 	if c.Token == "" {
 		return fmt.Errorf("PEERSIGHT_TOKEN is required")

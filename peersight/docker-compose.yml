@@ -74,7 +74,9 @@ services:
     environment:
       PEERSIGHT_API_URL: http://api:4000
       PEERSIGHT_TOKEN: ${PEERSIGHT_BROKER_TOKEN:-placeholder}
+      PEERSIGHT_BROKER_ID: ${PEERSIGHT_BROKER_ID:-cloud-broker-1}
       PEERSIGHT_LOOP_INTERVAL: "15"
+      PEERSIGHT_QUEUE_LEASE_SECONDS: ${PEERSIGHT_QUEUE_LEASE_SECONDS:-60}
       PEERSIGHT_PIPE_1_NAME: events-file
       PEERSIGHT_PIPE_1_TO: file
       PEERSIGHT_PIPE_1_FROM: alerts,changes

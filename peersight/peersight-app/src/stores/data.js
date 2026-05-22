@@ -29,8 +29,10 @@ export const useHostStore = defineStore('hosts', () => {
     }
   }
 
-  async function generateAgentToken() {
-    const res = await api.post('/admin/agent-tokens')
+  async function generateAgentToken(hostId) {
+    const res = hostId
+      ? await api.post(`/hosts/${hostId}/agent-tokens`)
+      : await api.post('/admin/agent-tokens')
     return res.data?.agent_token || null
   }
 
@@ -78,10 +80,10 @@ export const useAlertStore = defineStore('alerts', () => {
   const alerts = ref([])
   const loading = ref(false)
 
-  async function fetchAlerts() {
+  async function fetchAlerts(params = {}) {
     loading.value = true
     try {
-      const res = await api.get('/alerts')
+      const res = await api.get('/alerts', { params })
       alerts.value = res.data.data || []
     } finally {
       loading.value = false

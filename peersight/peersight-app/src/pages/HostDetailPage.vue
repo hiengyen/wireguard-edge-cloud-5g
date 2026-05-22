@@ -261,7 +261,7 @@
         </div>
 
         <div v-if="!agentToken" class="modal-body">
-          <p class="hint">Generate a long-lived Agent Token (10 years) to authenticate the <code>peersight-agent</code> daemon for <strong>{{ host?.name }}</strong>.</p>
+          <p class="hint">Generate a host-scoped Agent Token (10 years) to authenticate the <code>peersight-agent</code> daemon for <strong>{{ host?.name }}</strong>.</p>
           <div class="modal-footer">
             <button class="btn btn-secondary" @click="showTokenModal = false">Cancel</button>
             <button class="btn btn-primary" :disabled="tokenLoading" @click="handleGenerateToken">
@@ -277,7 +277,7 @@
         <div v-else class="modal-body animate-fade">
           <div class="success-banner">
             <span class="material-symbols-outlined">key</span>
-            Token valid for <strong>10 years</strong>
+            Host-scoped token valid for <strong>10 years</strong>
           </div>
 
           <div class="info-row">
@@ -479,7 +479,7 @@ function openTokenModal() {
 async function handleGenerateToken() {
   tokenLoading.value = true
   try {
-    const token = await hostStore.generateAgentToken()
+    const token = await hostStore.generateAgentToken(hostId)
     if (token) {
       agentToken.value = token
     }

@@ -30,6 +30,22 @@ type Session struct {
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
 }
 
+// ServiceToken represents an API token issued to a daemon such as an agent or broker.
+type ServiceToken struct {
+	ID          uuid.UUID  `db:"id"           json:"id"`
+	OrgID       uuid.UUID  `db:"org_id"       json:"org_id"`
+	TokenHash   string     `db:"token_hash"   json:"-"`
+	TokenPrefix string     `db:"token_prefix" json:"token_prefix"`
+	Kind        string     `db:"kind"         json:"kind"` // "agent" | "broker"
+	HostID      *uuid.UUID `db:"host_id"      json:"host_id,omitempty"`
+	Scopes      []string   `db:"scopes"       json:"scopes"`
+	ExpiresAt   time.Time  `db:"expires_at"   json:"expires_at"`
+	RevokedAt   *time.Time `db:"revoked_at"   json:"revoked_at,omitempty"`
+	LastUsedAt  *time.Time `db:"last_used_at" json:"last_used_at,omitempty"`
+	CreatedBy   *uuid.UUID `db:"created_by"   json:"created_by,omitempty"`
+	CreatedAt   time.Time  `db:"created_at"   json:"created_at"`
+}
+
 // ────────────────────────────────────────────────
 // WireGuard topology
 // ────────────────────────────────────────────────
@@ -64,18 +80,18 @@ type Peer struct {
 
 // Interface represents a wg interface (e.g. wg0) on a Host.
 type Interface struct {
-	ID         uuid.UUID  `db:"id"          json:"id"`
-	HostID     uuid.UUID  `db:"host_id"     json:"host_id"`
-	PeerID     uuid.UUID  `db:"peer_id"     json:"peer_id"`
-	Name       string     `db:"name"        json:"name"`
-	ListenPort int        `db:"listen_port" json:"listen_port"`
-	Fwmark     int        `db:"fwmark"      json:"fwmark"`
-	Up         bool       `db:"up"          json:"up"`
-	Address    string     `db:"address"     json:"address"`
-	DNS        string     `db:"dns"         json:"dns"`
-	MTU        int        `db:"mtu"         json:"mtu"`
-	CreatedAt  time.Time  `db:"created_at"  json:"created_at"`
-	UpdatedAt  time.Time  `db:"updated_at"  json:"updated_at"`
+	ID         uuid.UUID `db:"id"          json:"id"`
+	HostID     uuid.UUID `db:"host_id"     json:"host_id"`
+	PeerID     uuid.UUID `db:"peer_id"     json:"peer_id"`
+	Name       string    `db:"name"        json:"name"`
+	ListenPort int       `db:"listen_port" json:"listen_port"`
+	Fwmark     int       `db:"fwmark"      json:"fwmark"`
+	Up         bool      `db:"up"          json:"up"`
+	Address    string    `db:"address"     json:"address"`
+	DNS        string    `db:"dns"         json:"dns"`
+	MTU        int       `db:"mtu"         json:"mtu"`
+	CreatedAt  time.Time `db:"created_at"  json:"created_at"`
+	UpdatedAt  time.Time `db:"updated_at"  json:"updated_at"`
 }
 
 // Endpoint represents a peer connection slot on an Interface.
@@ -107,8 +123,8 @@ type Alert struct {
 	ID        uuid.UUID  `db:"id"         json:"id"`
 	OrgID     uuid.UUID  `db:"org_id"     json:"org_id"`
 	HostID    *uuid.UUID `db:"host_id"    json:"host_id,omitempty"`
-	Type      string     `db:"type"       json:"type"`   // "peer_connected" | "peer_dropped" | "auth_failed" ...
-	Level     string     `db:"level"      json:"level"`  // "info" | "warning" | "critical"
+	Type      string     `db:"type"       json:"type"`  // "peer_connected" | "peer_dropped" | "auth_failed" ...
+	Level     string     `db:"level"      json:"level"` // "info" | "warning" | "critical"
 	Message   string     `db:"message"    json:"message"`
 	Resolved  bool       `db:"resolved"   json:"resolved"`
 	CreatedAt time.Time  `db:"created_at" json:"created_at"`
@@ -116,15 +132,15 @@ type Alert struct {
 
 // DesiredChange represents a pending configuration change to push to an Agent.
 type DesiredChange struct {
-	ID          uuid.UUID  `db:"id"           json:"id"`
-	HostID      uuid.UUID  `db:"host_id"      json:"host_id"`
-	Type        string     `db:"type"         json:"type"`   // "add_peer" | "remove_peer" | "update_interface"
-	Payload     string     `db:"payload"      json:"payload"` // JSON
-	State       string     `db:"state"        json:"state"`   // "pending" | "executed" | "failed"
-	Message     string     `db:"message"      json:"message"`
-	CreatedAt   time.Time  `db:"created_at"   json:"created_at"`
-	ExecutedAt  *time.Time `db:"executed_at"  json:"executed_at,omitempty"`
-	HostName    string     `db:"-"            json:"host_name,omitempty"`
+	ID         uuid.UUID  `db:"id"           json:"id"`
+	HostID     uuid.UUID  `db:"host_id"      json:"host_id"`
+	Type       string     `db:"type"         json:"type"`    // "add_peer" | "remove_peer" | "update_interface"
+	Payload    string     `db:"payload"      json:"payload"` // JSON
+	State      string     `db:"state"        json:"state"`   // "pending" | "executed" | "failed"
+	Message    string     `db:"message"      json:"message"`
+	CreatedAt  time.Time  `db:"created_at"   json:"created_at"`
+	ExecutedAt *time.Time `db:"executed_at"  json:"executed_at,omitempty"`
+	HostName   string     `db:"-"            json:"host_name,omitempty"`
 }
 
 // ────────────────────────────────────────────────
@@ -133,36 +149,36 @@ type DesiredChange struct {
 
 // PingRequest is sent by the agent every cycle.
 type PingRequest struct {
-	AgentVersion string               `json:"agent_version"`
-	ReadOnly     bool                 `json:"read_only"`
-	Interfaces   []PingInterface      `json:"interfaces"`
-	Executed     []PingExecuted       `json:"executed,omitempty"`
+	AgentVersion string          `json:"agent_version"`
+	ReadOnly     bool            `json:"read_only"`
+	Interfaces   []PingInterface `json:"interfaces"`
+	Executed     []PingExecuted  `json:"executed,omitempty"`
 }
 
 // PingInterface describes a WireGuard interface reported by an agent.
 type PingInterface struct {
-	Name       string      `json:"name"`
-	PublicKey  string      `json:"public_key"`
-	PrivateKey string      `json:"private_key,omitempty"`
-	ListenPort int         `json:"listen_port"`
-	Fwmark     int         `json:"fwmark"`
-	Up         bool        `json:"up"`
-	Address    string      `json:"address"`
-	DNS        string      `json:"dns,omitempty"`
-	MTU        int         `json:"mtu,omitempty"`
-	Peers      []PingPeer  `json:"peers"`
+	Name       string     `json:"name"`
+	PublicKey  string     `json:"public_key"`
+	PrivateKey string     `json:"private_key,omitempty"`
+	ListenPort int        `json:"listen_port"`
+	Fwmark     int        `json:"fwmark"`
+	Up         bool       `json:"up"`
+	Address    string     `json:"address"`
+	DNS        string     `json:"dns,omitempty"`
+	MTU        int        `json:"mtu,omitempty"`
+	Peers      []PingPeer `json:"peers"`
 }
 
 // PingPeer describes a WireGuard peer seen by an agent.
 type PingPeer struct {
-	PublicKey         string   `json:"public_key"`
-	Endpoint          string   `json:"endpoint"`
-	AllowedIPs        []string `json:"allowed_ips"`
-	LatestHandshake   int64    `json:"latest_handshake"`
-	TransferRx        int64    `json:"transfer_rx"`
-	TransferTx        int64    `json:"transfer_tx"`
-	PersistentKeepalive int   `json:"persistent_keepalive"`
-	Available         bool     `json:"available"`
+	PublicKey           string   `json:"public_key"`
+	Endpoint            string   `json:"endpoint"`
+	AllowedIPs          []string `json:"allowed_ips"`
+	LatestHandshake     int64    `json:"latest_handshake"`
+	TransferRx          int64    `json:"transfer_rx"`
+	TransferTx          int64    `json:"transfer_tx"`
+	PersistentKeepalive int      `json:"persistent_keepalive"`
+	Available           bool     `json:"available"`
 }
 
 // PingExecuted reports completion of a previously issued DesiredChange.
@@ -174,7 +190,7 @@ type PingExecuted struct {
 
 // PingResponse is returned to the agent after each ping.
 type PingResponse struct {
-	Data    []DesiredChange `json:"data"`
+	Data []DesiredChange `json:"data"`
 }
 
 // ────────────────────────────────────────────────
@@ -183,10 +199,15 @@ type PingResponse struct {
 
 // QueueEvent is an item stored in the broker event queue.
 type QueueEvent struct {
-	ID        uuid.UUID  `db:"id"         json:"id"`
-	OrgID     uuid.UUID  `db:"org_id"     json:"org_id"`
-	Type      string     `db:"type"       json:"type"`
-	Payload   string     `db:"payload"    json:"payload"`
-	Acked     bool       `db:"acked"      json:"acked"`
-	CreatedAt time.Time  `db:"created_at" json:"created_at"`
+	ID          uuid.UUID  `db:"id"           json:"id"`
+	OrgID       uuid.UUID  `db:"org_id"       json:"org_id"`
+	Type        string     `db:"type"         json:"type"`
+	Payload     string     `db:"payload"      json:"payload"`
+	Acked       bool       `db:"acked"        json:"acked"`
+	LockedUntil *time.Time `db:"locked_until" json:"locked_until,omitempty"`
+	LockedBy    string     `db:"locked_by"    json:"locked_by,omitempty"`
+	Attempts    int        `db:"attempts"     json:"attempts"`
+	LastError   string     `db:"last_error"   json:"last_error,omitempty"`
+	AckedAt     *time.Time `db:"acked_at"     json:"acked_at,omitempty"`
+	CreatedAt   time.Time  `db:"created_at"   json:"created_at"`
 }
