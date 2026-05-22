@@ -195,24 +195,60 @@ ssh -i <your-key.pem> -N \
 ```
 Open [http://127.0.0.1:5173](http://127.0.0.1:5173) in your browser and log in with your admin credentials.
 
-### 8.2 Generate Host Identifiers
-1. Navigate to **Hosts** → **Create Host** → Name it `cloud-gateway`. Save the generated **Host ID** and **Agent Token**.
-2. Navigate to **Hosts** → **Create Host** → Name it `edge-orangepi-01`. Save the generated **Host ID** and **Agent Token**.
+### 8.2 Register a Host Profile (Web UI)
 
-### 8.3 Configure the Cloud Agent Service
-Once you have the `cloud-gateway` credentials, run the service installer:
+Navigate to **Hosts** → click **"Register Host"** → enter a name (e.g. `cloud-gateway` or `edge-orangepi-01`).
+
+The system creates a database record and returns the **Host ID (UUID)** — copy and save it. This UUID is what you pass as `PEERSIGHT_HOST_ID` to the agent.
+
+> **Note:** Hosts can also self-register automatically on first ping if the agent is pre-configured with a valid UUID and token (see Section 8.3).
+
+### 8.3 Generate a Long-Lived Agent Token (PEERSIGHT_TOKEN)
+
+`PEERSIGHT_TOKEN` is a **JWT signed with your `PEERSIGHT_JWT_SECRET`**. Because the agent runs as a systemd service 24/7, you need a **long-lived token (10 years)** — not the standard 30-minute UI session token.
+
+**Step 1 — Login and get a short-lived admin token:**
+```bash
+# On the cloud server (or through SSH tunnel)
+ADMIN_TOKEN=$(curl -s -X POST http://10.8.0.1:4000/sessions \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@peersight.local","password":"<YOUR_ADMIN_PASSWORD>"}' \
+  | jq -r '.token')
+echo "Admin token: $ADMIN_TOKEN"
+```
+
+**Step 2 — Exchange for a long-lived agent token:**
+```bash
+AGENT_TOKEN=$(curl -s -X POST http://10.8.0.1:4000/admin/agent-tokens \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  | jq -r '.agent_token')
+echo "Agent token (save this!): $AGENT_TOKEN"
+```
+
+This `AGENT_TOKEN` is valid for **10 years** and can be safely stored in `/etc/peersight/agent.env`.
+
+### 8.4 Configure the Cloud Agent Service
+
+With the `PEERSIGHT_HOST_ID` from the Web UI and `AGENT_TOKEN` from the API above:
 
 ```bash
-sudo PEERSIGHT_HOST_ID="<CLOUD_UUID>" \
-     PEERSIGHT_TOKEN="<CLOUD_JWT>" \
+sudo PEERSIGHT_API_URL="http://127.0.0.1:4000" \
+     PEERSIGHT_HOST_ID="<CLOUD_HOST_UUID>" \
+     PEERSIGHT_TOKEN="<AGENT_TOKEN>" \
      ~/wireguard-edge-cloud-5g/peersight/install-agent.sh
+```
+
+Verify the service is running:
+```bash
+sudo systemctl status peersight-agent
+sudo journalctl -u peersight-agent -f
 ```
 
 ---
 
 ## 9. Edge Node Deployment (One Command)
 
-Choose one of the two modes for setting up the Edge Node Agent.
+First, generate a **separate Host ID and Agent Token** for each edge node using the same steps in Section 8.2 and 8.3 above (e.g., name the host `edge-orangepi-01`).
 
 ### Option A: Native On-Device Compilation (Slower)
 SSH to the Edge node and run:
@@ -221,8 +257,8 @@ SSH to the Edge node and run:
 cd ~/wireguard-edge-cloud-5g
 sudo -E BUILD_MODE=native \
      PEERSIGHT_API_URL="http://10.8.0.1:4000" \
-     PEERSIGHT_HOST_ID="<EDGE_UUID>" \
-     PEERSIGHT_TOKEN="<EDGE_JWT>" \
+     PEERSIGHT_HOST_ID="<EDGE_HOST_UUID>" \
+     PEERSIGHT_TOKEN="<AGENT_TOKEN>" \
      ./peersight/deploy-edge.sh
 ```
 
@@ -241,8 +277,8 @@ sudo -E BUILD_MODE=native \
    cd ~/wireguard-edge-cloud-5g
    sudo -E BUILD_MODE=transfer \
         PEERSIGHT_API_URL="http://10.8.0.1:4000" \
-        PEERSIGHT_HOST_ID="<EDGE_UUID>" \
-        PEERSIGHT_TOKEN="<EDGE_JWT>" \
+        PEERSIGHT_HOST_ID="<EDGE_HOST_UUID>" \
+        PEERSIGHT_TOKEN="<AGENT_TOKEN>" \
         ./peersight/deploy-edge.sh
    ```
 
@@ -253,6 +289,7 @@ sudo journalctl -u peersight-agent -f
 ```
 
 ---
+
 
 ## 10. SIEM Bridge & Loki Integration
 

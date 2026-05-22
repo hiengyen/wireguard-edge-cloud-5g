@@ -157,6 +157,9 @@ func setupRouter(db *repository.DB, cfg *config.Config) *gin.Engine {
 		admin.DELETE("/admin/users/:id", authH.DeleteUser)
 		admin.PUT("/admin/users/:id/role", authH.UpdateUserRole)
 
+		// Issue long-lived agent token (for use in PEERSIGHT_TOKEN env var)
+		admin.POST("/admin/agent-tokens", authH.IssueAgentToken)
+
 		// Destructive ops
 		admin.DELETE("/peers/:id", peerH.Delete)
 		admin.POST("/hosts/:id/changes", hostH.CreateChange)

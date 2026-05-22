@@ -33,6 +33,23 @@ func GenerateToken(secret string, userID uuid.UUID, role string) (string, error)
 	return token.SignedString([]byte(secret))
 }
 
+// GenerateAgentToken creates a long-lived JWT token (10 years) for systemd agent daemons.
+// This token does not expire quickly so it can be stored in /etc/peersight/agent.env.
+func GenerateAgentToken(secret string, userID uuid.UUID, role string) (string, error) {
+	claims := Claims{
+		UserID: userID,
+		Role:   role,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(10 * 365 * 24 * time.Hour)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			Issuer:    "peersight-api",
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(secret))
+}
+
 // GenerateRefreshToken creates a long-lived refresh JWT token (7 days).
 func GenerateRefreshToken(secret string, userID uuid.UUID, role string) (string, error) {
 	claims := Claims{

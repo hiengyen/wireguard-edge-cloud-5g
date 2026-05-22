@@ -166,6 +166,34 @@ func (h *AuthHandler) Signup(c *gin.Context) {
 	})
 }
 
+// IssueAgentToken generates a long-lived JWT (10 years) for a systemd agent daemon.
+// This token is stored in /etc/peersight/agent.env and used by the agent to authenticate pings.
+// Admin-only: requires "admin" role in the caller's JWT.
+func (h *AuthHandler) IssueAgentToken(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	role, _ := c.Get("user_role")
+
+	uid, ok := userID.(uuid.UUID)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user context"})
+		return
+	}
+
+	roleStr, _ := role.(string)
+	agentToken, err := middleware.GenerateAgentToken(h.JWTSecret, uid, roleStr)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate agent token"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"agent_token": agentToken,
+		"note":        "This token is valid for 10 years. Store it in PEERSIGHT_TOKEN in /etc/peersight/agent.env.",
+	})
+}
+
+
+
 // CreateUserRequest is the JSON body for admin-only user creation.
 type CreateUserRequest struct {
 	Email    string `json:"email"    binding:"required,email"`
