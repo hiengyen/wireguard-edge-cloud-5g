@@ -2,15 +2,15 @@
   <div>
     <!-- Page header -->
     <div class="page-header">
-      <h1 class="page-title">Hosts</h1>
+      <h1 class="page-title">{{ t('hosts.title') }}</h1>
       <div style="display:flex;gap:10px">
         <button class="btn btn-primary" @click="openCreate" style="display:flex;align-items:center;gap:6px">
           <span class="material-symbols-outlined" style="font-size:18px">add</span>
-          Register Host
+          {{ t('hosts.registerNew') }}
         </button>
         <button class="btn btn-secondary" @click="hostStore.fetchHosts()" style="display:flex;align-items:center;gap:6px">
           <span class="material-symbols-outlined" style="font-size:18px">refresh</span>
-          Refresh
+          {{ t('common.refresh') }}
         </button>
       </div>
     </div>
@@ -23,8 +23,8 @@
     <!-- Empty state -->
     <div v-else-if="hostStore.hosts.length === 0" class="empty-state">
       <span class="material-symbols-outlined">dns</span>
-      <h3>No Hosts Registered</h3>
-      <p>Click <strong>Register Host</strong> to add a WireGuard host.</p>
+      <h3>{{ t('settings.auditEmpty') }}</h3>
+      <p>{{ t('settings.auditEmptyDesc') }}</p>
     </div>
 
     <!-- Host table -->
@@ -32,12 +32,12 @@
       <table class="data-table">
         <thead>
           <tr>
-            <th>Name</th>
-            <th>ID</th>
+            <th>{{ t('hosts.hostName') }}</th>
+            <th>{{ t('hosts.hostId') }}</th>
             <th>Agent</th>
-            <th>Last Ping</th>
-            <th>Status</th>
-            <th style="text-align:right">Actions</th>
+            <th>{{ t('hosts.lastSeen') }}</th>
+            <th>{{ t('common.status') }}</th>
+            <th style="text-align:right">{{ t('users.actions') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -78,20 +78,20 @@
             <td @click="$router.push(`/hosts/${host.id}`)" style="cursor:pointer">
               <span class="badge" :class="isOnline(host) ? 'online' : 'offline'">
                 <span class="badge-dot"></span>
-                {{ isOnline(host) ? 'Online' : 'Offline' }}
+                {{ isOnline(host) ? t('common.online') : t('common.offline') }}
               </span>
             </td>
 
             <!-- Actions -->
             <td style="text-align:right">
               <div style="display:flex;justify-content:flex-end;gap:4px" @click.stop>
-                <button class="icon-btn" @click.stop="startEdit(host)" title="Rename">
+                <button class="icon-btn" @click.stop="startEdit(host)" :title="t('hosts.rename')">
                   <span class="material-symbols-outlined">edit</span>
                 </button>
-                <button class="icon-btn" @click.stop="openTokenModal(host)" title="Generate Agent Token">
+                <button class="icon-btn" @click.stop="openTokenModal(host)" :title="t('settings.generateToken')">
                   <span class="material-symbols-outlined">key</span>
                 </button>
-                <button class="icon-btn red" @click.stop="confirmDelete(host)" title="Delete host">
+                <button class="icon-btn red" @click.stop="confirmDelete(host)" :title="t('common.delete')">
                   <span class="material-symbols-outlined">delete</span>
                 </button>
               </div>
@@ -111,7 +111,7 @@
             <span class="material-symbols-outlined" style="font-size:19px;vertical-align:middle;margin-right:6px">
               {{ modalStep === 'form' ? 'dns' : modalStep === 'created' ? 'check_circle' : 'key' }}
             </span>
-            {{ modalStep === 'form' ? 'Register New Host'
+            {{ modalStep === 'form' ? t('hosts.registerNew')
               : modalStep === 'created' ? 'Host Created'
               : 'Agent Token' }}
           </h3>
@@ -124,15 +124,15 @@
         <div v-if="modalStep === 'form'" class="modal-body">
           <p class="hint">Enter a name for this WireGuard host. A unique Host ID will be generated.</p>
           <div class="form-group">
-            <label for="host-name">Host Name</label>
+            <label for="host-name">{{ t('hosts.hostName') }}</label>
             <input id="host-name" type="text" v-model="newHostName" class="form-control"
                    placeholder="e.g. cloud-gateway" @keyup.enter="handleCreate" autofocus />
           </div>
           <div class="modal-footer">
-            <button class="btn btn-secondary" @click="closeModal">Cancel</button>
+            <button class="btn btn-secondary" @click="closeModal">{{ t('common.cancel') }}</button>
             <button class="btn btn-primary" :disabled="!newHostName.trim() || hostStore.loading" @click="handleCreate">
               <span v-if="hostStore.loading" class="spinner-sm"></span>
-              <span v-else>Create Host</span>
+              <span v-else>{{ t('common.save') }}</span>
             </button>
           </div>
         </div>
@@ -159,7 +159,7 @@
               <span v-if="tokenLoading" class="spinner-sm"></span>
               <span v-else style="display:flex;align-items:center;gap:5px">
                 <span class="material-symbols-outlined" style="font-size:16px">key</span>
-                Generate Agent Token
+                {{ t('settings.generateToken') }}
               </span>
             </button>
           </div>
@@ -195,7 +195,7 @@
           <div class="cmd-block-wrap">
             <div class="cmd-label">
               <span class="material-symbols-outlined" style="font-size:13px">terminal</span>
-              Install command
+              {{ t('hosts.installCommand') }}
             </div>
             <div class="cmd-block">
               <pre>{{ installCmd }}</pre>
@@ -207,7 +207,7 @@
 
           <div class="warning-note">
             <span class="material-symbols-outlined">warning</span>
-            Save this token — it will not be shown again.
+            {{ t('settings.tokenWarning') }}
           </div>
 
           <div class="modal-footer">
@@ -225,7 +225,7 @@
         <div class="modal-header">
           <h3 style="color:#f87171">
             <span class="material-symbols-outlined" style="font-size:19px;vertical-align:middle;margin-right:6px">warning</span>
-            Delete Host
+            {{ t('common.delete') }}
           </h3>
           <button class="modal-close" @click="showDeleteConfirm = false">
             <span class="material-symbols-outlined">close</span>
@@ -233,15 +233,14 @@
         </div>
         <div class="modal-body">
           <p style="color:var(--color-text-secondary);line-height:1.6;margin:0">
-            Are you sure you want to delete
-            <strong style="color:var(--color-text)">{{ deleteTarget?.name }}</strong>?<br/>
-            This will permanently remove the host, all its interfaces, endpoints, desired changes, and alerts.
+            {{ t('hosts.deleteConfirm').replace('{name}', deleteTarget?.name) }}<br/>
+            {{ t('hosts.deleteWarning') }}
           </p>
           <div class="modal-footer">
-            <button class="btn btn-secondary" @click="showDeleteConfirm = false">Cancel</button>
+            <button class="btn btn-secondary" @click="showDeleteConfirm = false">{{ t('common.cancel') }}</button>
             <button class="btn btn-danger" :disabled="deleteLoading" @click="executeDelete">
               <span v-if="deleteLoading" class="spinner-sm"></span>
-              <span v-else>Delete Host</span>
+              <span v-else>{{ t('common.delete') }}</span>
             </button>
           </div>
         </div>
@@ -254,8 +253,10 @@
 import { ref, computed, nextTick, onMounted } from 'vue'
 import { useHostStore } from '@/stores/data.js'
 import { shortId, isOnline, formatTime } from '@/utils/format.js'
+import { useI18n } from '@/utils/i18n.js'
 
 const hostStore = useHostStore()
+const { t } = useI18n()
 onMounted(() => hostStore.fetchHosts())
 
 // ── Inline Edit ─────────────────────────────────

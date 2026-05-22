@@ -1,15 +1,15 @@
 <template>
   <div>
     <div class="page-header">
-      <h1 class="page-title">Users</h1>
+      <h1 class="page-title">{{ t('users.title') }}</h1>
       <div style="display:flex;gap:var(--space-sm);align-items:center">
         <button class="btn btn-primary" @click="showCreateModal = true">
           <span class="material-symbols-outlined">person_add</span>
-          Add User
+          {{ t('users.add') }}
         </button>
         <button class="btn btn-secondary" @click="userStore.fetchUsers()">
           <span class="material-symbols-outlined">refresh</span>
-          Refresh
+          {{ t('common.refresh') }}
         </button>
       </div>
     </div>
@@ -25,17 +25,17 @@
     <div v-else class="card">
       <div v-if="userStore.users.length === 0" class="empty-state">
         <span class="material-symbols-outlined">group</span>
-        <h3>No Users</h3>
-        <p>Create an admin or operator account to grant dashboard access.</p>
+        <h3>{{ t('users.noUsers') }}</h3>
+        <p>{{ t('users.noUsersDesc') }}</p>
       </div>
       <table v-else class="data-table">
         <thead>
           <tr>
             <th>Email</th>
             <th>ID</th>
-            <th>Role</th>
-            <th>Created</th>
-            <th style="text-align:right">Actions</th>
+            <th>{{ t('settings.profile.role') }}</th>
+            <th>{{ t('common.time') }}</th>
+            <th style="text-align:right">{{ t('users.actions') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -80,7 +80,7 @@
     <div v-if="showCreateModal" class="modal-overlay" @click.self="closeCreateModal">
       <div class="modal-content">
         <div class="modal-header">
-          <h3>Add User</h3>
+          <h3>{{ t('users.add') }}</h3>
           <button class="modal-close" @click="closeCreateModal" aria-label="Close">
             <span class="material-symbols-outlined">close</span>
           </button>
@@ -92,11 +92,11 @@
             <input id="new-user-email" v-model.trim="newUser.email" class="form-input" type="email" autocomplete="email" required />
           </div>
           <div class="form-group">
-            <label class="form-label" for="new-user-password">Password</label>
+            <label class="form-label" for="new-user-password">{{ t('settings.profile.password') }}</label>
             <input id="new-user-password" v-model="newUser.password" class="form-input" type="password" autocomplete="new-password" minlength="8" required />
           </div>
           <div class="form-group">
-            <label class="form-label" for="new-user-role">Role</label>
+            <label class="form-label" for="new-user-role">{{ t('settings.profile.role') }}</label>
             <select id="new-user-role" v-model="newUser.role" class="form-input">
               <option value="operator">Operator</option>
               <option value="admin">Admin</option>
@@ -106,10 +106,10 @@
           <div v-if="createError" class="form-error">{{ createError }}</div>
 
           <div class="modal-actions">
-            <button type="button" class="btn btn-secondary" @click="closeCreateModal">Cancel</button>
+            <button type="button" class="btn btn-secondary" @click="closeCreateModal">{{ t('common.cancel') }}</button>
             <button type="submit" class="btn btn-primary" :disabled="creating || !canCreateUser">
               <span class="material-symbols-outlined" style="font-size:16px">person_add</span>
-              Create
+              {{ t('common.save') }}
             </button>
           </div>
         </form>
@@ -123,9 +123,11 @@ import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '@/stores/data.js'
 import { useAuthStore } from '@/stores/auth.js'
 import { shortId, formatTime } from '@/utils/format.js'
+import { useI18n } from '@/utils/i18n.js'
 
 const userStore = useUserStore()
 const authStore = useAuthStore()
+const { t } = useI18n()
 const error = ref('')
 const showCreateModal = ref(false)
 const creating = ref(false)
@@ -143,7 +145,7 @@ onMounted(async () => {
     await userStore.fetchUsers()
   } catch (err) {
     if (err.response?.status === 403) {
-      error.value = "Admin access required to view this page."
+      error.value = t('users.adminRequired')
     } else {
       error.value = "Failed to fetch users."
     }

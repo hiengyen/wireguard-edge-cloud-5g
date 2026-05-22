@@ -4,7 +4,7 @@
       <div class="login-brand">
         <span class="material-symbols-outlined brand-icon">vpn_lock</span>
         <h1>peersight</h1>
-        <p>WireGuard Monitoring &amp; Orchestration</p>
+        <p>{{ t('auth.loginTitle') }}</p>
       </div>
 
       <form @submit.prevent="handleLogin" class="login-form">
@@ -23,7 +23,7 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">Password</label>
+          <label class="form-label">{{ t('settings.profile.password') }}</label>
           <input
             v-model="password"
             type="password"
@@ -35,12 +35,12 @@
 
         <button type="submit" class="btn btn-primary login-btn" :disabled="loading">
           <span v-if="loading" class="spinner" style="width:16px;height:16px;border-width:2px"></span>
-          <span v-else>Sign In</span>
+          <span v-else>{{ t('auth.loginBtn') }}</span>
         </button>
 
         <div style="text-align:center;margin-top:var(--space-lg);font-size:var(--font-size-sm);color:var(--color-text-muted)">
-          Don't have an account?
-          <router-link to="/signup" style="color:var(--color-accent);font-weight:500">Create Account</router-link>
+          {{ t('auth.noAccount') }}
+          <router-link to="/signup" style="color:var(--color-accent);font-weight:500">{{ t('auth.signUpBtn') }}</router-link>
         </div>
       </form>
     </div>
@@ -51,9 +51,11 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.js'
+import { useI18n } from '@/utils/i18n.js'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const { t } = useI18n()
 
 const email = ref('')
 const password = ref('')

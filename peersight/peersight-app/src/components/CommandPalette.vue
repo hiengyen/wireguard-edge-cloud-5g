@@ -10,7 +10,7 @@
             v-model="query"
             type="text"
             class="palette-input"
-            placeholder="Search hosts, peers, alerts... (Use ↑↓ to navigate, Enter to select)"
+            :placeholder="t('search.placeholder')"
             @keydown.down.prevent="navigateDown"
             @keydown.up.prevent="navigateUp"
             @keydown.enter.prevent="selectCurrent"
@@ -23,18 +23,18 @@
         <div class="palette-body" ref="resultsList">
           <div v-if="query.trim() === ''" class="palette-hint">
             <span class="material-symbols-outlined" style="font-size:24px;color:var(--color-text-muted)">keyboard</span>
-            <p>Type to search across edge infrastructure</p>
+            <p>{{ t('search.hint') }}</p>
           </div>
 
           <div v-else-if="totalResults === 0" class="palette-empty">
             <span class="material-symbols-outlined" style="font-size:24px;color:var(--color-danger)">search_off</span>
-            <p>No matches found for "<strong>{{ query }}</strong>"</p>
+            <p>{{ t('search.noMatches').replace('{query}', query) }}</p>
           </div>
 
           <div v-else>
             <!-- Hosts Category -->
             <div v-if="filteredHosts.length > 0" class="palette-category">
-              <div class="category-header">Hosts</div>
+              <div class="category-header">{{ t('search.hostsCat') }}</div>
               <div
                 v-for="h in filteredHosts"
                 :key="'host-' + h.id"
@@ -53,7 +53,7 @@
 
             <!-- Peers Category -->
             <div v-if="filteredPeers.length > 0" class="palette-category">
-              <div class="category-header">Peers</div>
+              <div class="category-header">{{ t('search.peersCat') }}</div>
               <div
                 v-for="p in filteredPeers"
                 :key="'peer-' + p.id"
@@ -72,7 +72,7 @@
 
             <!-- Alerts Category -->
             <div v-if="filteredAlerts.length > 0" class="palette-category">
-              <div class="category-header">Active Alerts</div>
+              <div class="category-header">{{ t('search.alertsCat') }}</div>
               <div
                 v-for="a in filteredAlerts"
                 :key="'alert-' + a.id"
@@ -99,11 +99,13 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useHostStore, usePeerStore, useAlertStore } from '@/stores/data.js'
+import { useI18n } from '@/utils/i18n.js'
 
 const router = useRouter()
 const hostStore = useHostStore()
 const peerStore = usePeerStore()
 const alertStore = useAlertStore()
+const { t } = useI18n()
 
 const isOpen = ref(false)
 const query = ref('')

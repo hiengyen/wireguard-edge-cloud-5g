@@ -1,10 +1,10 @@
 <template>
   <div>
     <div class="page-header">
-      <h1 class="page-title">Peers</h1>
+      <h1 class="page-title">{{ t('peers.title') }}</h1>
       <button class="btn btn-secondary" @click="peerStore.fetchPeers()">
         <span class="material-symbols-outlined">refresh</span>
-        Refresh
+        {{ t('common.refresh') }}
       </button>
     </div>
 
@@ -14,7 +14,7 @@
 
     <div v-else-if="peerStore.peers.length === 0" class="empty-state">
       <span class="material-symbols-outlined">hub</span>
-      <h3>No Peers Found</h3>
+      <h3>{{ t('peers.noEndpoints') }}</h3>
       <p>Peers are discovered automatically when an agent reports its WireGuard state.</p>
     </div>
 
@@ -22,10 +22,10 @@
       <table class="data-table">
         <thead>
           <tr>
-            <th>Name</th>
+            <th>{{ t('hosts.hostName') }}</th>
             <th>Public Key</th>
-            <th>Created</th>
-            <th>Actions</th>
+            <th>{{ t('common.time') }}</th>
+            <th>{{ t('users.actions') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -48,7 +48,7 @@
             <td>
               <button class="btn btn-danger" style="font-size:var(--font-size-xs);padding:4px 10px" @click="confirmDelete(peer)">
                 <span class="material-symbols-outlined" style="font-size:14px">delete</span>
-                Remove
+                {{ t('common.delete') }}
               </button>
             </td>
           </tr>
@@ -59,14 +59,14 @@
     <!-- Delete Confirmation Modal -->
     <div v-if="peerToDelete" class="modal-overlay" @click.self="peerToDelete = null">
       <div class="modal-content">
-        <h3 style="margin-bottom:var(--space-md)">Remove Peer?</h3>
+        <h3 style="margin-bottom:var(--space-md)">{{ t('common.delete') }}</h3>
         <p style="color:var(--color-text-secondary);margin-bottom:var(--space-lg)">
           Are you sure you want to remove <strong>{{ peerToDelete.name }}</strong>?
           This will not remove the peer from the WireGuard interface.
         </p>
         <div style="display:flex;gap:var(--space-sm);justify-content:flex-end">
-          <button class="btn btn-secondary" @click="peerToDelete = null">Cancel</button>
-          <button class="btn btn-danger" @click="deletePeer">Remove</button>
+          <button class="btn btn-secondary" @click="peerToDelete = null">{{ t('common.cancel') }}</button>
+          <button class="btn btn-danger" @click="deletePeer">{{ t('common.delete') }}</button>
         </div>
       </div>
     </div>
@@ -76,8 +76,10 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { usePeerStore } from '@/stores/data.js'
+import { useI18n } from '@/utils/i18n.js'
 
 const peerStore = usePeerStore()
+const { t } = useI18n()
 const peerToDelete = ref(null)
 
 onMounted(() => peerStore.fetchPeers())

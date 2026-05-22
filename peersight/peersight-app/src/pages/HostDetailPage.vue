@@ -24,8 +24,8 @@
             </button>
           </div>
           <div v-else style="display:flex;align-items:center;gap:8px">
-            <h1 class="page-title">{{ host?.name || 'Loading...' }}</h1>
-            <button v-if="host" class="icon-btn-edit" @click="startRename" title="Rename Host">
+            <h1 class="page-title">{{ host?.name || t('common.loading') }}</h1>
+            <button v-if="host" class="icon-btn-edit" @click="startRename" :title="t('hosts.rename')">
               <span class="material-symbols-outlined" style="font-size:18px">edit</span>
             </button>
           </div>
@@ -35,16 +35,16 @@
       <div style="display:flex;gap:var(--space-sm);align-items:center">
         <span v-if="host" class="badge" :class="isOnline(host) ? 'online' : 'offline'">
           <span class="badge-dot"></span>
-          {{ isOnline(host) ? 'Online' : 'Offline' }}
+          {{ isOnline(host) ? t('common.online') : t('common.offline') }}
         </span>
         <button class="btn btn-secondary" @click="refreshAll">
-          <span class="material-symbols-outlined">refresh</span> Refresh
+          <span class="material-symbols-outlined">refresh</span> {{ t('common.refresh') }}
         </button>
-        <button v-if="host" class="btn btn-secondary" @click="openTokenModal" title="Generate Agent Token" style="display:flex;align-items:center;gap:4px">
+        <button v-if="host" class="btn btn-secondary" @click="openTokenModal" :title="t('settings.generateToken')" style="display:flex;align-items:center;gap:4px">
           <span class="material-symbols-outlined" style="font-size:18px">key</span> Token
         </button>
-        <button v-if="host" class="btn btn-secondary" @click="confirmDelete" title="Delete Host" style="display:flex;align-items:center;gap:4px;color:var(--color-danger);border-color:rgba(239,68,68,0.2)">
-          <span class="material-symbols-outlined" style="font-size:18px;color:var(--color-danger)">delete</span> Delete
+        <button v-if="host" class="btn btn-secondary" @click="confirmDelete" :title="t('common.delete')" style="display:flex;align-items:center;gap:4px;color:var(--color-danger);border-color:rgba(239,68,68,0.2)">
+          <span class="material-symbols-outlined" style="font-size:18px;color:var(--color-danger)">delete</span> {{ t('common.delete') }}
         </button>
       </div>
     </div>
@@ -62,21 +62,21 @@
         <div class="stat-icon green"><span class="material-symbols-outlined">lan</span></div>
         <div>
           <div class="stat-value">{{ interfaces.length }}</div>
-          <div class="stat-label">Interfaces</div>
+          <div class="stat-label">{{ t('hosts.interfaces') }}</div>
         </div>
       </div>
       <div class="stat-card">
         <div class="stat-icon yellow"><span class="material-symbols-outlined">hub</span></div>
         <div>
           <div class="stat-value">{{ endpoints.length }}</div>
-          <div class="stat-label">Peer Connections</div>
+          <div class="stat-label">{{ t('peers.endpointsList') }}</div>
         </div>
       </div>
       <div class="stat-card">
         <div class="stat-icon red"><span class="material-symbols-outlined">schedule</span></div>
         <div>
           <div class="stat-value">{{ formatTime(host.last_ping) }}</div>
-          <div class="stat-label">Last Ping</div>
+          <div class="stat-label">{{ t('hosts.lastSeen') }}</div>
         </div>
       </div>
     </div>
@@ -94,18 +94,18 @@
     <div v-if="activeTab === 'interfaces'" class="card">
       <div v-if="interfaces.length === 0" class="empty-state">
         <span class="material-symbols-outlined">lan</span>
-        <h3>No Interfaces</h3>
+        <h3>{{ t('hosts.noInterfaces') }}</h3>
         <p>No WireGuard interfaces reported by the agent yet.</p>
       </div>
       <table v-else class="data-table">
         <thead>
           <tr>
-            <th>Name</th>
+            <th>{{ t('hosts.hostName') }}</th>
             <th>Address</th>
             <th>Listen Port</th>
             <th>MTU</th>
             <th>DNS</th>
-            <th>Status</th>
+            <th>{{ t('common.status') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -135,7 +135,7 @@
     <div v-if="activeTab === 'endpoints'" class="card">
       <div v-if="endpoints.length === 0" class="empty-state">
         <span class="material-symbols-outlined">hub</span>
-        <h3>No Endpoints</h3>
+        <h3>{{ t('peers.noEndpoints') }}</h3>
         <p>No peer connections discovered yet.</p>
       </div>
       <table v-else class="data-table">
@@ -185,15 +185,15 @@
       <!-- Add Change Form -->
       <div class="card" style="margin-bottom:var(--space-md)">
         <div class="card-header">
-          <h2 class="card-title">Push a Change</h2>
+          <h2 class="card-title">{{ t('hosts.pushChange') }}</h2>
         </div>
         <form @submit.prevent="submitChange" style="display:flex;gap:var(--space-sm);flex-wrap:wrap;align-items:flex-end">
           <div class="form-group" style="margin-bottom:0;flex:0 0 180px">
-            <label class="form-label">Type</label>
+            <label class="form-label">{{ t('settings.auditType') }}</label>
             <select v-model="newChange.type" class="form-input">
-              <option value="add_peer">Add Peer</option>
-              <option value="remove_peer">Remove Peer</option>
-              <option value="update_interface">Update Interface</option>
+              <option value="add_peer">{{ t('hosts.addPeer') }}</option>
+              <option value="remove_peer">{{ t('hosts.removePeer') }}</option>
+              <option value="update_interface">{{ t('hosts.updateInterface') }}</option>
             </select>
           </div>
           <div class="form-group" style="margin-bottom:0;flex:1;min-width:250px">
@@ -202,7 +202,7 @@
           </div>
           <button type="submit" class="btn btn-primary" :disabled="changeSending">
             <span class="material-symbols-outlined" style="font-size:16px">send</span>
-            Push
+            {{ t('hosts.pushChange') }}
           </button>
         </form>
         <div v-if="changeError" style="color:var(--color-danger);font-size:var(--font-size-xs);margin-top:var(--space-sm)">{{ changeError }}</div>
@@ -212,16 +212,16 @@
       <div class="card">
         <div v-if="changes.length === 0" class="empty-state">
           <span class="material-symbols-outlined">history</span>
-          <h3>No Changes</h3>
+          <h3>{{ t('hosts.noChanges') }}</h3>
           <p>No desired changes have been created for this host.</p>
         </div>
         <table v-else class="data-table">
           <thead>
             <tr>
-              <th>Type</th>
-              <th>State</th>
-              <th>Message</th>
-              <th>Created</th>
+              <th>{{ t('settings.auditType') }}</th>
+              <th>{{ t('common.status') }}</th>
+              <th>{{ t('common.message') }}</th>
+              <th>{{ t('common.time') }}</th>
               <th>Executed</th>
             </tr>
           </thead>
@@ -331,7 +331,7 @@
         <div class="modal-header">
           <h3 style="color:#f87171">
             <span class="material-symbols-outlined" style="font-size:19px;vertical-align:middle;margin-right:6px">warning</span>
-            Delete Host
+            {{ t('common.delete') }}
           </h3>
           <button class="modal-close" @click="showDeleteConfirm = false">
             <span class="material-symbols-outlined">close</span>
@@ -339,15 +339,14 @@
         </div>
         <div class="modal-body">
           <p style="color:var(--color-text-secondary);line-height:1.6;margin:0">
-            Are you sure you want to delete
-            <strong style="color:var(--color-text)">{{ host?.name }}</strong>?<br/>
-            This will permanently remove the host, all its interfaces, endpoints, desired changes, and alerts.
+            {{ t('hosts.deleteConfirm').replace('{name}', host?.name) }}<br/>
+            {{ t('hosts.deleteWarning') }}
           </p>
           <div class="modal-footer">
-            <button class="btn btn-secondary" @click="showDeleteConfirm = false">Cancel</button>
+            <button class="btn btn-secondary" @click="showDeleteConfirm = false">{{ t('common.cancel') }}</button>
             <button class="btn btn-danger" :disabled="deleteLoading" @click="executeDelete">
               <span v-if="deleteLoading" class="spinner-sm"></span>
-              <span v-else>Delete Host</span>
+              <span v-else>{{ t('common.delete') }}</span>
             </button>
           </div>
         </div>
@@ -361,12 +360,14 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '@/plugins/axios.js'
 import { useHostStore } from '@/stores/data.js'
+import { useI18n } from '@/utils/i18n.js'
 
 const route = useRoute()
 const router = useRouter()
 const hostId = route.params.id
 
 const hostStore = useHostStore()
+const { t } = useI18n()
 
 const host = ref(null)
 const interfaces = ref([])
@@ -402,9 +403,9 @@ const installCmd = computed(() => {
 })
 
 const tabs = computed(() => [
-  { id: 'interfaces', label: 'Interfaces', icon: 'lan', count: interfaces.value.length },
-  { id: 'endpoints', label: 'Endpoints', icon: 'hub', count: endpoints.value.length },
-  { id: 'changes', label: 'Changes', icon: 'history', count: changes.value.filter(c => c.state === 'pending').length }
+  { id: 'interfaces', label: t('hosts.interfaces'), icon: 'lan', count: interfaces.value.length },
+  { id: 'endpoints', label: t('hosts.endpoints'), icon: 'hub', count: endpoints.value.length },
+  { id: 'changes', label: t('hosts.changes'), icon: 'history', count: changes.value.filter(c => c.state === 'pending').length }
 ])
 
 onMounted(() => refreshAll())

@@ -1,10 +1,10 @@
 <template>
   <div>
     <div class="page-header">
-      <h1 class="page-title">Dashboard</h1>
+      <h1 class="page-title">{{ t('dashboard.title') }}</h1>
       <button class="btn btn-secondary" @click="refresh">
         <span class="material-symbols-outlined">refresh</span>
-        Refresh
+        {{ t('common.refresh') }}
       </button>
     </div>
 
@@ -16,7 +16,7 @@
         </div>
         <div>
           <div class="stat-value">{{ hostStore.hosts.length }}</div>
-          <div class="stat-label">Hosts</div>
+          <div class="stat-label">{{ t('dashboard.hosts') }}</div>
         </div>
       </div>
 
@@ -26,7 +26,7 @@
         </div>
         <div>
           <div class="stat-value">{{ peerStore.peers.length }}</div>
-          <div class="stat-label">Peers</div>
+          <div class="stat-label">{{ t('dashboard.peers') }}</div>
         </div>
       </div>
 
@@ -36,7 +36,7 @@
         </div>
         <div>
           <div class="stat-value">{{ onlineHosts }}</div>
-          <div class="stat-label">Online</div>
+          <div class="stat-label">{{ t('dashboard.online') }}</div>
         </div>
       </div>
 
@@ -46,7 +46,7 @@
         </div>
         <div>
           <div class="stat-value" style="font-size:var(--font-size-md);line-height:1.2;font-weight:700;white-space:nowrap">{{ totalBandwidth }}</div>
-          <div class="stat-label">Network Flow</div>
+          <div class="stat-label">{{ t('dashboard.networkFlow') }}</div>
         </div>
       </div>
 
@@ -56,7 +56,7 @@
         </div>
         <div>
           <div class="stat-value">{{ unresolvedAlerts }}</div>
-          <div class="stat-label">Active Alerts</div>
+          <div class="stat-label">{{ t('dashboard.activeAlerts') }}</div>
         </div>
       </div>
     </div>
@@ -65,7 +65,7 @@
     <div class="charts-row">
       <div class="card chart-card">
         <div class="card-header">
-          <h2 class="card-title">Host Status</h2>
+          <h2 class="card-title">{{ t('hosts.title') }}</h2>
         </div>
         <div class="chart-container">
           <canvas ref="statusChartEl"></canvas>
@@ -74,7 +74,7 @@
 
       <div class="card chart-card">
         <div class="card-header">
-          <h2 class="card-title">Alert Distribution</h2>
+          <h2 class="card-title">{{ t('alerts.title') }}</h2>
         </div>
         <div class="chart-container">
           <canvas ref="alertChartEl"></canvas>
@@ -87,7 +87,7 @@
       <div class="card-header border-b">
         <h2 class="card-title" style="display:flex;align-items:center;gap:8px">
           <span class="material-symbols-outlined" style="color:var(--color-accent)">hub</span>
-          WireGuard Network Topology
+          {{ t('dashboard.topologyMap') }}
         </h2>
       </div>
       <div class="card-body" style="padding:var(--space-xl);display:flex;justify-content:center;align-items:center;background:#0d0d12;border-radius:var(--radius-lg);overflow:hidden">
@@ -121,7 +121,7 @@
               <text class="material-symbols-outlined" font-size="32" text-anchor="middle" y="10" fill="var(--color-accent)">
                 cloud
               </text>
-              <text y="54" text-anchor="middle" fill="var(--color-text)" font-size="12" font-weight="700">VPN Cloud HUB</text>
+              <text y="54" text-anchor="middle" fill="var(--color-text)" font-size="12" font-weight="700">{{ t('dashboard.nodeHub') }}</text>
             </g>
 
             <!-- Edge Nodes -->
@@ -153,9 +153,9 @@
     <!-- Recent Hosts -->
     <div class="card" style="margin-bottom: var(--space-xl)">
       <div class="card-header">
-        <h2 class="card-title">Recent Hosts</h2>
+        <h2 class="card-title">{{ t('dashboard.recentActivity') }} ({{ t('hosts.title') }})</h2>
         <router-link to="/hosts" class="btn btn-secondary" style="font-size:var(--font-size-xs)">
-          View All
+          {{ t('nav.hosts') }}
         </router-link>
       </div>
       <div v-if="hostStore.loading" style="text-align:center;padding:var(--space-xl)">
@@ -164,10 +164,10 @@
       <table v-else class="data-table">
         <thead>
           <tr>
-            <th>Name</th>
+            <th>{{ t('hosts.hostName') }}</th>
             <th>Agent Version</th>
-            <th>Last Ping</th>
-            <th>Status</th>
+            <th>{{ t('hosts.lastSeen') }}</th>
+            <th>{{ t('common.status') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -182,13 +182,13 @@
             <td>
               <span class="badge" :class="isOnline(host) ? 'online' : 'offline'">
                 <span class="badge-dot"></span>
-                {{ isOnline(host) ? 'Online' : 'Offline' }}
+                {{ isOnline(host) ? t('common.online') : t('common.offline') }}
               </span>
             </td>
           </tr>
           <tr v-if="recentHosts.length === 0">
             <td colspan="4" style="text-align:center;color:var(--color-text-muted);padding:var(--space-xl)">
-              No hosts registered yet
+              {{ t('hosts.noInterfaces') }}
             </td>
           </tr>
         </tbody>
@@ -198,18 +198,18 @@
     <!-- Recent Alerts -->
     <div class="card">
       <div class="card-header">
-        <h2 class="card-title">Recent Alerts</h2>
+        <h2 class="card-title">{{ t('dashboard.recentAlerts') }}</h2>
         <router-link to="/alerts" class="btn btn-secondary" style="font-size:var(--font-size-xs)">
-          View All
+          {{ t('nav.alerts') }}
         </router-link>
       </div>
       <table class="data-table">
         <thead>
           <tr>
-            <th>Level</th>
-            <th>Message</th>
-            <th>Time</th>
-            <th>Status</th>
+            <th>{{ t('common.level') }}</th>
+            <th>{{ t('common.message') }}</th>
+            <th>{{ t('common.time') }}</th>
+            <th>{{ t('common.status') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -222,13 +222,13 @@
               {{ formatTime(alert.created_at) }}
             </td>
             <td>
-              <span v-if="alert.resolved" class="badge online">Resolved</span>
-              <span v-else class="badge warning">Active</span>
+              <span v-if="alert.resolved" class="badge online">{{ t('common.resolved') }}</span>
+              <span v-else class="badge warning">{{ t('common.active') }}</span>
             </td>
           </tr>
           <tr v-if="recentAlerts.length === 0">
             <td colspan="4" style="text-align:center;color:var(--color-text-muted);padding:var(--space-xl)">
-              No alerts
+              {{ t('dashboard.noAlerts') }}
             </td>
           </tr>
         </tbody>
@@ -251,11 +251,13 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useHostStore, usePeerStore, useAlertStore } from '@/stores/data.js'
 import { formatTime, isOnline, alertClass, alertIcon, formatBytes } from '@/utils/format.js'
+import { useI18n } from '@/utils/i18n.js'
 import { api } from '@/plugins/axios.js'
 
 const hostStore = useHostStore()
 const peerStore = usePeerStore()
 const alertStore = useAlertStore()
+const { locale, t } = useI18n()
 
 // Chart refs
 const statusChartEl = ref(null)
@@ -432,7 +434,7 @@ async function renderCharts() {
     statusChart = new Chart(statusChartEl.value, {
       type: 'doughnut',
       data: {
-        labels: ['Online', 'Offline'],
+        labels: [t('common.online'), t('common.offline')],
         datasets: [{
           data: [online, offline],
           backgroundColor: ['#34d399', '#f87171'],
@@ -466,7 +468,7 @@ async function renderCharts() {
     alertChart = new Chart(alertChartEl.value, {
       type: 'bar',
       data: {
-        labels: ['Critical', 'Warning', 'Info', 'Resolved'],
+        labels: [t('common.level') + ' Critical', t('common.level') + ' Warning', 'Info', t('common.resolved')],
         datasets: [{
           data: [critical, warning, info, resolved],
           backgroundColor: ['rgba(248,113,113,0.7)', 'rgba(251,191,36,0.7)', 'rgba(96,165,250,0.7)', 'rgba(52,211,153,0.7)'],
@@ -504,6 +506,9 @@ watch([() => hostStore.hosts.length, () => alertStore.alerts.length], () => {
 
 watch([statusChartEl, alertChartEl], () => {
   if (statusChartEl.value && alertChartEl.value) renderCharts()
+})
+watch(locale, () => {
+  renderCharts()
 })
 </script>
 

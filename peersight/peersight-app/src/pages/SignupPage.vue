@@ -4,7 +4,7 @@
       <div class="login-brand">
         <span class="material-symbols-outlined brand-icon">vpn_lock</span>
         <h1>peersight</h1>
-        <p>Create your account</p>
+        <p>{{ t('auth.signUpTitle') }}</p>
       </div>
 
       <form @submit.prevent="handleSignup" class="login-form">
@@ -23,7 +23,7 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">Password</label>
+          <label class="form-label">{{ t('settings.profile.password') || t('settings.changePass') }}</label>
           <input
             v-model="password"
             type="password"
@@ -35,7 +35,7 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">Confirm Password</label>
+          <label class="form-label">{{ t('settings.profile.confirmPassword') || t('settings.confirmPass') }}</label>
           <input
             v-model="confirmPassword"
             type="password"
@@ -47,12 +47,12 @@
 
         <button type="submit" class="btn btn-primary login-btn" :disabled="loading">
           <span v-if="loading" class="spinner" style="width:16px;height:16px;border-width:2px"></span>
-          <span v-else>Create Account</span>
+          <span v-else>{{ t('auth.signUpBtn') }}</span>
         </button>
 
         <div class="signup-link">
-          Already have an account?
-          <router-link to="/login">Sign In</router-link>
+          {{ t('auth.hasAccount') }}
+          <router-link to="/login">{{ t('auth.loginBtn') }}</router-link>
         </div>
       </form>
     </div>
@@ -64,9 +64,11 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.js'
 import { api } from '@/plugins/axios.js'
+import { useI18n } from '@/utils/i18n.js'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const { t } = useI18n()
 
 const email = ref('')
 const password = ref('')

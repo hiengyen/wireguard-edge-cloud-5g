@@ -1,10 +1,10 @@
 <template>
   <div>
     <div class="page-header">
-      <h1 class="page-title">Settings</h1>
+      <h1 class="page-title">{{ t('settings.title') }}</h1>
       <button class="btn btn-secondary" @click="fetchDiagnostics" style="display:flex;align-items:center;gap:6px">
         <span class="material-symbols-outlined" style="font-size:18px">sync</span>
-        Refresh Diagnostics
+        {{ t('settings.refreshDiagnostics') }}
       </button>
     </div>
 
@@ -14,28 +14,28 @@
         <div class="card-header border-b">
           <h2 class="card-title" style="display:flex;align-items:center;gap:8px">
             <span class="material-symbols-outlined" style="color:var(--color-info)">account_circle</span>
-            User Profile Settings
+            {{ t('settings.profileTitle') }}
           </h2>
         </div>
         <div class="card-body">
           <div style="margin-bottom:var(--space-md)">
             <div class="diag-row" style="padding-top:0">
-              <span class="diag-label">Account Role</span>
+              <span class="diag-label">{{ t('settings.accountRole') }}</span>
               <span class="badge online" style="text-transform:capitalize">
                 {{ authStore.role || 'User' }}
               </span>
             </div>
             <div class="diag-row">
-              <span class="diag-label">User ID</span>
+              <span class="diag-label">{{ t('settings.userId') }}</span>
               <code style="font-size:var(--font-size-xs)">{{ authStore.userId || '—' }}</code>
             </div>
           </div>
 
-          <div class="section-divider">Change Password</div>
+          <div class="section-divider">{{ t('settings.changePass') }}</div>
           
           <form @submit.prevent="handleChangePassword" style="margin-top:var(--space-sm)">
             <div class="form-group">
-              <label class="form-label">New Password</label>
+              <label class="form-label">{{ t('settings.newPass') }}</label>
               <input
                 v-model="newPassword"
                 type="password"
@@ -47,7 +47,7 @@
             </div>
             
             <div class="form-group">
-              <label class="form-label">Confirm Password</label>
+              <label class="form-label">{{ t('settings.confirmPass') }}</label>
               <input
                 v-model="confirmPassword"
                 type="password"
@@ -60,7 +60,7 @@
 
             <div v-if="passSuccess" class="success-alert" style="margin-bottom:var(--space-md)">
               <span class="material-symbols-outlined">check_circle</span>
-              <span>Password updated successfully!</span>
+              <span>{{ t('settings.passSuccess') }}</span>
             </div>
 
             <div v-if="passError" class="warning-alert" style="margin-bottom:var(--space-md)">
@@ -71,7 +71,7 @@
             <button type="submit" class="btn btn-primary" :disabled="passLoading" style="display:flex;align-items:center;gap:8px;width:100%;justify-content:center">
               <span v-if="passLoading" class="spinner-sm"></span>
               <span v-else class="material-symbols-outlined" style="font-size:18px">lock_reset</span>
-              Update Password
+              {{ t('settings.updatePass') }}
             </button>
           </form>
         </div>
@@ -82,18 +82,18 @@
         <div class="card-header border-b">
           <h2 class="card-title" style="display:flex;align-items:center;gap:8px">
             <span class="material-symbols-outlined" style="color:var(--color-accent)">key</span>
-            Agent Tokens
+            {{ t('settings.tokensCardTitle') }}
           </h2>
         </div>
         <div class="card-body">
           <p class="settings-desc">
-            Generate long-lived tokens (valid for 10 years) to authenticate and initialize <code>peersight-agent</code> on your edge and gateway nodes.
+            {{ t('settings.tokensDesc') }}
           </p>
 
           <div v-if="generatedToken" class="token-result animate-fade">
             <div class="success-alert">
               <span class="material-symbols-outlined">check_circle</span>
-              <span>Token generated successfully!</span>
+              <span>{{ t('settings.tokenSuccess') }}</span>
             </div>
             
             <div class="token-box">
@@ -102,7 +102,7 @@
                 <button class="icon-btn" @click="showToken = !showToken" :title="showToken ? 'Hide token' : 'Show token'">
                   <span class="material-symbols-outlined">{{ showToken ? 'visibility_off' : 'visibility' }}</span>
                 </button>
-                <button class="icon-btn" @click="copyToken" :title="copied ? 'Copied!' : 'Copy to clipboard'">
+                <button class="icon-btn" @click="copyToken" :title="copied ? t('common.copied') : t('common.copy')">
                   <span class="material-symbols-outlined">{{ copied ? 'check' : 'content_copy' }}</span>
                 </button>
               </div>
@@ -110,7 +110,7 @@
 
             <div class="warning-alert">
               <span class="material-symbols-outlined">warning</span>
-              <span>Make sure to copy this token now. For security, you will not be able to view it again after leaving this page.</span>
+              <span>{{ t('settings.tokenWarning') }}</span>
             </div>
           </div>
 
@@ -118,7 +118,7 @@
             <button class="btn btn-primary" :disabled="loading" @click="generateToken" style="display:flex;align-items:center;gap:8px">
               <span v-if="loading" class="spinner-sm"></span>
               <span v-else class="material-symbols-outlined" style="font-size:18px">vpn_key</span>
-              Generate New Agent Token
+              {{ t('settings.generateToken') }}
             </button>
           </div>
         </div>
@@ -129,24 +129,24 @@
         <div class="card-header border-b">
           <h2 class="card-title" style="display:flex;align-items:center;gap:8px">
             <span class="material-symbols-outlined" style="color:var(--color-success)">analytics</span>
-            System Diagnostics
+            {{ t('settings.diagnosticsTitle') }}
           </h2>
         </div>
         <div class="card-body">
           <div v-if="diagnosticsLoading" class="diag-loading">
             <div class="spinner-sm"></div>
-            <span>Fetching live API state...</span>
+            <span>{{ t('settings.diagLoading') }}</span>
           </div>
 
           <div v-else-if="diagnosticsError" class="diag-error">
             <span class="material-symbols-outlined">error</span>
-            <span>Failed to contact backend API. Host might be offline.</span>
+            <span>{{ t('settings.diagError') }}</span>
           </div>
 
           <div v-else class="diagnostics-info animate-fade">
             <!-- Health Row -->
             <div class="diag-row">
-              <span class="diag-label">API Service Status</span>
+              <span class="diag-label">{{ t('settings.apiStatus') }}</span>
               <span class="badge" :class="diagnostics.status === 'healthy' ? 'online' : 'offline'">
                 <span class="badge-dot"></span>
                 {{ diagnostics.status || 'Offline' }}
@@ -155,31 +155,31 @@
 
             <!-- Version Row -->
             <div class="diag-row">
-              <span class="diag-label">Software Version</span>
+              <span class="diag-label">{{ t('settings.version') }}</span>
               <code>v{{ diagnostics.version || '0.1.0' }}</code>
             </div>
 
             <!-- Uptime Row -->
             <div class="diag-row">
-              <span class="diag-label">API Service Uptime</span>
+              <span class="diag-label">{{ t('settings.uptime') }}</span>
               <span style="font-weight:500;color:var(--color-text)">{{ diagnostics.uptime || '—' }}</span>
             </div>
 
             <!-- Database Stats Divider -->
-            <div class="section-divider">PostgreSQL Connections</div>
+            <div class="section-divider">{{ t('settings.dbPool') }}</div>
 
             <div class="db-metrics-grid">
               <div class="metric-box">
                 <span class="metric-val">{{ diagnostics.database?.total_conns ?? '—' }}</span>
-                <span class="metric-lbl">Total Pool Size</span>
+                <span class="metric-lbl">{{ t('settings.dbTotal') }}</span>
               </div>
               <div class="metric-box">
                 <span class="metric-val" style="color:var(--color-accent)">{{ diagnostics.database?.acquired ?? '—' }}</span>
-                <span class="metric-lbl">Active</span>
+                <span class="metric-lbl">{{ t('settings.dbActive') }}</span>
               </div>
               <div class="metric-box">
                 <span class="metric-val" style="color:var(--color-text-muted)">{{ diagnostics.database?.idle_conns ?? '—' }}</span>
-                <span class="metric-lbl">Idle</span>
+                <span class="metric-lbl">{{ t('settings.dbIdle') }}</span>
               </div>
             </div>
           </div>
@@ -192,7 +192,7 @@
       <div class="card-header border-b">
         <h2 class="card-title" style="display:flex;align-items:center;gap:8px">
           <span class="material-symbols-outlined" style="color:var(--color-accent)">history</span>
-          Configuration Audit Logs
+          {{ t('settings.auditTitle') }}
         </h2>
         <button class="btn btn-secondary" @click="fetchAuditLogs" style="font-size:var(--font-size-xs)">
           <span class="material-symbols-outlined">sync</span>
@@ -205,20 +205,20 @@
 
       <div v-else-if="auditLogs.length === 0" class="empty-state">
         <span class="material-symbols-outlined">history</span>
-        <h3>No Logs Recorded</h3>
-        <p>Configuration changes pushed to agents will appear here.</p>
+        <h3>{{ t('settings.auditEmpty') }}</h3>
+        <p>{{ t('settings.auditEmptyDesc') }}</p>
       </div>
 
       <div v-else class="table-wrap">
         <table class="data-table">
           <thead>
             <tr>
-              <th>Timestamp</th>
-              <th>Host Node</th>
-              <th>Action Type</th>
-              <th>Target Payload</th>
-              <th>Status</th>
-              <th>Executed At</th>
+              <th>{{ t('settings.timestamp') }}</th>
+              <th>{{ t('settings.hostNode') }}</th>
+              <th>{{ t('settings.actionType') }}</th>
+              <th>{{ t('settings.targetPayload') }}</th>
+              <th>{{ t('common.status') }}</th>
+              <th>{{ t('settings.executedAt') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -260,9 +260,11 @@ import { useHostStore } from '@/stores/data.js'
 import { useAuthStore } from '@/stores/auth.js'
 import { api } from '@/plugins/axios.js'
 import { formatDate } from '@/utils/format.js'
+import { useI18n } from '@/utils/i18n.js'
 
 const hostStore = useHostStore()
 const authStore = useAuthStore()
+const { t } = useI18n()
 
 const newPassword = ref('')
 const confirmPassword = ref('')

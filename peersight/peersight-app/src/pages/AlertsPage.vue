@@ -1,12 +1,12 @@
 <template>
   <div>
     <div class="page-header">
-      <h1 class="page-title">Alerts</h1>
+      <h1 class="page-title">{{ t('alerts.title') }}</h1>
       <div style="display:flex;gap:var(--space-sm);align-items:center;flex-wrap:wrap">
         <select v-model="filter" class="form-input" style="width:auto;margin:0" @change="selectedIds = []">
-          <option value="all">All Alerts</option>
-          <option value="active">Active</option>
-          <option value="resolved">Resolved</option>
+          <option value="all">{{ t('alerts.all') }}</option>
+          <option value="active">{{ t('alerts.activeAlerts') }}</option>
+          <option value="resolved">{{ t('alerts.resolvedAlerts') }}</option>
         </select>
         
         <button
@@ -16,12 +16,12 @@
           style="display:flex;align-items:center;gap:6px;color:#a3e635;border-color:rgba(163,230,53,.2)"
         >
           <span class="material-symbols-outlined" style="font-size:18px">done_all</span>
-          Resolve All Active
+          {{ t('alerts.resolveAllActive') }}
         </button>
 
         <button class="btn btn-secondary" @click="alertStore.fetchAlerts()">
           <span class="material-symbols-outlined">refresh</span>
-          Refresh
+          {{ t('common.refresh') }}
         </button>
       </div>
     </div>
@@ -31,15 +31,15 @@
       <div v-if="selectedIds.length > 0" class="bulk-banner">
         <div style="display:flex;align-items:center;gap:12px">
           <span class="material-symbols-outlined" style="color:var(--color-accent)">check_box</span>
-          <span class="banner-text"><strong>{{ selectedIds.length }}</strong> alerts selected</span>
+          <span class="banner-text"><strong>{{ selectedIds.length }}</strong> {{ t('alerts.selectedAlerts') }}</span>
         </div>
         <div style="display:flex;gap:10px">
           <button class="btn btn-secondary" @click="selectedIds = []" style="padding:6px 14px;font-size:var(--font-size-sm)">
-            Clear Selection
+            {{ t('alerts.clearSelection') }}
           </button>
           <button class="btn btn-primary" @click="handleResolveSelected" style="padding:6px 16px;font-size:var(--font-size-sm);display:flex;align-items:center;gap:6px">
             <span class="material-symbols-outlined" style="font-size:16px">check</span>
-            Resolve Selected
+            {{ t('alerts.resolveSelected') }}
           </button>
         </div>
       </div>
@@ -51,8 +51,8 @@
 
     <div v-else-if="filteredAlerts.length === 0" class="empty-state">
       <span class="material-symbols-outlined">check_circle</span>
-      <h3>No Alerts</h3>
-      <p>Everything is running smoothly.</p>
+      <h3>{{ t('alerts.noAlertsTitle') }}</h3>
+      <p>{{ t('dashboard.smoothRunning') }}</p>
     </div>
 
     <div v-else class="card animate-fade">
@@ -68,12 +68,12 @@
                 @change="toggleSelectAll"
               />
             </th>
-            <th>Level</th>
-            <th>Type</th>
-            <th>Message</th>
-            <th>Time</th>
-            <th>Status</th>
-            <th>Actions</th>
+            <th>{{ t('common.level') }}</th>
+            <th>{{ t('common.type') }}</th>
+            <th>{{ t('common.message') }}</th>
+            <th>{{ t('common.time') }}</th>
+            <th>{{ t('common.status') }}</th>
+            <th>{{ t('users.actions') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -106,11 +106,11 @@
             <td>
               <span v-if="alert.resolved" class="badge online">
                 <span class="material-symbols-outlined" style="font-size:12px">check</span>
-                Resolved
+                {{ t('common.resolved') }}
               </span>
               <span v-else class="badge warning">
                 <span class="badge-dot"></span>
-                Active
+                {{ t('alerts.activeAlerts') }}
               </span>
             </td>
             <td>
@@ -121,7 +121,7 @@
                 @click="resolve(alert.id)"
               >
                 <span class="material-symbols-outlined" style="font-size:14px">check</span>
-                Resolve
+                {{ t('alerts.resolve') }}
               </button>
               <span v-else style="color:var(--color-text-muted);font-size:var(--font-size-xs)">—</span>
             </td>
@@ -136,8 +136,10 @@
 import { ref, computed, onMounted } from 'vue'
 import { useAlertStore } from '@/stores/data.js'
 import { formatTime, alertClass as levelClass, alertIcon as levelIcon } from '@/utils/format.js'
+import { useI18n } from '@/utils/i18n.js'
 
 const alertStore = useAlertStore()
+const { t } = useI18n()
 const filter = ref('all')
 const selectedIds = ref([])
 

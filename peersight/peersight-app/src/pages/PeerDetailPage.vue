@@ -7,7 +7,7 @@
           <span class="material-symbols-outlined" style="font-size:18px">arrow_back</span>
         </router-link>
         <div>
-          <h1 class="page-title">{{ peer?.name || 'Loading Peer...' }}</h1>
+          <h1 class="page-title">{{ peer?.name || t('common.loading') }}</h1>
           <div v-if="peer" class="pubkey-wrap">
             <code class="pubkey">{{ peer.public_key }}</code>
             <button class="copy-btn" @click="copyKey" title="Copy full key">
@@ -17,7 +17,7 @@
         </div>
       </div>
       <button class="btn btn-secondary" @click="refreshAll" style="display:flex;align-items:center;gap:6px">
-        <span class="material-symbols-outlined">refresh</span> Refresh
+        <span class="material-symbols-outlined">refresh</span> {{ t('common.refresh') }}
       </button>
     </div>
 
@@ -27,21 +27,21 @@
         <div class="stat-icon green"><span class="material-symbols-outlined">schedule</span></div>
         <div>
           <div class="stat-value">{{ formatDate(peer.created_at) }}</div>
-          <div class="stat-label">Discovered On</div>
+          <div class="stat-label">{{ t('common.time') }}</div>
         </div>
       </div>
       <div class="stat-card">
         <div class="stat-icon blue"><span class="material-symbols-outlined">hub</span></div>
         <div>
           <div class="stat-value">{{ endpoints.length }}</div>
-          <div class="stat-label">Active Host Associations</div>
+          <div class="stat-label">{{ t('peers.endpointsList') }}</div>
         </div>
       </div>
       <div class="stat-card">
         <div class="stat-icon yellow"><span class="material-symbols-outlined">swap_calls</span></div>
         <div>
           <div class="stat-value">{{ totalTransfer }}</div>
-          <div class="stat-label">Cumulative Data Flow</div>
+          <div class="stat-label">{{ t('dashboard.networkFlow') }}</div>
         </div>
       </div>
     </div>
@@ -51,7 +51,7 @@
       <div class="card-header border-b">
         <h2 class="card-title" style="display:flex;align-items:center;gap:8px">
           <span class="material-symbols-outlined" style="color:var(--color-accent)">dns</span>
-          Host Endpoint Associations
+          {{ t('peers.endpointsList') }}
         </h2>
       </div>
 
@@ -61,20 +61,20 @@
 
       <div v-else-if="endpoints.length === 0" class="empty-state">
         <span class="material-symbols-outlined">swap_horiz</span>
-        <h3>No Host Associations</h3>
+        <h3>{{ t('peers.noEndpoints') }}</h3>
         <p>This peer is not active on any managed WireGuard interface.</p>
       </div>
 
       <table v-else class="data-table">
         <thead>
           <tr>
-            <th>Host Node</th>
-            <th>WG Interface</th>
+            <th>{{ t('hosts.hostName') }}</th>
+            <th>{{ t('hosts.interfaces') }}</th>
             <th>Tunnel IP</th>
             <th>Allowed IPs</th>
             <th>Last Handshake</th>
             <th>RX / TX Data</th>
-            <th>Status</th>
+            <th>{{ t('common.status') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -122,9 +122,11 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from '@/plugins/axios.js'
 import { formatTime, formatBytes, formatDate } from '@/utils/format.js'
+import { useI18n } from '@/utils/i18n.js'
 
 const route = useRoute()
 const peerId = route.params.id
+const { t } = useI18n()
 
 const peer = ref(null)
 const endpoints = ref([])
