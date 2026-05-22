@@ -1,6 +1,7 @@
 #!/bin/bash
 # ==============================================================
 # WireGuard Client Setup Script - 5G WWAN
+# Topology: Edge client connects outbound to the cloud WireGuard gateway
 # Auto detect: ww*
 # ==============================================================
 

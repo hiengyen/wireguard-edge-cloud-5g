@@ -2,6 +2,9 @@
 
 This file groups the commands most commonly used while deploying and operating `wireguard-edge-cloud-5g`.
 
+Current VPN topology: `Client-to-Site (Edge-to-Cloud)`.
+The cloud node is the WireGuard server/gateway and each edge node joins as a client.
+
 ## Environment
 
 ```bash
@@ -46,7 +49,7 @@ cd edge/5g-wwan/docker
 sudo docker compose up -d
 ```
 
-## WireGuard Client Join
+## WireGuard Client Join (Edge -> Cloud)
 
 ```bash
 set -a && . ./.env && set +a

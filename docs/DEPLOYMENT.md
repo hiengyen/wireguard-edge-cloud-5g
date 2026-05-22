@@ -5,6 +5,10 @@ For a compact command reference, see [COMMANDS.md](./COMMANDS.md).
 
 The repository assumes:
 
+- VPN topology: `Client-to-Site (Edge-to-Cloud)`
+- Cloud EC2 node acts as the central WireGuard gateway/server
+- Each edge node acts as a WireGuard client that dials out to the cloud public endpoint
+- Traffic over WireGuard is split-tunnel by default: only the overlay subnet `10.8.0.0/24` is routed through the VPN unless `WIREGUARD_ALLOWED_IPS` is changed explicitly
 - WireGuard overlay network: `10.8.0.0/24`
 - WireGuard server interface: `10.8.0.1/24`
 - Each edge node uses a unique `/32` client address, for example `10.8.0.2/32`
