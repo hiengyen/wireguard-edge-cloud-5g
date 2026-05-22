@@ -160,7 +160,7 @@ Connect your Quectel 5G Module via USB/M.2 to the Edge SBC (e.g., Orange Pi). Yo
 **Option A: Systemd Service (Native)**
 ```bash
 cd edge/5g-wwan
-sudo -E ./install.sh
+sudo -E bash install.sh
 ```
 
 The edge installer also provisions the common operator toolset:
@@ -178,7 +178,7 @@ sudo -E docker compose up -d
 Once connected to the internet, join the VPN overlay by running the client setup script:
 
 ```bash
-sudo -E ./edge/vpn/setup-wg-client.sh
+sudo -E bash edge/vpn/setup-wg-client.sh
 ```
 
 Follow the prompts to generate a client public key. Then, SSH into your cloud gateway and add the peer manually using `sudo wg set wg0 peer <client-public-key> allowed-ips 10.8.0.x/32` and `sudo wg-quick save wg0`.
@@ -190,13 +190,13 @@ The client should keep:
 If you need to remove the local WireGuard client setup from the edge node later:
 
 ```bash
-sudo -E ./edge/vpn/uninstall-wg-client.sh
+sudo -E bash edge/vpn/uninstall-wg-client.sh
 ```
 
 To remove the local key pair too:
 
 ```bash
-sudo -E REMOVE_WG_KEYS=true ./edge/vpn/uninstall-wg-client.sh
+sudo -E REMOVE_WG_KEYS=true bash edge/vpn/uninstall-wg-client.sh
 ```
 
 This only removes the local edge client. If you also need to remove the peer from the cloud server, delete that peer separately on the server with `wg set ... peer ... remove` and `wg-quick save`.
@@ -209,8 +209,8 @@ The cloud bootstrap also installs the common operator toolset on Amazon Linux 20
 On both environments, run:
 
 ```bash
-sudo -E ./shared/scripts/hardening.sh
-sudo -E ./shared/scripts/install-node-exporter.sh
+sudo -E bash shared/scripts/hardening.sh
+sudo -E bash shared/scripts/install-node-exporter.sh
 ```
 
 `hardening.sh` auto-detects the target OS:
@@ -235,14 +235,14 @@ sudo -E docker compose --env-file ../../.env up -d --force-recreate
 Or use the wrapper script which validates `GRAFANA_ADMIN_PASSWORD` and applies `ALLOW_MONITORING_OVER_WIREGUARD` automatically:
 
 ```bash
-sudo ./cloud/monitoring/setup-monitoring.sh
+sudo -E bash cloud/monitoring/setup-monitoring.sh
 ```
 
 If you want to reach Grafana, Prometheus, and Loki through the WireGuard overlay instead of SSH tunneling, set `ALLOW_MONITORING_OVER_WIREGUARD=true` in `.env`, then re-run:
 
 ```bash
-sudo -E ./shared/scripts/hardening.sh
-sudo ./cloud/monitoring/setup-monitoring.sh
+sudo -E bash shared/scripts/hardening.sh
+sudo -E bash cloud/monitoring/setup-monitoring.sh
 ```
 
 You do not need extra AWS Security Group ingress for `3000/tcp`, `9090/tcp`, `3100/tcp`, or `9100/tcp` in that model. Only the WireGuard UDP port is exposed publicly; Grafana, Prometheus, Loki, and Node Exporter are reached after traffic is decrypted on the EC2 instance.
@@ -279,7 +279,7 @@ To forward edge logs to Loki with Alloy after WireGuard is up:
 
 ```bash
 set -a && . ./.env && set +a
-sudo -E ./edge/observability/alloy/install-alloy.sh
+sudo -E bash edge/observability/alloy/install-alloy.sh
 ```
 
 The default Alloy endpoint expects cloud Loki at `10.8.0.1:3100`, so bind the monitoring stack to the WireGuard address before using it.
@@ -295,7 +295,7 @@ curl http://127.0.0.1:9100/metrics | head
 The repository currently installs Node Exporter `1.11.1` by default. Override it with:
 
 ```bash
-sudo -E NODE_EXPORTER_VERSION=<version> ./shared/scripts/install-node-exporter.sh
+sudo -E NODE_EXPORTER_VERSION=<version> bash shared/scripts/install-node-exporter.sh
 ```
 
 
@@ -310,20 +310,20 @@ Run the automated benchmark suite to validate the full stack after deployment:
 iperf3 -s -D
 
 # On the edge node — run all non-destructive suites
-./benchmark/run_all.sh
+bash benchmark/run_all.sh
 
 # Connectivity + bandwidth only
-./benchmark/run_all.sh --suite 01,02
+bash benchmark/run_all.sh --suite 01,02
 
 # Services health only (after monitoring stack is up)
 set -a && . .env && set +a
-./benchmark/run_all.sh --suite 03
+bash benchmark/run_all.sh --suite 03
 
 # Full stack smoke test
 bash benchmark/05-e2e/test_full_stack.sh
 
 # Include reconnect and failover tests (requires root)
-sudo ./benchmark/run_all.sh --allow-destructive
+sudo -E bash benchmark/run_all.sh --allow-destructive
 ```
 
 Reports are written to `benchmark/reports/` as `.txt`, `.csv`, and `.json` files.  
@@ -486,7 +486,7 @@ Bạn có thể chọn 1 trong 2 cách triển khai:
 **Cách 1: Chạy trực tiếp qua Systemd (Khuyên dùng)**
 ```bash
 cd edge/5g-wwan
-sudo -E ./install.sh
+sudo -E bash install.sh
 ```
 
 Trình cài đặt edge cũng cài sẵn bộ công cụ vận hành:
@@ -504,7 +504,7 @@ sudo -E docker compose up -d
 Sau khi có kết nối Internet do SIM cấp, tạo cấu hình và tham gia vào mạng:
 
 ```bash
-sudo -E ./edge/vpn/setup-wg-client.sh
+sudo -E bash edge/vpn/setup-wg-client.sh
 ```
 
 Thực hiện theo các bước trên màn hình để tạo Client Public Key. Sau đó, SSH lên Cloud Gateway và thêm Peer thủ công bằng lệnh `sudo wg set wg0 peer <client-public-key> allowed-ips 10.8.0.x/32` và lưu lại bằng `sudo wg-quick save wg0`.
@@ -516,13 +516,13 @@ Client nên giữ:
 Nếu cần gỡ cấu hình WireGuard client cục bộ trên edge sau này:
 
 ```bash
-sudo -E ./edge/vpn/uninstall-wg-client.sh
+sudo -E bash edge/vpn/uninstall-wg-client.sh
 ```
 
 Nếu muốn xóa cả key local:
 
 ```bash
-sudo -E REMOVE_WG_KEYS=true ./edge/vpn/uninstall-wg-client.sh
+sudo -E REMOVE_WG_KEYS=true bash edge/vpn/uninstall-wg-client.sh
 ```
 
 Script này chỉ gỡ phía edge local. Nếu cần xóa peer trên cloud server thì phải thực hiện riêng bằng `wg set ... peer ... remove` và `wg-quick save`.
@@ -535,8 +535,8 @@ Bootstrap cloud cũng cài sẵn bộ công cụ vận hành trên Amazon Linux 
 Hoạt động dùng chung ở cả 2 bề mặt của hệ thống:
 
 ```bash
-sudo -E ./shared/scripts/hardening.sh
-sudo -E ./shared/scripts/install-node-exporter.sh
+sudo -E bash shared/scripts/hardening.sh
+sudo -E bash shared/scripts/install-node-exporter.sh
 ```
 
 `hardening.sh` sẽ tự nhận diện hệ điều hành:
@@ -561,14 +561,14 @@ sudo -E docker compose --env-file ../../.env up -d --force-recreate
 Hoặc dùng wrapper script để tự validate `GRAFANA_ADMIN_PASSWORD` và tự áp dụng `ALLOW_MONITORING_OVER_WIREGUARD`:
 
 ```bash
-sudo ./cloud/monitoring/setup-monitoring.sh
+sudo -E bash cloud/monitoring/setup-monitoring.sh
 ```
 
 Nếu muốn truy cập Grafana, Prometheus và Loki qua đường hầm WireGuard thay vì SSH tunnel, đặt `ALLOW_MONITORING_OVER_WIREGUARD=true` trong `.env` rồi chạy lại:
 
 ```bash
-sudo -E ./shared/scripts/hardening.sh
-sudo ./cloud/monitoring/setup-monitoring.sh
+sudo -E bash shared/scripts/hardening.sh
+sudo -E bash cloud/monitoring/setup-monitoring.sh
 ```
 
 Mô hình này không cần mở thêm AWS Security Group cho `3000/tcp`, `9090/tcp`, `3100/tcp`, hoặc `9100/tcp`. Bên ngoài chỉ mở cổng UDP của WireGuard; Grafana, Prometheus, Loki và Node Exporter chỉ được truy cập sau khi gói tin được giải mã trên chính EC2.
@@ -605,7 +605,7 @@ Sau đó mở:
 
 ```bash
 set -a && . ./.env && set +a
-sudo -E ./edge/observability/alloy/install-alloy.sh
+sudo -E bash edge/observability/alloy/install-alloy.sh
 ```
 
 Endpoint Alloy mặc định cần Loki ở `10.8.0.1:3100`, nên hãy bind monitoring stack vào địa chỉ WireGuard trước khi dùng.
@@ -621,7 +621,7 @@ curl http://127.0.0.1:9100/metrics | head
 Repo hiện cài Node Exporter mặc định ở phiên bản `1.11.1`. Có thể đổi bằng:
 
 ```bash
-sudo -E NODE_EXPORTER_VERSION=<version> ./shared/scripts/install-node-exporter.sh
+sudo -E NODE_EXPORTER_VERSION=<version> bash shared/scripts/install-node-exporter.sh
 ```
 
 
@@ -638,20 +638,20 @@ Chạy bộ benchmark tự động để xác nhận toàn bộ stack sau khi tr
 iperf3 -s -D
 
 # Trên edge node — chạy toàn bộ suite không phá hoại
-./benchmark/run_all.sh
+bash benchmark/run_all.sh
 
 # Chỉ kết nối + băng thông
-./benchmark/run_all.sh --suite 01,02
+bash benchmark/run_all.sh --suite 01,02
 
 # Chỉ kiểm tra sức khoẻ dịch vụ (sau khi monitoring stack đã lên)
 set -a && . .env && set +a
-./benchmark/run_all.sh --suite 03
+bash benchmark/run_all.sh --suite 03
 
 # Smoke test toàn stack
 bash benchmark/05-e2e/test_full_stack.sh
 
 # Cho phép test phá hoại (WWAN reconnect, failover) — cần sudo
-sudo ./benchmark/run_all.sh --allow-destructive
+sudo -E bash benchmark/run_all.sh --allow-destructive
 ```
 
 Báo cáo được ghi vào `benchmark/reports/` dưới dạng `.txt`, `.csv` và `.json`.  

@@ -37,7 +37,7 @@ Native install:
 
 ```bash
 cd edge/5g-wwan
-sudo -E ./install.sh
+sudo -E bash install.sh
 sudo systemctl status wwan.service
 sudo systemctl status wwan-monitor.service
 ```
@@ -53,7 +53,7 @@ sudo docker compose up -d
 
 ```bash
 set -a && . ./.env && set +a
-sudo -E ./edge/vpn/setup-wg-client.sh
+sudo -E bash edge/vpn/setup-wg-client.sh
 ```
 
 Manual peer registration on the cloud node:
@@ -67,13 +67,13 @@ sudo wg show
 Remove the local WireGuard client setup from the edge node:
 
 ```bash
-sudo -E ./edge/vpn/uninstall-wg-client.sh
+sudo -E bash edge/vpn/uninstall-wg-client.sh
 ```
 
 Remove the local key pair too:
 
 ```bash
-sudo -E REMOVE_WG_KEYS=true ./edge/vpn/uninstall-wg-client.sh
+sudo -E REMOVE_WG_KEYS=true bash edge/vpn/uninstall-wg-client.sh
 ```
 
 ## Monitoring Stack
@@ -92,7 +92,7 @@ curl http://127.0.0.1:3000/api/health
 Or use the wrapper script (handles `ALLOW_MONITORING_OVER_WIREGUARD` and validates `GRAFANA_ADMIN_PASSWORD` automatically):
 
 ```bash
-sudo ./cloud/monitoring/setup-monitoring.sh
+sudo -E bash cloud/monitoring/setup-monitoring.sh
 ```
 
 Grafana loads Prometheus and Loki from `cloud/monitoring/grafana/provisioning/datasources/datasources.yml`.
@@ -101,7 +101,7 @@ Expose Grafana, Prometheus, and Loki through WireGuard only:
 
 ```bash
 # In .env: set ALLOW_MONITORING_OVER_WIREGUARD=true
-sudo -E ./shared/scripts/hardening.sh
+sudo -E bash shared/scripts/hardening.sh
 cd cloud/monitoring
 sudo docker compose --env-file ../../.env down
 sudo docker compose --env-file ../../.env up -d
@@ -110,8 +110,8 @@ sudo docker compose --env-file ../../.env up -d
 Or with the wrapper (sets `MONITORING_BIND_ADDRESS=10.8.0.1` automatically from `ALLOW_MONITORING_OVER_WIREGUARD`):
 
 ```bash
-sudo ./cloud/monitoring/setup-monitoring.sh down
-sudo ./cloud/monitoring/setup-monitoring.sh
+sudo -E bash cloud/monitoring/setup-monitoring.sh down
+sudo -E bash cloud/monitoring/setup-monitoring.sh
 ```
 
 ## SSH Tunnels For Web UI
@@ -141,7 +141,7 @@ the default `ALLOY_LOKI_URL` expects cloud Loki to be reachable at `10.8.0.1:310
 
 ```bash
 set -a && . ./.env && set +a
-sudo -E ./edge/observability/alloy/install-alloy.sh
+sudo -E bash edge/observability/alloy/install-alloy.sh
 sudo systemctl status alloy --no-pager
 sudo journalctl -u alloy --no-pager
 ```
@@ -150,13 +150,13 @@ sudo journalctl -u alloy --no-pager
 reachable over WireGuard. Override the listen address if needed:
 
 ```bash
-sudo -E ALLOY_HTTP_LISTEN_ADDR=0.0.0.0:12345 ./edge/observability/alloy/install-alloy.sh
+sudo -E ALLOY_HTTP_LISTEN_ADDR=0.0.0.0:12345 bash edge/observability/alloy/install-alloy.sh
 ```
 
 Override the Loki push endpoint if the cloud overlay IP or port is different:
 
 ```bash
-sudo -E ALLOY_LOKI_URL=http://10.8.0.1:3100/loki/api/v1/push ./edge/observability/alloy/install-alloy.sh
+sudo -E ALLOY_LOKI_URL=http://10.8.0.1:3100/loki/api/v1/push bash edge/observability/alloy/install-alloy.sh
 ```
 
 Access the Alloy UI from your laptop via SSH tunnel through EC2:
@@ -173,7 +173,7 @@ ssh -i <your-key.pem> -N -L 12345:10.8.0.2:12345 ec2-user@<EC2_PUBLIC_IP>
 Uninstall local Alloy service/config:
 
 ```bash
-sudo -E ./edge/observability/alloy/uninstall-alloy.sh
+sudo -E bash edge/observability/alloy/uninstall-alloy.sh
 ```
 
 ## Node Exporter
@@ -181,13 +181,13 @@ sudo -E ./edge/observability/alloy/uninstall-alloy.sh
 Install:
 
 ```bash
-sudo -E ./shared/scripts/install-node-exporter.sh
+sudo -E bash shared/scripts/install-node-exporter.sh
 ```
 
 Install with a specific version:
 
 ```bash
-sudo -E NODE_EXPORTER_VERSION=1.11.1 ./shared/scripts/install-node-exporter.sh
+sudo -E NODE_EXPORTER_VERSION=1.11.1 bash shared/scripts/install-node-exporter.sh
 ```
 
 Verify:
@@ -209,25 +209,25 @@ curl http://10.8.0.3:9100/metrics | head
 Default:
 
 ```bash
-sudo -E ./shared/scripts/hardening.sh
+sudo -E bash shared/scripts/hardening.sh
 ```
 
 With custom WireGuard port:
 
 ```bash
-sudo WIREGUARD_PORT=51821 ./shared/scripts/hardening.sh
+sudo -E WIREGUARD_PORT=51821 bash shared/scripts/hardening.sh
 ```
 
 With monitoring access over WireGuard:
 
 ```bash
-sudo ALLOW_MONITORING_OVER_WIREGUARD=true WIREGUARD_NETWORK=10.8.0.0/24 ./shared/scripts/hardening.sh
+sudo -E ALLOW_MONITORING_OVER_WIREGUARD=true WIREGUARD_NETWORK=10.8.0.0/24 bash shared/scripts/hardening.sh
 ```
 
 With custom extra edge TCP ports:
 
 ```bash
-sudo EDGE_EXTRA_TCP_PORTS='443 5201' ./shared/scripts/hardening.sh
+sudo -E EDGE_EXTRA_TCP_PORTS='443 5201' bash shared/scripts/hardening.sh
 ```
 
 ## File Transfer Tests
@@ -264,15 +264,15 @@ ssh ec2-user@10.8.0.1 'cat /tmp/wg-test.txt'
 Run all non-destructive suites:
 
 ```bash
-./benchmark/run_all.sh
+bash benchmark/run_all.sh
 ```
 
 Run specific suites:
 
 ```bash
-./benchmark/run_all.sh --suite 01,02      # connectivity + bandwidth
-./benchmark/run_all.sh --suite 03         # services health
-./benchmark/run_all.sh --suite 05         # end-to-end full stack
+bash benchmark/run_all.sh --suite 01,02      # connectivity + bandwidth
+bash benchmark/run_all.sh --suite 03         # services health
+bash benchmark/run_all.sh --suite 05         # end-to-end full stack
 ```
 
 Run a single script:
@@ -287,14 +287,14 @@ bash benchmark/05-e2e/test_full_stack.sh
 Override thresholds or targets inline:
 
 ```bash
-IPERF3_DURATION=30 WG_SERVER_IP=10.8.0.1 ./benchmark/run_all.sh 02
-set -a && . .env && set +a && ./benchmark/run_all.sh 03
+IPERF3_DURATION=30 WG_SERVER_IP=10.8.0.1 bash benchmark/run_all.sh 02
+set -a && . .env && set +a && bash benchmark/run_all.sh 03
 ```
 
 Enable destructive tests (WWAN reconnect, failover):
 
 ```bash
-sudo ./benchmark/run_all.sh --allow-destructive
+sudo -E bash benchmark/run_all.sh --allow-destructive
 ```
 
 iperf3 server (start on cloud gateway before running suite 02 or 04):

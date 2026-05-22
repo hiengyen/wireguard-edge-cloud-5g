@@ -48,7 +48,7 @@ ss -lntp | grep 5201
 cd ~/wireguard-edge-cloud-5g/cloud/monitoring
 
 # Khởi chạy stack docker-compose
-sudo ./setup-monitoring.sh
+sudo -E bash setup-monitoring.sh
 # Hoặc chạy trực tiếp qua docker compose:
 # sudo -E docker compose --env-file ../../.env up -d --force-recreate
 ```
@@ -90,33 +90,33 @@ Sau khi kết nối hoàn tất, hãy quay lại thiết bị **Edge Node** đ�
 Chạy tất cả kiểm thử đo đạc độ trễ, băng thông và service (không ngắt kết nối mạng):
 ```bash
 cd /home/hiengyen/CODE/wireguard-edge-cloud-5g
-./benchmark/run_all.sh
+bash benchmark/run_all.sh
 ```
 
 ### 3.2. Chạy toàn bộ test suite kèm theo các bài test tải phá hủy (Destructive Tests)
 Các bài test này sẽ đo thời gian phục hồi kết nối 5G (WWAN Reconnect) và khả năng chuyển mạch dự phòng (Failover). **Yêu cầu quyền root (sudo) và sẽ gây mất mạng tạm thời**:
 ```bash
-sudo ./benchmark/run_all.sh --allow-destructive
+sudo -E bash benchmark/run_all.sh --allow-destructive
 ```
 
 ### 3.3. Chạy riêng từng bộ kiểm thử cụ thể
 Nếu bạn chỉ muốn kiểm tra tốc độ mạng hoặc dịch vụ:
 ```bash
 # Chỉ chạy Suite 01 (Connectivity) và Suite 02 (Bandwidth)
-./benchmark/run_all.sh --suite 01,02
+bash benchmark/run_all.sh --suite 01,02
 
 # Chỉ chạy Suite 03 (Services)
-./benchmark/run_all.sh --suite 03
+bash benchmark/run_all.sh --suite 03
 ```
 
 ### 3.4. Ghi đè tham số trực tiếp (Inline Environment Overrides)
 Bạn có thể thay đổi các ngưỡng chấp nhận hoặc thời gian test trực tiếp trên command line mà không cần sửa code:
 ```bash
 # Tăng thời gian test iperf lên 30 giây, số luồng song song lên 8
-IPERF3_DURATION=30 IPERF3_PARALLEL=8 ./benchmark/run_all.sh --suite 02
+IPERF3_DURATION=30 IPERF3_PARALLEL=8 bash benchmark/run_all.sh --suite 02
 
 # Đo lường độ hao hụt (overhead) của Wireguard bằng cách truyền tải trực tiếp qua IP Public
-CLOUD_PUBLIC_IP=52.74.220.78 ./benchmark/run_all.sh --suite 02
+CLOUD_PUBLIC_IP=52.74.220.78 bash benchmark/run_all.sh --suite 02
 ```
 
 ---

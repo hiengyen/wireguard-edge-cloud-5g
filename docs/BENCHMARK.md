@@ -104,20 +104,20 @@ All tuneable parameters live in [`benchmark/config.sh`](../benchmark/config.sh).
 
 ```bash
 cd /path/to/wireguard-edge-cloud-5g
-./benchmark/run_all.sh
+bash benchmark/run_all.sh
 ```
 
 ### Run specific suites
 
 ```bash
 # Connectivity only
-./benchmark/run_all.sh --suite 01
+bash benchmark/run_all.sh --suite 01
 
 # Connectivity + bandwidth
-./benchmark/run_all.sh --suite 01,02
+bash benchmark/run_all.sh --suite 01,02
 
 # Services only
-./benchmark/run_all.sh --suite 03
+bash benchmark/run_all.sh --suite 03
 ```
 
 ### Run a single script directly
@@ -132,14 +132,14 @@ bash benchmark/03-services/test_prometheus.sh
 
 ```bash
 # Longer iperf3 runs and custom server
-IPERF3_DURATION=30 IPERF3_PARALLEL=8 ./benchmark/run_all.sh 02
+IPERF3_DURATION=30 IPERF3_PARALLEL=8 bash benchmark/run_all.sh 02
 
 # Lower latency threshold for high-quality 5G
-MAX_RTT_MS=80 ./benchmark/run_all.sh 01
+MAX_RTT_MS=80 bash benchmark/run_all.sh 01
 
 # Use .env values for service URLs and passwords
 set -a && . .env && set +a
-./benchmark/run_all.sh 03
+bash benchmark/run_all.sh 03
 ```
 
 ### Enable destructive tests (WWAN reconnect and failover)
@@ -147,7 +147,7 @@ set -a && . .env && set +a
 These tests briefly drop the WWAN interface or remove the WireGuard peer to measure recovery time. They require root.
 
 ```bash
-sudo ./benchmark/run_all.sh --allow-destructive
+sudo -E bash benchmark/run_all.sh --allow-destructive
 
 # Or a single test
 sudo bash benchmark/04-load/test_wwan_reconnect.sh
@@ -157,7 +157,7 @@ sudo bash benchmark/05-e2e/test_failover.sh
 ### Verbose mode (show full script output)
 
 ```bash
-./benchmark/run_all.sh --verbose
+bash benchmark/run_all.sh --verbose
 ```
 
 ---
@@ -336,7 +336,7 @@ QMI_DEVICE=/dev/cdc-wdm0 bash benchmark/01-connectivity/test_5g_signal.sh
 sudo bash benchmark/04-load/test_wwan_reconnect.sh
 sudo bash benchmark/05-e2e/test_failover.sh
 # Or via run_all.sh
-sudo ./benchmark/run_all.sh --allow-destructive
+sudo -E bash benchmark/run_all.sh --allow-destructive
 ```
 
 ---

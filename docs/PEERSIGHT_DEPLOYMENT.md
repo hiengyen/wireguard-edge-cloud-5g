@@ -144,7 +144,7 @@ To apply the hardening configuration:
 ```bash
 cd ~/wireguard-edge-cloud-5g
 set -a && . ./.env && set +a
-sudo -E ./shared/scripts/hardening.sh
+sudo -E bash shared/scripts/hardening.sh
 ```
 
 ---
@@ -156,7 +156,7 @@ SSH into the Cloud Gateway and run the automated orchestrator:
 ```bash
 cd ~/wireguard-edge-cloud-5g
 set -a && . ./.env && set +a
-sudo -E ./peersight/deploy-cloud.sh
+sudo -E bash peersight/deploy-cloud.sh
 ```
 
 This single command will:
@@ -232,10 +232,10 @@ This `AGENT_TOKEN` is valid for **10 years** and can be safely stored in `/etc/p
 With the `PEERSIGHT_HOST_ID` from the Web UI and `AGENT_TOKEN` from the API above:
 
 ```bash
-sudo PEERSIGHT_API_URL="http://127.0.0.1:4000" \
+sudo -E PEERSIGHT_API_URL="http://127.0.0.1:4000" \
      PEERSIGHT_HOST_ID="<CLOUD_HOST_UUID>" \
      PEERSIGHT_TOKEN="<AGENT_TOKEN>" \
-     ~/wireguard-edge-cloud-5g/peersight/install-agent.sh
+     bash ~/wireguard-edge-cloud-5g/peersight/install-agent.sh
 ```
 
 Verify the service is running:
@@ -259,7 +259,7 @@ sudo -E BUILD_MODE=native \
      PEERSIGHT_API_URL="http://10.8.0.1:4000" \
      PEERSIGHT_HOST_ID="<EDGE_HOST_UUID>" \
      PEERSIGHT_TOKEN="<AGENT_TOKEN>" \
-     ./peersight/deploy-edge.sh
+     bash peersight/deploy-edge.sh
 ```
 
 ### Option B: Cross-Compilation & Transfer (Recommended & Faster)
@@ -279,7 +279,7 @@ sudo -E BUILD_MODE=native \
         PEERSIGHT_API_URL="http://10.8.0.1:4000" \
         PEERSIGHT_HOST_ID="<EDGE_HOST_UUID>" \
         PEERSIGHT_TOKEN="<AGENT_TOKEN>" \
-        ./peersight/deploy-edge.sh
+        bash ./peersight/deploy-edge.sh
    ```
 
 ### 9.1 Verification
@@ -317,14 +317,14 @@ sudo journalctl -u peersight-agent -f
 To suspend service containers on the Cloud node while retaining all Postgres database metrics and accounts:
 ```bash
 cd ~/wireguard-edge-cloud-5g/peersight
-sudo ./stop-peersight.sh
+sudo -E bash stop-peersight.sh
 ```
 
 ### 11.2 Complete PeerSight Clean-Up
 To fully erase all PeerSight files (systemd configurations, log queues, configurations, and binaries) while **preserving your DB volumes**:
 ```bash
 cd ~/wireguard-edge-cloud-5g/peersight
-sudo ./uninstall.sh
+sudo -E bash uninstall.sh
 ```
 
 ---

@@ -185,8 +185,8 @@ Before starting the monitoring stack, secure the cloud node and install the metr
 
 ```bash
 set -a && . ./.env && set +a
-sudo -E ./shared/scripts/hardening.sh
-sudo -E ./shared/scripts/install-node-exporter.sh
+sudo -E bash shared/scripts/hardening.sh
+sudo -E bash shared/scripts/install-node-exporter.sh
 ```
 
 Verify Node Exporter on the cloud host:
@@ -216,7 +216,7 @@ sudo -E docker compose --env-file ../../.env up -d --force-recreate
 Alternatively, use the wrapper script which automatically applies `ALLOW_MONITORING_OVER_WIREGUARD` and validates required variables:
 
 ```bash
-sudo ./cloud/monitoring/setup-monitoring.sh
+sudo -E bash cloud/monitoring/setup-monitoring.sh
 ```
 
 Verify:
@@ -272,7 +272,7 @@ On the edge device:
 ```bash
 set -a && . ./.env && set +a
 cd edge/5g-wwan
-sudo -E ./install.sh
+sudo -E bash install.sh
 ```
 
 If you use the Docker-based WWAN mode:
@@ -307,7 +307,7 @@ Run the client setup on the edge node:
 
 ```bash
 set -a && . ./.env && set +a
-sudo -E ./edge/vpn/setup-wg-client.sh
+sudo -E bash edge/vpn/setup-wg-client.sh
 ```
 
 Recommended answers:
@@ -334,13 +334,13 @@ sudo wg show
 If you need to remove the local WireGuard client setup from the edge node later:
 
 ```bash
-sudo -E ./edge/vpn/uninstall-wg-client.sh
+sudo -E bash edge/vpn/uninstall-wg-client.sh
 ```
 
 To remove the local key pair too:
 
 ```bash
-sudo -E REMOVE_WG_KEYS=true ./edge/vpn/uninstall-wg-client.sh
+sudo -E REMOVE_WG_KEYS=true bash edge/vpn/uninstall-wg-client.sh
 ```
 
 This only removes the local edge setup. Remove the peer on the cloud server separately if it was previously registered.
@@ -351,8 +351,8 @@ Now that the edge node is connected to the VPN, secure it and install Node Expor
 
 ```bash
 set -a && . ./.env && set +a
-sudo -E ./shared/scripts/hardening.sh
-sudo -E ./shared/scripts/install-node-exporter.sh
+sudo -E bash shared/scripts/hardening.sh
+sudo -E bash shared/scripts/install-node-exporter.sh
 ```
 
 If the edge node does not have an `authorized_keys` file yet, the script will **skip SSH hardening** and print a warning:
@@ -406,7 +406,7 @@ Once key-based login is confirmed, re-run the hardening script to disable passwo
 
 ```bash
 set -a && . ./.env && set +a
-sudo -E ./shared/scripts/hardening.sh
+sudo -E bash shared/scripts/hardening.sh
 ```
 
 Verify Node Exporter on the edge host:
@@ -439,13 +439,13 @@ For this default endpoint to work, you must have started the cloud monitoring st
 
 ```bash
 set -a && . ./.env && set +a
-sudo -E ./edge/observability/alloy/install-alloy.sh
+sudo -E bash edge/observability/alloy/install-alloy.sh
 ```
 
 Override the push endpoint if your cloud WireGuard IP or Loki port differs:
 
 ```bash
-sudo -E ALLOY_LOKI_URL=http://10.8.0.1:3100/loki/api/v1/push ./edge/observability/alloy/install-alloy.sh
+sudo -E ALLOY_LOKI_URL=http://10.8.0.1:3100/loki/api/v1/push bash edge/observability/alloy/install-alloy.sh
 ```
 
 Verify Alloy:
