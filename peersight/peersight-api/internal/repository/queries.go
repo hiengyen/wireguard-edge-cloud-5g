@@ -62,6 +62,34 @@ func (db *DB) CreateHost(ctx context.Context, host *models.Host) error {
 	return err
 }
 
+// UpdateHost renames a host.
+func (db *DB) UpdateHost(ctx context.Context, id uuid.UUID, name string) (*models.Host, error) {
+	now := time.Now().UTC()
+	h := &models.Host{}
+	err := db.Pool.QueryRow(ctx,
+		`UPDATE hosts SET name = $1, updated_at = $2 WHERE id = $3
+		 RETURNING id, org_id, name, last_ping, agent_ver, created_at, updated_at`,
+		name, now, id).
+		Scan(&h.ID, &h.OrgID, &h.Name, &h.LastPing, &h.AgentVer, &h.CreatedAt, &h.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return h, nil
+}
+
+// DeleteHost removes a host and all its cascaded data (interfaces, endpoints, changes, alerts).
+func (db *DB) DeleteHost(ctx context.Context, id uuid.UUID) error {
+	cmd, err := db.Pool.Exec(ctx, `DELETE FROM hosts WHERE id = $1`, id)
+	if err != nil {
+		return err
+	}
+	if cmd.RowsAffected() == 0 {
+		return fmt.Errorf("host not found")
+	}
+	return nil
+}
+
+
 
 // RecordPing updates the host's last ping time and agent version.
 func (db *DB) RecordPing(ctx context.Context, hostID uuid.UUID, agentVer string) error {

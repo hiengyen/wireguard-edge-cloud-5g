@@ -373,6 +373,45 @@ func (h *HostHandler) Show(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": host})
 }
 
+// Update renames a host.
+func (h *HostHandler) Update(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid host id"})
+		return
+	}
+
+	var req struct {
+		Name string `json:"name" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	host, err := h.DB.UpdateHost(c.Request.Context(), id, req.Name)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "host not found"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": host})
+}
+
+// Delete removes a host and all its cascaded data.
+func (h *HostHandler) Delete(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid host id"})
+		return
+	}
+	if err := h.DB.DeleteHost(c.Request.Context(), id); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "host deleted"})
+}
+
+
 // ListInterfaces returns all interfaces for a host.
 func (h *HostHandler) ListInterfaces(c *gin.Context) {
 	hostID, err := uuid.Parse(c.Param("id"))

@@ -130,6 +130,7 @@ func setupRouter(db *repository.DB, cfg *config.Config) *gin.Engine {
 		api.GET("/hosts", hostH.List)
 		api.POST("/hosts", hostH.Create)
 		api.GET("/hosts/:id", hostH.Show)
+		api.PUT("/hosts/:id", hostH.Update)
 		api.GET("/hosts/:id/interfaces", hostH.ListInterfaces)
 		api.GET("/hosts/:id/endpoints", hostH.ListEndpoints)
 		api.GET("/hosts/:id/changes", hostH.ListChanges)
@@ -162,6 +163,7 @@ func setupRouter(db *repository.DB, cfg *config.Config) *gin.Engine {
 
 		// Destructive ops
 		admin.DELETE("/peers/:id", peerH.Delete)
+		admin.DELETE("/hosts/:id", hostH.Delete)
 		admin.POST("/hosts/:id/changes", hostH.CreateChange)
 	}
 

@@ -34,7 +34,22 @@ export const useHostStore = defineStore('hosts', () => {
     return res.data?.agent_token || null
   }
 
-  return { hosts, loading, fetchHosts, createHost, generateAgentToken }
+  async function updateHost(id, name) {
+    const res = await api.put(`/hosts/${id}`, { name })
+    const updated = res.data?.data
+    if (updated) {
+      const idx = hosts.value.findIndex(h => h.id === id)
+      if (idx !== -1) hosts.value[idx] = updated
+    }
+    return updated
+  }
+
+  async function deleteHost(id) {
+    await api.delete(`/hosts/${id}`)
+    hosts.value = hosts.value.filter(h => h.id !== id)
+  }
+
+  return { hosts, loading, fetchHosts, createHost, generateAgentToken, updateHost, deleteHost }
 })
 
 export const usePeerStore = defineStore('peers', () => {
