@@ -31,12 +31,22 @@
       </div>
 
       <div class="stat-card">
-        <div class="stat-icon yellow">
+        <div class="stat-icon green">
           <span class="material-symbols-outlined">wifi</span>
         </div>
         <div>
           <div class="stat-value">{{ onlineHosts }}</div>
           <div class="stat-label">Online</div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon yellow">
+          <span class="material-symbols-outlined">swap_calls</span>
+        </div>
+        <div>
+          <div class="stat-value" style="font-size:var(--font-size-md);line-height:1.2;font-weight:700;white-space:nowrap">{{ totalBandwidth }}</div>
+          <div class="stat-label">Network Flow</div>
         </div>
       </div>
 
@@ -68,6 +78,74 @@
         </div>
         <div class="chart-container">
           <canvas ref="alertChartEl"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Topology Map -->
+    <div class="card" style="margin-bottom: var(--space-xl)">
+      <div class="card-header border-b">
+        <h2 class="card-title" style="display:flex;align-items:center;gap:8px">
+          <span class="material-symbols-outlined" style="color:var(--color-accent)">hub</span>
+          WireGuard Network Topology
+        </h2>
+      </div>
+      <div class="card-body" style="padding:var(--space-xl);display:flex;justify-content:center;align-items:center;background:#0d0d12;border-radius:var(--radius-lg);overflow:hidden">
+        <div class="topology-container">
+          <svg class="topo-svg" viewBox="0 0 800 400">
+            <!-- Connection Lines -->
+            <g v-for="node in hostNodes" :key="'line-' + node.id">
+              <path
+                :d="getConnectionPath(node)"
+                :class="['connection-line', isOnline(node) ? 'active' : 'inactive']"
+              />
+              <!-- Animated glowing flow indicator -->
+              <circle
+                v-if="isOnline(node)"
+                r="4"
+                fill="var(--color-accent, #5865f2)"
+                class="flow-particle"
+              >
+                <animateMotion
+                  :path="getConnectionPath(node)"
+                  dur="4s"
+                  repeatCount="indefinite"
+                />
+              </circle>
+            </g>
+
+            <!-- Central Hub -->
+            <g transform="translate(400, 200)" class="topo-node central-hub">
+              <circle r="36" fill="rgba(88, 101, 242, 0.15)" stroke="var(--color-accent)" stroke-width="2" />
+              <circle r="28" fill="rgba(88, 101, 242, 0.3)" />
+              <text class="material-symbols-outlined" font-size="32" text-anchor="middle" y="10" fill="var(--color-accent)">
+                cloud
+              </text>
+              <text y="54" text-anchor="middle" fill="var(--color-text)" font-size="12" font-weight="700">VPN Cloud HUB</text>
+            </g>
+
+            <!-- Edge Nodes -->
+            <g
+              v-for="node in hostNodes"
+              :key="'node-' + node.id"
+              :transform="`translate(${node.x}, ${node.y})`"
+              class="topo-node edge-node"
+              @click="$router.push(`/hosts/${node.id}`)"
+            >
+              <circle r="24" :fill="isOnline(node) ? 'rgba(52, 211, 153, 0.1)' : 'rgba(239, 68, 68, 0.1)'" :stroke="isOnline(node) ? '#34d399' : '#f87171'" stroke-width="1.5" />
+              <circle r="16" :fill="isOnline(node) ? 'rgba(52, 211, 153, 0.2)' : 'rgba(239, 68, 68, 0.2)'" />
+              <text class="material-symbols-outlined" font-size="18" text-anchor="middle" y="6" :fill="isOnline(node) ? '#34d399' : '#f87171'">
+                router
+              </text>
+              <text y="42" text-anchor="middle" fill="var(--color-text-secondary)" font-size="11" font-weight="600">
+                {{ node.name }}
+              </text>
+              <rect x="-24" y="-38" width="48" height="14" rx="4" :fill="isOnline(node) ? 'rgba(52,211,153,0.1)' : 'rgba(239,68,68,0.1)'" />
+              <text y="-28" text-anchor="middle" :fill="isOnline(node) ? '#34d399' : '#f87171'" font-size="8" font-weight="700">
+                {{ isOnline(node) ? 'ONLINE' : 'OFFLINE' }}
+              </text>
+            </g>
+          </svg>
         </div>
       </div>
     </div>
@@ -172,7 +250,8 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useHostStore, usePeerStore, useAlertStore } from '@/stores/data.js'
-import { formatTime, isOnline, alertClass, alertIcon } from '@/utils/format.js'
+import { formatTime, isOnline, alertClass, alertIcon, formatBytes } from '@/utils/format.js'
+import { api } from '@/plugins/axios.js'
 
 const hostStore = useHostStore()
 const peerStore = usePeerStore()
@@ -246,10 +325,50 @@ onUnmounted(() => {
   alertChart?.destroy()
 })
 
-function refresh() {
-  hostStore.fetchHosts()
-  peerStore.fetchPeers()
-  alertStore.fetchAlerts()
+const totalRx = ref(0)
+const totalTx = ref(0)
+
+const totalBandwidth = computed(() => {
+  return formatBytes(totalRx.value + totalTx.value)
+})
+
+async function fetchBandwidthStats() {
+  totalRx.value = 0
+  totalTx.value = 0
+  try {
+    const hosts = hostStore.hosts
+    if (hosts.length === 0) return
+    const promises = hosts.map(h => api.get(`/hosts/${h.id}/endpoints`))
+    const results = await Promise.allSettled(promises)
+    let rxSum = 0
+    let txSum = 0
+    results.forEach(res => {
+      if (res.status === 'fulfilled') {
+        const endpoints = res.value.data.data || []
+        endpoints.forEach(ep => {
+          rxSum += ep.rx_bytes || 0
+          txSum += ep.tx_bytes || 0
+        })
+      }
+    })
+    totalRx.value = rxSum
+    totalTx.value = txSum
+  } catch (err) {
+    console.error('Failed to aggregate dashboard bandwidth stats:', err)
+  }
+}
+
+watch(() => hostStore.hosts, () => {
+  fetchBandwidthStats()
+}, { deep: true })
+
+async function refresh() {
+  await Promise.allSettled([
+    hostStore.fetchHosts(),
+    peerStore.fetchPeers(),
+    alertStore.fetchAlerts()
+  ])
+  await fetchBandwidthStats()
 }
 
 const recentHosts = computed(() => hostStore.hosts.slice(0, 5))
@@ -262,6 +381,41 @@ const onlineHosts = computed(() =>
 const unresolvedAlerts = computed(() =>
   alertStore.alerts.filter(a => !a.resolved).length
 )
+
+const hostNodes = computed(() => {
+  const hosts = hostStore.hosts
+  const count = hosts.length
+  if (count === 0) return []
+
+  return hosts.map((h, i) => {
+    let angle
+    if (count === 1) {
+      angle = Math.PI // Directly to the left
+    } else {
+      const indexFraction = count > 1 ? i / (count - 1) : 0.5
+      angle = Math.PI * 0.6 + indexFraction * Math.PI * 0.8
+    }
+
+    const rx = 260
+    const ry = 120
+    const x = 400 + rx * Math.cos(angle)
+    const y = 200 + ry * Math.sin(angle)
+
+    return {
+      ...h,
+      x,
+      y
+    }
+  })
+})
+
+function getConnectionPath(node) {
+  const cx1 = (node.x + 400) / 2
+  const cy1 = node.y
+  const cx2 = (node.x + 400) / 2
+  const cy2 = 200
+  return `M ${node.x} ${node.y} C ${cx1} ${cy1}, ${cx2} ${cy2}, 400 200`
+}
 
 // Chart rendering
 async function renderCharts() {
@@ -432,5 +586,71 @@ watch([statusChartEl, alertChartEl], () => {
 @keyframes slideOut {
   from { transform: translateX(0); opacity: 1; }
   to { transform: translateX(100%); opacity: 0; }
+}
+
+.border-b {
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.topology-container {
+  width: 100%;
+  max-width: 800px;
+  position: relative;
+}
+
+.topo-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.connection-line {
+  fill: none;
+  stroke-width: 1.5;
+  transition: stroke 0.3s, stroke-width 0.3s;
+}
+
+.connection-line.active {
+  stroke: rgba(88, 101, 242, 0.4);
+  stroke-dasharray: 4 4;
+  animation: dash 30s linear infinite;
+}
+
+.connection-line.inactive {
+  stroke: rgba(239, 68, 68, 0.2);
+  stroke-dasharray: 6 6;
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: -1000;
+  }
+}
+
+.flow-particle {
+  filter: drop-shadow(0 0 4px var(--color-accent));
+}
+
+.topo-node {
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.topo-node:hover {
+  transform: scale(1.08);
+}
+
+.edge-node text.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  dominant-baseline: middle;
+}
+
+.central-hub {
+  cursor: default;
+}
+.central-hub:hover {
+  transform: none;
 }
 </style>

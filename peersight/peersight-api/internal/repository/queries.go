@@ -156,6 +156,50 @@ func (db *DB) DeletePeer(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+// GetPeer retrieves a peer by ID.
+func (db *DB) GetPeer(ctx context.Context, id uuid.UUID) (*models.Peer, error) {
+	p := &models.Peer{}
+	err := db.Pool.QueryRow(ctx,
+		`SELECT id, org_id, name, public_key, created_at, updated_at
+		   FROM peers WHERE id = $1`, id).
+		Scan(&p.ID, &p.OrgID, &p.Name, &p.PublicKey, &p.CreatedAt, &p.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return p, nil
+}
+
+// ListEndpointsByPeer returns all connection slots associated with a peer.
+func (db *DB) ListEndpointsByPeer(ctx context.Context, peerID uuid.UUID) ([]models.Endpoint, error) {
+	rows, err := db.Pool.Query(ctx,
+		`SELECT e.id, e.interface_id, e.peer_id, e.ip, e.port, e.allowed_ips, e.keepalive,
+		        e.available, e.last_handshake, e.rx_bytes, e.tx_bytes, e.created_at, e.updated_at,
+		        i.name AS interface_name, h.name AS host_name, h.id AS host_id
+		   FROM endpoints e
+		   JOIN interfaces i ON e.interface_id = i.id
+		   JOIN hosts h ON i.host_id = h.id
+		  WHERE e.peer_id = $1
+		  ORDER BY e.updated_at DESC`, peerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var endpoints []models.Endpoint
+	for rows.Next() {
+		var ep models.Endpoint
+		var hostID uuid.UUID
+		if err := rows.Scan(&ep.ID, &ep.InterfaceID, &ep.PeerID, &ep.IP, &ep.Port, &ep.AllowedIPs,
+			&ep.Keepalive, &ep.Available, &ep.LastHandshake, &ep.RxBytes, &ep.TxBytes,
+			&ep.CreatedAt, &ep.UpdatedAt, &ep.InterfaceName, &ep.HostName, &hostID); err != nil {
+			return nil, err
+		}
+		ep.HostID = &hostID
+		endpoints = append(endpoints, ep)
+	}
+	return endpoints, nil
+}
+
 // ────────────────────────────────────────────────
 // Interface queries
 // ────────────────────────────────────────────────
@@ -414,6 +458,13 @@ func (db *DB) ResolveAlert(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+// ResolveAlerts marks multiple alerts as resolved.
+func (db *DB) ResolveAlerts(ctx context.Context, ids []uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx,
+		`UPDATE alerts SET resolved = true WHERE id = ANY($1)`, ids)
+	return err
+}
+
 // ────────────────────────────────────────────────
 // Queue events (for Broker)
 // ────────────────────────────────────────────────
@@ -505,6 +556,14 @@ func (db *DB) CreateUser(ctx context.Context, u *models.User) error {
 	return err
 }
 
+// UpdateUserPassword updates the password hash of a user.
+func (db *DB) UpdateUserPassword(ctx context.Context, id uuid.UUID, hash string) error {
+	_, err := db.Pool.Exec(ctx,
+		`UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL`,
+		hash, id)
+	return err
+}
+
 // ListUsers returns all non-deleted users.
 func (db *DB) ListUsers(ctx context.Context) ([]models.User, error) {
 	rows, err := db.Pool.Query(ctx,
@@ -555,4 +614,29 @@ func (db *DB) DeleteUser(ctx context.Context, id uuid.UUID) error {
 		return fmt.Errorf("user not found")
 	}
 	return nil
+}
+
+// ListGlobalChanges returns the last N desired changes across all hosts.
+func (db *DB) ListGlobalChanges(ctx context.Context, limit int) ([]models.DesiredChange, error) {
+	rows, err := db.Pool.Query(ctx,
+		`SELECT c.id, c.host_id, c.type, c.payload, c.state, c.message, c.created_at, c.executed_at,
+		        h.name AS host_name
+		   FROM desired_changes c
+		   JOIN hosts h ON c.host_id = h.id
+		  ORDER BY c.created_at DESC LIMIT $1`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var changes []models.DesiredChange
+	for rows.Next() {
+		var c models.DesiredChange
+		if err := rows.Scan(&c.ID, &c.HostID, &c.Type, &c.Payload, &c.State, &c.Message,
+			&c.CreatedAt, &c.ExecutedAt, &c.HostName); err != nil {
+			return nil, err
+		}
+		changes = append(changes, c)
+	}
+	return changes, nil
 }

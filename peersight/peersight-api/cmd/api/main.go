@@ -135,12 +135,18 @@ func setupRouter(db *repository.DB, cfg *config.Config) *gin.Engine {
 		api.GET("/hosts/:id/endpoints", hostH.ListEndpoints)
 		api.GET("/hosts/:id/changes", hostH.ListChanges)
 
+		// Self-Service User Profile / Change Password
+		api.POST("/profile/change-password", authH.ChangePassword)
+
 		// Peers (read)
 		api.GET("/peers", peerH.List)
+		api.GET("/peers/:id", peerH.Show)
+		api.GET("/peers/:id/endpoints", peerH.ListEndpoints)
 
 		// Alerts (read + resolve)
 		api.GET("/alerts", alertH.List)
 		api.POST("/alerts/:id/resolve", alertH.Resolve)
+		api.POST("/alerts/resolve-bulk", alertH.ResolveBulk)
 
 		// Queues (for broker)
 		api.POST("/queues/:type/next", queueH.PollNext)
@@ -160,6 +166,9 @@ func setupRouter(db *repository.DB, cfg *config.Config) *gin.Engine {
 
 		// Issue long-lived agent token (for use in PEERSIGHT_TOKEN env var)
 		admin.POST("/admin/agent-tokens", authH.IssueAgentToken)
+
+		// Global change log audit
+		admin.GET("/admin/changes", hostH.ListGlobalChanges)
 
 		// Destructive ops
 		admin.DELETE("/peers/:id", peerH.Delete)

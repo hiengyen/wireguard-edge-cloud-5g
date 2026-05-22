@@ -94,7 +94,17 @@ export const useAlertStore = defineStore('alerts', () => {
     if (alert) alert.resolved = true
   }
 
-  return { alerts, loading, fetchAlerts, resolveAlert }
+  async function resolveAlertsBulk(ids) {
+    if (!ids || ids.length === 0) return
+    await api.post('/alerts/resolve-bulk', { ids })
+    alerts.value.forEach(a => {
+      if (ids.includes(a.id)) {
+        a.resolved = true
+      }
+    })
+  }
+
+  return { alerts, loading, fetchAlerts, resolveAlert, resolveAlertsBulk }
 })
 
 export const useUserStore = defineStore('users', () => {

@@ -93,6 +93,9 @@ type Endpoint struct {
 	TxBytes       int64      `db:"tx_bytes"         json:"tx_bytes"`
 	CreatedAt     time.Time  `db:"created_at"       json:"created_at"`
 	UpdatedAt     time.Time  `db:"updated_at"       json:"updated_at"`
+	InterfaceName string     `db:"-"                json:"interface_name,omitempty"`
+	HostName      string     `db:"-"                json:"host_name,omitempty"`
+	HostID        *uuid.UUID `db:"-"                json:"host_id,omitempty"`
 }
 
 // ────────────────────────────────────────────────
@@ -121,6 +124,7 @@ type DesiredChange struct {
 	Message     string     `db:"message"      json:"message"`
 	CreatedAt   time.Time  `db:"created_at"   json:"created_at"`
 	ExecutedAt  *time.Time `db:"executed_at"  json:"executed_at,omitempty"`
+	HostName    string     `db:"-"            json:"host_name,omitempty"`
 }
 
 // ────────────────────────────────────────────────

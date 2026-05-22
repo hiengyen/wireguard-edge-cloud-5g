@@ -274,6 +274,40 @@ func (h *AuthHandler) DeleteUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "user deleted"})
 }
 
+// ChangePasswordRequest represents the request body for changing password.
+type ChangePasswordRequest struct {
+	Password string `json:"password" binding:"required,min=6"`
+}
+
+// ChangePassword updates the current user's password.
+func (h *AuthHandler) ChangePassword(c *gin.Context) {
+	var req ChangePasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	userIDVal, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+	userID := userIDVal.(uuid.UUID)
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to hash password"})
+		return
+	}
+
+	if err := h.DB.UpdateUserPassword(c.Request.Context(), userID, string(hash)); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "password updated successfully"})
+}
+
 // UpdateUserRole updates a user's role (admin only).
 func (h *AuthHandler) UpdateUserRole(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
@@ -457,6 +491,16 @@ func (h *HostHandler) ListChanges(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": changes})
 }
 
+// ListGlobalChanges returns desired changes across all hosts.
+func (h *HostHandler) ListGlobalChanges(c *gin.Context) {
+	changes, err := h.DB.ListGlobalChanges(c.Request.Context(), 100)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": changes})
+}
+
 // CreateChangeRequest is the JSON body for creating a desired change.
 type CreateChangeRequest struct {
 	Type    string `json:"type"    binding:"required"`
@@ -532,6 +576,36 @@ func (h *PeerHandler) Delete(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "peer deleted"})
 }
 
+// Show returns a single peer by ID.
+func (h *PeerHandler) Show(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid peer id"})
+		return
+	}
+	peer, err := h.DB.GetPeer(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "peer not found"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": peer})
+}
+
+// ListEndpoints returns all connection endpoints for a peer.
+func (h *PeerHandler) ListEndpoints(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid peer id"})
+		return
+	}
+	endpoints, err := h.DB.ListEndpointsByPeer(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": endpoints})
+}
+
 // ────────────────────────────────────────────────
 // Alert handlers
 // ────────────────────────────────────────────────
@@ -564,6 +638,22 @@ func (h *AlertHandler) Resolve(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "alert resolved"})
+}
+
+// ResolveBulk marks multiple alerts as resolved.
+func (h *AlertHandler) ResolveBulk(c *gin.Context) {
+	var req struct {
+		IDs []uuid.UUID `json:"ids" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+	if err := h.DB.ResolveAlerts(c.Request.Context(), req.IDs); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "alerts resolved"})
 }
 
 // ────────────────────────────────────────────────

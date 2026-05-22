@@ -31,10 +31,10 @@
         <tbody>
           <tr v-for="peer in peerStore.peers" :key="peer.id">
             <td style="font-weight:600">
-              <div style="display:flex;align-items:center;gap:8px">
+              <router-link :to="`/peers/${peer.id}`" class="peer-link">
                 <span class="material-symbols-outlined" style="font-size:18px;color:var(--color-success)">key</span>
                 {{ peer.name }}
-              </div>
+              </router-link>
             </td>
             <td>
               <code class="pubkey">{{ truncateKey(peer.public_key) }}</code>
@@ -151,5 +151,18 @@ async function deletePeer() {
   max-width: 420px;
   width: 90%;
   box-shadow: var(--shadow-lg);
+}
+
+.peer-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.peer-link:hover {
+  color: var(--color-accent);
 }
 </style>

@@ -35,6 +35,11 @@ const routes = [
     component: () => import('@/pages/PeersPage.vue')
   },
   {
+    path: '/peers/:id',
+    name: 'PeerDetail',
+    component: () => import('@/pages/PeerDetailPage.vue')
+  },
+  {
     path: '/alerts',
     name: 'Alerts',
     component: () => import('@/pages/AlertsPage.vue')
