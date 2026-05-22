@@ -10,7 +10,7 @@
 
 set -euo pipefail
 
-GO_VERSION="${GO_VERSION:-1.22.4}"
+GO_VERSION="${GO_VERSION:-1.23.0}"
 INSTALL_DIR="/usr/local"
 PROFILE_FILE="/etc/profile.d/go.sh"
 BASE_URL="https://go.dev/dl"
