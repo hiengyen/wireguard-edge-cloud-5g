@@ -126,7 +126,12 @@ const translations = {
       hostNode: 'Host Node',
       actionType: 'Action Type',
       targetPayload: 'Target Payload',
-      executedAt: 'Executed At'
+      executedAt: 'Executed At',
+      profile: {
+        role: 'Role',
+        password: 'Password',
+        confirmPassword: 'Confirm Password'
+      }
     },
     users: {
       title: 'User Management',
@@ -134,8 +139,12 @@ const translations = {
       email: 'Email Address',
       role: 'Role',
       actions: 'Actions',
+      add: 'Add User',
       addBtn: 'Add User',
-      deleteConfirm: 'Are you sure you want to delete user {email}?'
+      deleteConfirm: 'Are you sure you want to delete user {email}?',
+      noUsers: 'No Users Registered',
+      noUsersDesc: 'Manage your organizational users and permissions here.',
+      adminRequired: 'Only administrators can access user management settings.'
     },
     auth: {
       loginTitle: 'Sign In to peerSight',
@@ -279,7 +288,12 @@ const translations = {
       hostNode: 'Thiết bị Node',
       actionType: 'Loại hành động',
       targetPayload: 'Nội dung thay đổi',
-      executedAt: 'Thời điểm thực thi'
+      executedAt: 'Thời điểm thực thi',
+      profile: {
+        role: 'Vai trò',
+        password: 'Mật khẩu',
+        confirmPassword: 'Xác nhận mật khẩu'
+      }
     },
     users: {
       title: 'Quản lý người dùng',
@@ -287,8 +301,12 @@ const translations = {
       email: 'Địa chỉ Email',
       role: 'Vai trò',
       actions: 'Thao tác',
+      add: 'Thêm người dùng',
       addBtn: 'Thêm người dùng',
-      deleteConfirm: 'Bạn có chắc chắn muốn xóa tài khoản {email}?'
+      deleteConfirm: 'Bạn có chắc chắn muốn xóa tài khoản {email}?',
+      noUsers: 'Chưa có tài khoản nào',
+      noUsersDesc: 'Quản lý tài khoản người dùng và phân quyền tại đây.',
+      adminRequired: 'Chỉ quản trị viên mới được quyền truy cập quản lý người dùng.'
     },
     auth: {
       loginTitle: 'Đăng nhập vào peerSight',

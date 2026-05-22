@@ -236,7 +236,7 @@ With the `PEERSIGHT_HOST_ID` from the Web UI and `AGENT_TOKEN` from the API abov
 cd ~/wireguard-edge-cloud-5g
 
 # Run the installation script using a relative path
-sudo -E PEERSIGHT_API_URL="http://127.0.0.1:4000" \
+sudo -E PEERSIGHT_API_URL="http://10.8.0.1:4000" \
      PEERSIGHT_HOST_ID="<CLOUD_HOST_UUID>" \
      PEERSIGHT_TOKEN="<AGENT_TOKEN>" \
      bash peersight/install-agent.sh

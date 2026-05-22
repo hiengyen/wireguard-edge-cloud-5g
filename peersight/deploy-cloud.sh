@@ -106,7 +106,7 @@ if [[ -z "${PEERSIGHT_HOST_ID:-}" || -z "${PEERSIGHT_TOKEN:-}" ]]; then
     warn "PEERSIGHT_HOST_ID or PEERSIGHT_TOKEN is not set."
     warn "Skipping agent service setup."
     warn "After creating a Host in the Web UI, run:"
-    warn "  sudo -E PEERSIGHT_HOST_ID=<uuid> PEERSIGHT_TOKEN=<jwt> bash ${SCRIPT_DIR}/install-agent.sh"
+    warn "  sudo -E PEERSIGHT_API_URL=\"http://${MONITORING_BIND_ADDRESS}:${PEERSIGHT_API_PORT}\" PEERSIGHT_HOST_ID=<uuid> PEERSIGHT_TOKEN=<jwt> bash ${SCRIPT_DIR}/install-agent.sh"
 else
     info "Installing peersight-agent systemd service..."
     PEERSIGHT_API_URL="http://${MONITORING_BIND_ADDRESS}:${PEERSIGHT_API_PORT}" \
