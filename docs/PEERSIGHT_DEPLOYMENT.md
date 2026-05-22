@@ -232,10 +232,14 @@ This `AGENT_TOKEN` is valid for **10 years** and can be safely stored in `/etc/p
 With the `PEERSIGHT_HOST_ID` from the Web UI and `AGENT_TOKEN` from the API above:
 
 ```bash
+# Navigate to your repository root directory first
+cd ~/wireguard-edge-cloud-5g
+
+# Run the installation script using a relative path
 sudo -E PEERSIGHT_API_URL="http://127.0.0.1:4000" \
      PEERSIGHT_HOST_ID="<CLOUD_HOST_UUID>" \
      PEERSIGHT_TOKEN="<AGENT_TOKEN>" \
-     bash ~/wireguard-edge-cloud-5g/peersight/install-agent.sh
+     bash peersight/install-agent.sh
 ```
 
 Verify the service is running:

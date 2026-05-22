@@ -312,10 +312,12 @@ const copied = ref({ hostId: false, token: false, cmd: false })
 
 const installCmd = computed(() => {
   if (!activeHost.value || !agentToken.value) return ''
-  return `sudo PEERSIGHT_API_URL="http://127.0.0.1:4000" \\
+  const hostName = window.location.hostname
+  const apiHost = hostName === 'localhost' || hostName === '127.0.0.1' ? '127.0.0.1' : hostName
+  return `cd ~/wireguard-edge-cloud-5g && sudo -E PEERSIGHT_API_URL="http://${apiHost}:4000" \\
      PEERSIGHT_HOST_ID="${activeHost.value.id}" \\
      PEERSIGHT_TOKEN="${agentToken.value}" \\
-     ~/wireguard-edge-cloud-5g/peersight/install-agent.sh`
+     bash peersight/install-agent.sh`
 })
 
 function openCreate() {
