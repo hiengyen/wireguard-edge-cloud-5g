@@ -29,7 +29,12 @@ export const useHostStore = defineStore('hosts', () => {
     }
   }
 
-  return { hosts, loading, fetchHosts, createHost }
+  async function generateAgentToken() {
+    const res = await api.post('/admin/agent-tokens')
+    return res.data?.agent_token || null
+  }
+
+  return { hosts, loading, fetchHosts, createHost, generateAgentToken }
 })
 
 export const usePeerStore = defineStore('peers', () => {
