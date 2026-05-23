@@ -163,7 +163,7 @@ func setupRouter(db *repository.DB, cfg *config.Config) *gin.Engine {
 	healthH := &handlers.HealthHandler{DB: db, StartedAt: startedAt}
 	pingH := &handlers.PingHandler{DB: db}
 	hostH := &handlers.HostHandler{DB: db}
-	peerH := &handlers.PeerHandler{DB: db}
+	peerH := &handlers.PeerHandler{DB: db, HandshakeThresholdSeconds: cfg.HandshakeStaleSeconds}
 	alertH := &handlers.AlertHandler{DB: db}
 	queueH := &handlers.QueueHandler{DB: db}
 	sseH := &handlers.SSEHandler{DB: db, JWTSecret: cfg.JWTSecret}

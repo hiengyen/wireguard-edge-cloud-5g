@@ -2,7 +2,9 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -23,6 +25,14 @@ type AlertFilter struct {
 // ChangeFilter scopes desired-change audit queries.
 type ChangeFilter struct {
 	State  string
+	Limit  int
+	Offset int
+}
+
+// PeerFilter scopes peer summary list queries.
+type PeerFilter struct {
+	Status string
+	Query  string
 	Limit  int
 	Offset int
 }
@@ -195,6 +205,107 @@ func (db *DB) ListPeers(ctx context.Context, orgID uuid.UUID) ([]models.Peer, er
 		peers = append(peers, p)
 	}
 	return peers, nil
+}
+
+// ListPeerSummaries returns peers with aggregated endpoint/host state.
+func (db *DB) ListPeerSummaries(ctx context.Context, orgID uuid.UUID, filter PeerFilter, handshakeThresholdSeconds int) ([]models.PeerSummary, error) {
+	if filter.Limit <= 0 || filter.Limit > 500 {
+		filter.Limit = 100
+	}
+	if filter.Offset < 0 {
+		filter.Offset = 0
+	}
+	if handshakeThresholdSeconds <= 0 {
+		handshakeThresholdSeconds = 180
+	}
+
+	where := "WHERE p.org_id = $1"
+	args := []interface{}{orgID, handshakeThresholdSeconds}
+	nextArg := 3
+	if filter.Query != "" {
+		where += fmt.Sprintf(` AND (
+			p.name ILIKE $%d OR
+			p.public_key ILIKE $%d OR
+			EXISTS (
+				SELECT 1 FROM endpoints qe
+				JOIN interfaces qi ON qe.interface_id = qi.id
+				JOIN hosts qh ON qi.host_id = qh.id
+				WHERE qe.peer_id = p.id
+				  AND (qh.name ILIKE $%d OR qe.allowed_ips ILIKE $%d)
+			)
+		)`, nextArg, nextArg, nextArg, nextArg)
+		args = append(args, "%"+filter.Query+"%")
+		nextArg++
+	}
+
+	having := ""
+	switch filter.Status {
+	case "active":
+		having = "HAVING BOOL_OR(COALESCE(ep.available, false) OR ep.last_handshake >= NOW() - ($2 * INTERVAL '1 second'))"
+	case "inactive":
+		having = "HAVING NOT BOOL_OR(COALESCE(ep.available, false) OR ep.last_handshake >= NOW() - ($2 * INTERVAL '1 second'))"
+	}
+
+	args = append(args, filter.Limit, filter.Offset)
+	limitArg := nextArg
+	offsetArg := nextArg + 1
+
+	rows, err := db.Pool.Query(ctx,
+		fmt.Sprintf(`
+			SELECT
+				p.id,
+				p.org_id,
+				p.name,
+				p.public_key,
+				p.created_at,
+				p.updated_at,
+				COALESCE(BOOL_OR(COALESCE(ep.available, false) OR ep.last_handshake >= NOW() - ($2 * INTERVAL '1 second')), false) AS active,
+				COUNT(ep.id)::int AS endpoint_count,
+				COUNT(ep.id) FILTER (WHERE COALESCE(ep.available, false) OR ep.last_handshake >= NOW() - ($2 * INTERVAL '1 second'))::int AS active_endpoint_count,
+				COALESCE(
+					jsonb_agg(jsonb_build_object('id', h.id, 'name', h.name, 'interface_name', i.name)
+						ORDER BY ep.last_handshake DESC NULLS LAST, h.name, i.name)
+						FILTER (WHERE h.id IS NOT NULL),
+					'[]'::jsonb
+				)::text AS related_hosts,
+				COALESCE(
+					array_remove(array_agg(DISTINCT NULLIF(ep.allowed_ips, '')), NULL),
+					ARRAY[]::text[]
+				) AS allowed_ips,
+				MAX(ep.last_handshake) AS last_handshake,
+				COALESCE(SUM(ep.rx_bytes), 0)::bigint AS rx_bytes,
+				COALESCE(SUM(ep.tx_bytes), 0)::bigint AS tx_bytes
+			FROM peers p
+			LEFT JOIN endpoints ep ON ep.peer_id = p.id
+			LEFT JOIN interfaces i ON ep.interface_id = i.id
+			LEFT JOIN hosts h ON i.host_id = h.id
+			%s
+			GROUP BY p.id, p.org_id, p.name, p.public_key, p.created_at, p.updated_at
+			%s
+			ORDER BY active DESC, last_handshake DESC NULLS LAST, p.name
+			LIMIT $%d OFFSET $%d`, where, having, limitArg, offsetArg),
+		args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var peers []models.PeerSummary
+	for rows.Next() {
+		var peer models.PeerSummary
+		var relatedHostsJSON string
+		if err := rows.Scan(&peer.ID, &peer.OrgID, &peer.Name, &peer.PublicKey, &peer.CreatedAt,
+			&peer.UpdatedAt, &peer.Active, &peer.EndpointCount, &peer.ActiveEndpointCount,
+			&relatedHostsJSON, &peer.AllowedIPs, &peer.LastHandshake, &peer.RxBytes, &peer.TxBytes); err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal([]byte(relatedHostsJSON), &peer.RelatedHosts); err != nil {
+			return nil, err
+		}
+		peer.AllowedIPs = normalizeAllowedIPs(peer.AllowedIPs)
+		peers = append(peers, peer)
+	}
+	return peers, rows.Err()
 }
 
 // DeletePeer removes a peer by ID.
@@ -956,6 +1067,22 @@ func uuidPtrString(id *uuid.UUID) string {
 		return ""
 	}
 	return id.String()
+}
+
+func normalizeAllowedIPs(values []string) []string {
+	seen := make(map[string]bool)
+	var result []string
+	for _, value := range values {
+		for _, part := range strings.Split(value, ",") {
+			ip := strings.TrimSpace(part)
+			if ip == "" || seen[ip] {
+				continue
+			}
+			seen[ip] = true
+			result = append(result, ip)
+		}
+	}
+	return result
 }
 
 // IsNoRows reports whether err means no database row was found.

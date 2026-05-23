@@ -58,10 +58,10 @@ export const usePeerStore = defineStore('peers', () => {
   const peers = ref([])
   const loading = ref(false)
 
-  async function fetchPeers() {
+  async function fetchPeers(params = {}) {
     loading.value = true
     try {
-      const res = await api.get('/peers')
+      const res = await api.get('/peers', { params })
       peers.value = res.data.data || []
     } finally {
       loading.value = false

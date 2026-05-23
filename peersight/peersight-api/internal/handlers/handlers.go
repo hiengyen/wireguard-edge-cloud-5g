@@ -638,13 +638,28 @@ func (h *HostHandler) CreateChange(c *gin.Context) {
 
 // PeerHandler handles peer-related API endpoints.
 type PeerHandler struct {
-	DB *repository.DB
+	DB                        *repository.DB
+	HandshakeThresholdSeconds int
 }
 
 // List returns all peers for the org.
 func (h *PeerHandler) List(c *gin.Context) {
 	orgID := getOrgID(c)
-	peers, err := h.DB.ListPeers(c.Request.Context(), orgID)
+	status := c.DefaultQuery("status", "all")
+	if status != "all" && status != "active" && status != "inactive" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "status must be one of: all, active, inactive"})
+		return
+	}
+	threshold := h.HandshakeThresholdSeconds
+	if threshold <= 0 {
+		threshold = 180
+	}
+	peers, err := h.DB.ListPeerSummaries(c.Request.Context(), orgID, repository.PeerFilter{
+		Status: status,
+		Query:  c.Query("q"),
+		Limit:  parseLimit(c, 100, 500),
+		Offset: parseOffset(c),
+	}, threshold)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

@@ -2,10 +2,22 @@
   <div>
     <div class="page-header">
       <h1 class="page-title">{{ t('peers.title') }}</h1>
-      <button class="btn btn-secondary" @click="peerStore.fetchPeers()">
-        <span class="material-symbols-outlined">refresh</span>
-        {{ t('common.refresh') }}
-      </button>
+      <div class="peer-toolbar">
+        <select v-model="statusFilter" class="form-input compact-input">
+          <option value="all">{{ t('peers.allStatuses') }}</option>
+          <option value="active">{{ t('peers.active') }}</option>
+          <option value="inactive">{{ t('peers.inactive') }}</option>
+        </select>
+        <input
+          v-model.trim="searchQuery"
+          class="form-input search-input"
+          placeholder="Search peer, host, IP..."
+        />
+        <button class="btn btn-secondary" @click="fetchPeers">
+          <span class="material-symbols-outlined">refresh</span>
+          {{ t('common.refresh') }}
+        </button>
+      </div>
     </div>
 
     <div v-if="peerStore.loading" style="text-align:center;padding:var(--space-2xl)">
@@ -24,7 +36,11 @@
           <tr>
             <th>{{ t('hosts.hostName') }}</th>
             <th>Public Key</th>
-            <th>{{ t('common.time') }}</th>
+            <th>{{ t('common.status') }}</th>
+            <th>{{ t('peers.relatedHost') }}</th>
+            <th>{{ t('peers.allowedIps') }}</th>
+            <th>{{ t('peers.lastHandshake') }}</th>
+            <th>{{ t('peers.traffic') }}</th>
             <th>{{ t('users.actions') }}</th>
           </tr>
         </thead>
@@ -43,7 +59,36 @@
               </button>
             </td>
             <td style="color:var(--color-text-secondary);font-size:var(--font-size-xs)">
-              {{ formatDate(peer.created_at) }}
+              <span class="badge" :class="peer.active ? 'online' : 'offline'">
+                <span class="badge-dot"></span>
+                {{ peer.active ? t('peers.active') : t('peers.inactive') }}
+              </span>
+            </td>
+            <td>
+              <template v-if="primaryHost(peer)">
+                <router-link :to="`/hosts/${primaryHost(peer).id}`" class="host-chip">
+                  <span class="material-symbols-outlined" style="font-size:15px;color:var(--color-accent)">dns</span>
+                  {{ primaryHost(peer).name }}
+                  <code>{{ primaryHost(peer).interface_name }}</code>
+                </router-link>
+                <span v-if="extraHostCount(peer) > 0" class="more-chip">+{{ extraHostCount(peer) }}</span>
+              </template>
+              <span v-else class="muted">—</span>
+            </td>
+            <td>
+              <div v-if="peer.allowed_ips?.length" class="ip-list">
+                <code v-for="ip in peer.allowed_ips.slice(0, 2)" :key="ip" class="ip-chip">{{ ip }}</code>
+                <span v-if="peer.allowed_ips.length > 2" class="more-chip">+{{ peer.allowed_ips.length - 2 }}</span>
+              </div>
+              <span v-else class="muted">—</span>
+            </td>
+            <td style="color:var(--color-text-secondary);font-size:var(--font-size-xs);white-space:nowrap">
+              {{ formatTime(peer.last_handshake) }}
+            </td>
+            <td style="font-size:var(--font-size-xs);white-space:nowrap">
+              <span style="color:var(--color-success)">↓{{ formatBytes(peer.rx_bytes) }}</span>
+              <span style="color:var(--color-text-muted);margin:0 4px">/</span>
+              <span style="color:var(--color-info)">↑{{ formatBytes(peer.tx_bytes) }}</span>
             </td>
             <td>
               <button class="btn btn-danger" style="font-size:var(--font-size-xs);padding:4px 10px" @click="confirmDelete(peer)">
@@ -74,27 +119,37 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { usePeerStore } from '@/stores/data.js'
 import { useI18n } from '@/utils/i18n.js'
+import { formatBytes, formatTime, truncateKey } from '@/utils/format.js'
 
 const peerStore = usePeerStore()
 const { t } = useI18n()
 const peerToDelete = ref(null)
+const statusFilter = ref('all')
+const searchQuery = ref('')
 
-onMounted(() => peerStore.fetchPeers())
+onMounted(() => fetchPeers())
 
-function truncateKey(key) {
-  if (!key) return '—'
-  return key.substring(0, 12) + '…' + key.substring(key.length - 6)
+watch([statusFilter, searchQuery], () => fetchPeers())
+
+function fetchPeers() {
+  const params = { status: statusFilter.value, limit: 200 }
+  if (searchQuery.value) params.q = searchQuery.value
+  return peerStore.fetchPeers(params)
 }
 
 function copyKey(key) {
   navigator.clipboard.writeText(key)
 }
 
-function formatDate(ts) {
-  return ts ? new Date(ts).toLocaleDateString() : '—'
+function primaryHost(peer) {
+  return peer.related_hosts?.[0] || null
+}
+
+function extraHostCount(peer) {
+  return Math.max((peer.related_hosts?.length || 0) - 1, 0)
 }
 
 function confirmDelete(peer) {
@@ -105,6 +160,7 @@ async function deletePeer() {
   if (peerToDelete.value) {
     await peerStore.deletePeer(peerToDelete.value.id)
     peerToDelete.value = null
+    await fetchPeers()
   }
 }
 </script>
@@ -166,5 +222,65 @@ async function deletePeer() {
 
 .peer-link:hover {
   color: var(--color-accent);
+}
+
+.peer-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.compact-input {
+  width: auto;
+  min-width: 140px;
+  margin: 0;
+}
+
+.search-input {
+  width: 220px;
+  margin: 0;
+}
+
+.host-chip,
+.ip-list {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.host-chip {
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.host-chip:hover {
+  color: var(--color-accent);
+}
+
+.host-chip code,
+.ip-chip {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  background: var(--color-bg-input);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-family: monospace;
+}
+
+.more-chip {
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-text-muted);
+  background: rgba(148, 163, 184, 0.12);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.muted {
+  color: var(--color-text-muted);
 }
 </style>

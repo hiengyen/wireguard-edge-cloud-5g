@@ -78,6 +78,31 @@ type Peer struct {
 	UpdatedAt time.Time `db:"updated_at"  json:"updated_at"`
 }
 
+// PeerRelatedHost describes where a peer appears in the managed topology.
+type PeerRelatedHost struct {
+	ID            uuid.UUID `json:"id"`
+	Name          string    `json:"name"`
+	InterfaceName string    `json:"interface_name"`
+}
+
+// PeerSummary adds operational endpoint state to a WireGuard peer identity.
+type PeerSummary struct {
+	ID                  uuid.UUID         `json:"id"`
+	OrgID               uuid.UUID         `json:"org_id"`
+	Name                string            `json:"name"`
+	PublicKey           string            `json:"public_key"`
+	CreatedAt           time.Time         `json:"created_at"`
+	UpdatedAt           time.Time         `json:"updated_at"`
+	Active              bool              `json:"active"`
+	EndpointCount       int               `json:"endpoint_count"`
+	ActiveEndpointCount int               `json:"active_endpoint_count"`
+	RelatedHosts        []PeerRelatedHost `json:"related_hosts"`
+	AllowedIPs          []string          `json:"allowed_ips"`
+	LastHandshake       *time.Time        `json:"last_handshake,omitempty"`
+	RxBytes             int64             `json:"rx_bytes"`
+	TxBytes             int64             `json:"tx_bytes"`
+}
+
 // Interface represents a wg interface (e.g. wg0) on a Host.
 type Interface struct {
 	ID         uuid.UUID `db:"id"          json:"id"`

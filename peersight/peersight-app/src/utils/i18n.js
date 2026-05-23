@@ -78,7 +78,13 @@ const translations = {
       txFlow: 'Transmitted Data',
       endpointsList: 'Connected Endpoints',
       connectedHost: 'Connected Host',
-      connectedInterface: 'Interface'
+      connectedInterface: 'Interface',
+      active: 'Active',
+      inactive: 'Inactive',
+      relatedHost: 'Related Host',
+      allowedIps: 'Allowed IPs',
+      traffic: 'Traffic',
+      allStatuses: 'All Statuses'
     },
     alerts: {
       title: 'Alerts',
@@ -240,7 +246,13 @@ const translations = {
       txFlow: 'Lưu lượng gửi',
       endpointsList: 'Danh sách cổng đầu cuối kết nối',
       connectedHost: 'Thiết bị kết nối',
-      connectedInterface: 'Cổng Interface'
+      connectedInterface: 'Cổng Interface',
+      active: 'Đang hoạt động',
+      inactive: 'Không hoạt động',
+      relatedHost: 'Host liên quan',
+      allowedIps: 'Allowed IP',
+      traffic: 'Lưu lượng',
+      allStatuses: 'Tất cả trạng thái'
     },
     alerts: {
       title: 'Cảnh báo hệ thống',
