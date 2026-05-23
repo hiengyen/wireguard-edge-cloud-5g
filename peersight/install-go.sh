@@ -13,7 +13,7 @@ set -euo pipefail
 GO_VERSION="${GO_VERSION:-1.23.0}"
 INSTALL_DIR="/usr/local"
 PROFILE_FILE="/etc/profile.d/go.sh"
-BASE_URL="https://go.dev/dl"
+BASE_URL="https://dl.google.com/go"
 
 # ── 1. Root check ──────────────────────────────────────────────
 if [[ $EUID -ne 0 ]]; then
