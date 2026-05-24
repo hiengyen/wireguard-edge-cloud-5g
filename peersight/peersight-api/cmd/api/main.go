@@ -94,6 +94,7 @@ func runOperationalAlertCheck(db *repository.DB, cfg *config.Config) {
 	defer cancel()
 
 	orgID := uuidDefaultOrg()
+	// 1. Check & raise host stale alerts, then auto-resolve recovered hosts
 	staleHosts, err := db.ListStaleHosts(ctx, orgID, cfg.HostStaleSeconds, 100)
 	if err == nil {
 		for _, host := range staleHosts {
@@ -102,7 +103,9 @@ func runOperationalAlertCheck(db *repository.DB, cfg *config.Config) {
 				fmt.Sprintf("Host %s has not pinged within %d seconds", host.Name, cfg.HostStaleSeconds))
 		}
 	}
+	_ = db.AutoResolveHostAlerts(ctx, orgID, cfg.HostStaleSeconds)
 
+	// 2. Check & raise endpoint stale alerts, then auto-resolve recovered endpoints
 	staleEndpoints, err := db.ListStaleEndpoints(ctx, orgID, cfg.HandshakeStaleSeconds, 100)
 	if err == nil {
 		for _, endpoint := range staleEndpoints {
@@ -110,11 +113,17 @@ func runOperationalAlertCheck(db *repository.DB, cfg *config.Config) {
 				fmt.Sprintf("Endpoint %s on host %s has a stale or unavailable WireGuard handshake", endpoint.IP, endpoint.HostName))
 		}
 	}
+	_ = db.AutoResolveEndpointAlerts(ctx, orgID, cfg.HandshakeStaleSeconds)
 
+	// 3. Check & raise broker backlog alert, then auto-resolve if backlog decreases
 	backlog, err := db.QueueBacklog(ctx, orgID)
-	if err == nil && cfg.QueueBacklogThreshold > 0 && backlog >= cfg.QueueBacklogThreshold {
-		createOpenAlertOnce(ctx, db, orgID, nil, "broker_backlog_high", "warning",
-			fmt.Sprintf("Broker queue backlog is %d events", backlog))
+	if err == nil {
+		if cfg.QueueBacklogThreshold > 0 && backlog >= cfg.QueueBacklogThreshold {
+			createOpenAlertOnce(ctx, db, orgID, nil, "broker_backlog_high", "warning",
+				fmt.Sprintf("Broker queue backlog is %d events", backlog))
+		} else {
+			_ = db.ResolveActiveAlertsByType(ctx, orgID, "broker_backlog_high")
+		}
 	}
 }
 

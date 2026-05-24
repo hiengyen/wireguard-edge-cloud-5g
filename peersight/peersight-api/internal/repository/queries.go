@@ -713,7 +713,59 @@ func (db *DB) ResolveAlerts(ctx context.Context, ids []uuid.UUID) error {
 	_, err := db.Pool.Exec(ctx,
 		`UPDATE alerts SET resolved = true WHERE id = ANY($1)`, ids)
 	return err
+
+// AutoResolveHostAlerts automatically resolves 'host_stale' alerts for hosts that have pinged recently.
+func (db *DB) AutoResolveHostAlerts(ctx context.Context, orgID uuid.UUID, thresholdSeconds int) error {
+	if thresholdSeconds <= 0 {
+		thresholdSeconds = 120
+	}
+	_, err := db.Pool.Exec(ctx,
+		`UPDATE alerts
+		    SET resolved = true
+		  WHERE org_id = $1
+		    AND type = 'host_stale'
+		    AND resolved = false
+		    AND host_id IN (
+		        SELECT id FROM hosts
+		         WHERE org_id = $1
+		           AND last_ping IS NOT NULL
+		           AND last_ping >= NOW() - ($2 * INTERVAL '1 second')
+		    )`, orgID, thresholdSeconds)
+	return err
 }
+
+// AutoResolveEndpointAlerts automatically resolves 'endpoint_handshake_stale' alerts for hosts with no stale endpoints.
+func (db *DB) AutoResolveEndpointAlerts(ctx context.Context, orgID uuid.UUID, thresholdSeconds int) error {
+	if thresholdSeconds <= 0 {
+		thresholdSeconds = 180
+	}
+	_, err := db.Pool.Exec(ctx,
+		`UPDATE alerts
+		    SET resolved = true
+		  WHERE org_id = $1
+		    AND type = 'endpoint_handshake_stale'
+		    AND resolved = false
+		    AND host_id IS NOT NULL
+		    AND NOT EXISTS (
+		        SELECT 1 FROM endpoints e
+		          JOIN interfaces i ON e.interface_id = i.id
+		         WHERE i.host_id = alerts.host_id
+		           AND (e.available = false OR e.last_handshake IS NULL OR e.last_handshake < NOW() - ($2 * INTERVAL '1 second'))
+		    )`, orgID, thresholdSeconds)
+	return err
+}
+
+// ResolveActiveAlertsByType resolves all open alerts of a given type.
+func (db *DB) ResolveActiveAlertsByType(ctx context.Context, orgID uuid.UUID, alertType string) error {
+	_, err := db.Pool.Exec(ctx,
+		`UPDATE alerts
+		    SET resolved = true
+		  WHERE org_id = $1
+		    AND type = $2
+		    AND resolved = false`, orgID, alertType)
+	return err
+}
+
 
 // OpenAlertExists checks for an unresolved alert of a given type/host.
 func (db *DB) OpenAlertExists(ctx context.Context, orgID uuid.UUID, hostID *uuid.UUID, alertType string) (bool, error) {
