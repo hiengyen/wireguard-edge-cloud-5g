@@ -713,6 +713,7 @@ func (db *DB) ResolveAlerts(ctx context.Context, ids []uuid.UUID) error {
 	_, err := db.Pool.Exec(ctx,
 		`UPDATE alerts SET resolved = true WHERE id = ANY($1)`, ids)
 	return err
+}
 
 // AutoResolveHostAlerts automatically resolves 'host_stale' alerts for hosts that have pinged recently.
 func (db *DB) AutoResolveHostAlerts(ctx context.Context, orgID uuid.UUID, thresholdSeconds int) error {
