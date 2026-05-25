@@ -305,7 +305,7 @@ function connectSSE() {
     })
 
     eventSource.addEventListener('ping', () => {
-      hostStore.fetchHosts()
+      refresh()
     })
 
     eventSource.onerror = () => {
@@ -316,8 +316,7 @@ function connectSSE() {
   } catch {
     // SSE not available, fallback to polling
     setInterval(() => {
-      alertStore.fetchAlerts()
-      hostStore.fetchHosts()
+      refresh()
     }, 30000)
   }
 }

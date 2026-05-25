@@ -356,7 +356,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '@/plugins/axios.js'
 import { useHostStore } from '@/stores/data.js'
@@ -408,7 +408,18 @@ const tabs = computed(() => [
   { id: 'changes', label: t('hosts.changes'), icon: 'history', count: changes.value.filter(c => c.state === 'pending').length }
 ])
 
-onMounted(() => refreshAll())
+let refreshTimer = null
+
+onMounted(() => {
+  refreshAll()
+  refreshTimer = setInterval(refreshAll, 5000)
+})
+
+onUnmounted(() => {
+  if (refreshTimer) {
+    clearInterval(refreshTimer)
+  }
+})
 
 async function refreshAll() {
   const [hostRes, ifaceRes, epRes, chRes] = await Promise.allSettled([

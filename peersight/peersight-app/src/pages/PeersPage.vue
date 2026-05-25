@@ -119,7 +119,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { usePeerStore } from '@/stores/data.js'
 import { useI18n } from '@/utils/i18n.js'
 import { formatBytes, formatTime, truncateKey } from '@/utils/format.js'
@@ -130,7 +130,18 @@ const peerToDelete = ref(null)
 const statusFilter = ref('all')
 const searchQuery = ref('')
 
-onMounted(() => fetchPeers())
+let refreshTimer = null
+
+onMounted(() => {
+  fetchPeers()
+  refreshTimer = setInterval(fetchPeers, 5000)
+})
+
+onUnmounted(() => {
+  if (refreshTimer) {
+    clearInterval(refreshTimer)
+  }
+})
 
 watch([statusFilter, searchQuery], () => fetchPeers())
 

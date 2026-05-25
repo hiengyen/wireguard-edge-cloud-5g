@@ -959,8 +959,16 @@ func (h *PingHandler) Ping(c *gin.Context) {
 			continue
 		}
 
+		var activePeerIDs []uuid.UUID
+
 		for _, p := range iface.Peers {
 			if p.PublicKey == "" {
+				continue
+			}
+
+			// Prevent recreation if there is a pending remove_peer desired change for this peer
+			hasPendingRemove, err := h.DB.HasPendingRemovePeer(ctx, hostID, p.PublicKey)
+			if err == nil && hasPendingRemove {
 				continue
 			}
 
@@ -987,8 +995,14 @@ func (h *PingHandler) Ping(c *gin.Context) {
 				RxBytes:       p.TransferRx,
 				TxBytes:       p.TransferTx,
 			}
-			_, _ = h.DB.UpsertEndpoint(ctx, ep)
+			_, err = h.DB.UpsertEndpoint(ctx, ep)
+			if err == nil {
+				activePeerIDs = append(activePeerIDs, remotePeer.ID)
+			}
 		}
+
+		// Sync endpoints to delete any peers that were removed directly from the Edge/Cloud
+		_ = h.DB.SyncInterfacePeers(ctx, dbIface.ID, activePeerIDs)
 	}
 
 	// 5. Return pending desired changes

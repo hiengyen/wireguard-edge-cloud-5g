@@ -250,14 +250,25 @@
 </template>
 
 <script setup>
-import { ref, computed, nextTick, onMounted } from 'vue'
+import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import { useHostStore } from '@/stores/data.js'
 import { shortId, isOnline, formatTime } from '@/utils/format.js'
 import { useI18n } from '@/utils/i18n.js'
 
 const hostStore = useHostStore()
 const { t } = useI18n()
-onMounted(() => hostStore.fetchHosts())
+let refreshTimer = null
+
+onMounted(() => {
+  hostStore.fetchHosts()
+  refreshTimer = setInterval(() => hostStore.fetchHosts(), 5000)
+})
+
+onUnmounted(() => {
+  if (refreshTimer) {
+    clearInterval(refreshTimer)
+  }
+})
 
 // ── Inline Edit ─────────────────────────────────
 const editingId = ref(null)

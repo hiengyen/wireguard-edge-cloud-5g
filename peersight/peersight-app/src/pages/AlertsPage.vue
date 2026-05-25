@@ -166,7 +166,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useAlertStore } from '@/stores/data.js'
 import { formatTime, alertClass as levelClass, alertIcon as levelIcon } from '@/utils/format.js'
 import { useI18n } from '@/utils/i18n.js'
@@ -220,7 +220,18 @@ function stopResize() {
   document.body.style.userSelect = ''
 }
 
-onMounted(() => fetchAlertsWithFilters())
+let refreshTimer = null
+
+onMounted(() => {
+  fetchAlertsWithFilters()
+  refreshTimer = setInterval(fetchAlertsWithFilters, 5000)
+})
+
+onUnmounted(() => {
+  if (refreshTimer) {
+    clearInterval(refreshTimer)
+  }
+})
 
 watch([filter, levelFilter, typeFilter], () => {
   fetchAlertsWithFilters()

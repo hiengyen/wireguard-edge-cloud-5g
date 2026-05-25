@@ -1188,3 +1188,42 @@ func normalizeAllowedIPs(values []string) []string {
 func IsNoRows(err error) bool {
 	return err == pgx.ErrNoRows
 }
+
+// HasPendingRemovePeer checks if a pending 'remove_peer' change exists for the given host and peer public key.
+func (db *DB) HasPendingRemovePeer(ctx context.Context, hostID uuid.UUID, publicKey string) (bool, error) {
+	var exists bool
+	err := db.Pool.QueryRow(ctx,
+		`SELECT EXISTS (
+			SELECT 1 FROM desired_changes
+			 WHERE host_id = $1
+			   AND type = 'remove_peer'
+			   AND state = 'pending'
+			   AND payload::jsonb->>'public_key' = $2
+		)`, hostID, publicKey).Scan(&exists)
+	return exists, err
+}
+
+// SyncInterfacePeers deletes endpoints for the given interface that are not in the reported active list.
+// It also removes any peers that no longer have any active endpoints in the DB.
+func (db *DB) SyncInterfacePeers(ctx context.Context, interfaceID uuid.UUID, activePeerIDs []uuid.UUID) error {
+	var err error
+	if len(activePeerIDs) == 0 {
+		_, err = db.Pool.Exec(ctx,
+			`DELETE FROM endpoints WHERE interface_id = $1`, interfaceID)
+	} else {
+		_, err = db.Pool.Exec(ctx,
+			`DELETE FROM endpoints
+			  WHERE interface_id = $1
+			    AND peer_id != ALL($2)`, interfaceID, activePeerIDs)
+	}
+	if err != nil {
+		return err
+	}
+
+	// Delete any peers that have zero endpoints left (orphan peers)
+	_, err = db.Pool.Exec(ctx,
+		`DELETE FROM peers
+		  WHERE id NOT IN (SELECT DISTINCT peer_id FROM endpoints)
+		    AND id NOT IN (SELECT DISTINCT peer_id FROM interfaces)`)
+	return err
+}
