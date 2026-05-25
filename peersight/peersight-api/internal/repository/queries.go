@@ -310,7 +310,53 @@ func (db *DB) ListPeerSummaries(ctx context.Context, orgID uuid.UUID, filter Pee
 
 // DeletePeer removes a peer by ID.
 func (db *DB) DeletePeer(ctx context.Context, id uuid.UUID) error {
-	_, err := db.Pool.Exec(ctx, `DELETE FROM peers WHERE id = $1`, id)
+	// 1. Find all interfaces and hosts where this peer is configured before deleting it
+	rows, err := db.Pool.Query(ctx,
+		`SELECT i.host_id, i.name AS interface_name, p.public_key
+		   FROM endpoints e
+		   JOIN interfaces i ON e.interface_id = i.id
+		   JOIN peers p ON e.peer_id = p.id
+		  WHERE e.peer_id = $1`, id)
+	
+	type peerInterface struct {
+		HostID        uuid.UUID
+		InterfaceName string
+		PublicKey     string
+	}
+	var connections []peerInterface
+
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var conn peerInterface
+			if errScan := rows.Scan(&conn.HostID, &conn.InterfaceName, &conn.PublicKey); errScan == nil {
+				connections = append(connections, conn)
+			}
+		}
+	}
+
+	// 2. Create remove_peer desired changes for each connected host
+	for _, conn := range connections {
+		payloadObj := struct {
+			Interface string `json:"interface"`
+			PublicKey string `json:"public_key"`
+		}{
+			Interface: conn.InterfaceName,
+			PublicKey: conn.PublicKey,
+		}
+		payloadBytes, errMarshal := json.Marshal(payloadObj)
+		if errMarshal == nil {
+			dc := &models.DesiredChange{
+				HostID:  conn.HostID,
+				Type:    "remove_peer",
+				Payload: string(payloadBytes),
+			}
+			_ = db.CreateDesiredChange(ctx, dc)
+		}
+	}
+
+	// 3. Delete the peer from the database (endpoints & interfaces will cascade delete)
+	_, err = db.Pool.Exec(ctx, `DELETE FROM peers WHERE id = $1`, id)
 	return err
 }
 
