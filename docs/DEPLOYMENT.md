@@ -614,3 +614,32 @@ stress-ng --cpu 4 --timeout 60s
 # Spike RAM and Force SWAP (allocate 120% of RAM, respawn if OOM killed, for 300s)
 stress-ng --vm 4 --vm-bytes 120% --vm-keep --oomable --timeout 300s
 ```
+
+---
+
+## 14. Security Verification and Resiliency Auditing
+
+To prove the core security guarantees of the WireGuard VPN overlay (specifically its resistance to Eavesdropping, Man-in-the-Middle (MITM), and Replay attacks), you can run the automated security verification suite on the Edge Node:
+
+```bash
+# Run all automated security scenarios (requires root)
+sudo -E bash shared/scripts/verify-vpn-security.sh
+```
+
+You can also target specific scenarios individually:
+
+* **Eavesdropping Resistance Test**: Captures network packets on the physical underlay interface (e.g. `eth0` or `wwan0`) using `tcpdump` and confirms that all sensitive payloads transmitted over the `wg0` interface are fully encrypted (ChaCha20-Poly1305 high-entropy bytes).
+  ```bash
+  sudo -E bash shared/scripts/verify-vpn-security.sh --eavesdropping
+  ```
+* **MITM & Impersonation Test**: Temporarily overrides the server's public key with a fake rogue key to prove that the client immediately drops all handshakes and silently discards untrusted traffic.
+  ```bash
+  sudo -E bash shared/scripts/verify-vpn-security.sh --mitm
+  ```
+* **Replay Attack Test**: Captures a valid WireGuard Handshake Initiation packet and replays it after a delay to prove that the gateway's TAI64N anti-replay mechanism silently ignores the stale packet and keeps the active session uninterrupted.
+  ```bash
+  sudo -E bash shared/scripts/verify-vpn-security.sh --replay
+  ```
+
+For a comprehensive breakdown of the threat model, cryptography foundations, and manual reproduction steps, see the dedicated [VPN Security Verification Guide](./VPN_SECURITY_VERIFICATION.md).
+

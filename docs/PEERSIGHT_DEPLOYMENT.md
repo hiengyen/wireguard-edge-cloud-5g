@@ -36,7 +36,7 @@ PeerSight replaces older Python and Elixir-based monitoring stacks (like Procust
 | Module | Language | Runtime | Description |
 |---|---|---|---|
 | `peersight-api` | Go (Gin) | Docker Container | Central REST API — manages DB, authenticates agents, registers hosts, and queues alerts. |
-| `peersight-app` | Vue.js 3 | Docker Container | Admin dashboard for configuring peers, visualizing host statuses, and managing alerts. |
+| `peersight-app` | Vue.js 3 | Docker Container | Modern admin dashboard with an **Obsidian-style interactive topology graph**, configuring peers, visualizing host statuses, and managing alerts. |
 | `peersight-agent` | Go | Systemd Daemon | Runs on both Cloud and Edge nodes. Periodically polls the API for desired peer configurations and runs kernel sync commands. |
 | `peersight-broker` | Go | Docker Container | SIEM Bridge daemon. Polls alert events from the API and pipes them to local logs `/var/log/peersight/events.jsonl` (scraped by Alloy/Loki). |
 
@@ -83,7 +83,7 @@ peersight/
 | **Docker Image Size** | ~150 MB (Python runtime) | **~15 MB (Alpine)** |
 | **Agent Memory Footprint**| ~30–50 MB | **~5–10 MB** (Highly Optimized) |
 | **Cross-Compile** | Complex (Python C dependencies) | **`GOOS=linux GOARCH=arm64 go build`** |
-| **Admin UI** | Vue 3 (Oruga/Bulma) | **Vue 3 (Custom Sleek Dark Mode)** |
+| **Admin UI** | Vue 3 (Oruga/Bulma) | **Vue 3 (Custom Sleek Dark Mode & Obsidian-style Interactive Graph View)** |
 
 ---
 

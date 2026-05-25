@@ -325,3 +325,22 @@ sudo journalctl -u alloy -f
 sudo wg show
 ip addr
 ```
+
+## VPN Security Verification
+
+Run automated security validation tests on the Edge node:
+
+```bash
+# Run the complete verification suite (Eavesdropping, MITM, Replay)
+sudo -E bash shared/scripts/verify-vpn-security.sh
+
+# Run only packet sniffing / encryption verification
+sudo -E bash shared/scripts/verify-vpn-security.sh --eavesdropping
+
+# Run only man-in-the-middle / gateway impersonation test
+sudo -E bash shared/scripts/verify-vpn-security.sh --mitm
+
+# Run only TAI64N anti-replay protection test
+sudo -E bash shared/scripts/verify-vpn-security.sh --replay
+```
+

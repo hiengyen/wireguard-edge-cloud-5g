@@ -61,7 +61,8 @@ wireguard-edge-cloud-5g/
 │   ├── DEPLOYMENT.md         # End-to-end rollout guide
 │   ├── PEERSIGHT_DEPLOYMENT.md # PeerSight installation and orchestration guide
 │   ├── COMMANDS.md           # Common command reference
-│   └── BENCHMARK.md          # Benchmark suite usage and interpretation guide
+│   ├── BENCHMARK.md          # Benchmark suite usage and interpretation guide
+│   └── VPN_SECURITY_VERIFICATION.md # VPN cryptographic & attack resilience validation guide
 ├── benchmark/                # Automated test and benchmark suite
 │   ├── run_all.sh            # Master runner — executes all suites and prints a combined report
 │   ├── config.sh             # Shared configuration, thresholds, and helper functions
@@ -88,11 +89,12 @@ wireguard-edge-cloud-5g/
 └── shared/                   # Cross-platform utilities
     └── scripts/
         ├── hardening.sh      # Distro-aware SSH/Firewall/Fail2Ban hardening
-        └── install-node-exporter.sh # Prometheus metrics agent installation
+        ├── install-node-exporter.sh # Prometheus metrics agent installation
+        └── verify-vpn-security.sh # Automates Eavesdropping, MITM, and Replay security tests
 ├── peersight/                # WireGuard Monitoring & Orchestration (PeerSight)
 │   ├── docker-compose.yml    # PostgreSQL + API + App UI + Broker
 │   ├── peersight-api/        # Go REST API (Gin + pgx + JWT)
-│   ├── peersight-app/        # Vue.js 3 Admin Dashboard
+│   ├── peersight-app/        # Vue.js 3 Admin Dashboard (Sleek Obsidian Graph)
 │   ├── peersight-agent/      # Go daemon — syncs WireGuard state
 │   ├── peersight-broker/     # Go daemon — SIEM bridge (alerts → Loki)
 │   └── README.md             # Pointer to central PEERSIGHT_DEPLOYMENT.md
@@ -105,6 +107,8 @@ wireguard-edge-cloud-5g/
 - **Multi-Peer Addressing:** The server owns `10.8.0.1/24`, while each edge peer gets a unique `/32` address such as `10.8.0.2/32`.
 - **Infrastructure as Code (IaC):** Cloud environments are 100% automated using Terraform.
 - **Observability:** Prometheus pulls metrics, Alloy forwards edge journald logs to Loki, and Grafana provisions Prometheus/Loki data sources from YAML.
+- **Interactive Topology Graph:** Premium Obsidian-inspired real-time graph visualization inside the PeerSight dashboard to monitor overlay node connectivity.
+- **Security Resilience Verification:** Automated suite (`verify-vpn-security.sh`) validating WireGuard immunity against packet sniffing (Eavesdropping), MITM, and Handshake/Data Replays.
 - **Hardening:** Best-practice security including OS-aware firewalling (`ufw` on Armbian/Debian, `firewalld` on Amazon Linux 2023), Fail2Ban, and key-only SSH.
 
 ## ⚙️ Environment File
@@ -388,7 +392,8 @@ wireguard-edge-cloud-5g/
 │   ├── DEPLOYMENT.md         # Hướng dẫn triển khai đầy đủ
 │   ├── PEERSIGHT_DEPLOYMENT.md # Hướng dẫn cài đặt và sử dụng PeerSight
 │   ├── COMMANDS.md           # Tổng hợp lệnh hay dùng
-│   └── BENCHMARK.md          # Hướng dẫn sử dụng và đọc kết quả benchmark
+│   ├── BENCHMARK.md          # Hướng dẫn sử dụng và đọc kết quả benchmark
+│   └── VPN_SECURITY_VERIFICATION.md # Hướng dẫn kịch bản kiểm thử bảo mật VPN (Chống nghe lén, MITM, Replay)
 ├── benchmark/                # Bộ kiểm thử và đo hiệu năng tự động
 │   ├── run_all.sh            # Runner tổng — chạy toàn bộ suite và in báo cáo tổng hợp
 │   ├── config.sh             # Cấu hình chung, ngưỡng chấp nhận và hàm tiện ích
@@ -415,11 +420,12 @@ wireguard-edge-cloud-5g/
 └── shared/                   # Các thư viện dùng chung cho cả Cloud và Edge
     └── scripts/
         ├── hardening.sh      # Hardening SSH/Firewall/Fail2Ban theo từng distro
-        └── install-node-exporter.sh # Cài Agent theo dõi sức khoẻ phần cứng
+        ├── install-node-exporter.sh # Cài Agent theo dõi sức khoẻ phần cứng
+        └── verify-vpn-security.sh # Tự động hóa kiểm thử bảo mật VPN (Nghe lén, MITM, Replay)
 ├── peersight/                # WireGuard Monitoring & Orchestration (PeerSight)
 │   ├── docker-compose.yml    # PostgreSQL + API + App UI + Broker
 │   ├── peersight-api/        # Go REST API (Gin + pgx + JWT)
-│   ├── peersight-app/        # Vue.js 3 Admin Dashboard
+│   ├── peersight-app/        # Vue.js 3 Admin Dashboard (Sơ đồ tương tác Obsidian)
 │   ├── peersight-agent/      # Go daemon — syncs WireGuard state
 │   ├── peersight-broker/     # Go daemon — SIEM bridge (alerts → Loki)
 │   └── README.md             # Con trỏ dẫn đến PEERSIGHT_DEPLOYMENT.md trung tâm
@@ -432,6 +438,8 @@ wireguard-edge-cloud-5g/
 - **Mô Hình Multi-Peer:** Server dùng `10.8.0.1/24`, còn mỗi edge peer nhận một IP `/32` riêng như `10.8.0.2/32`.
 - **Hạ tầng dưới dạng Mã (IaC):** Server rỗng được khởi tạo và cài cắm 100% tự động qua môi trường Terraform.
 - **Khả năng Quan sát (Observability):** Prometheus thu metrics, Alloy đẩy journald log từ edge về Loki, và Grafana tự provision datasource Prometheus/Loki bằng YAML.
+- **Sơ đồ Topo tương tác kiểu Obsidian:** Giao diện trực quan hóa thời gian thực cực kỳ hiện đại trong dashboard PeerSight để theo dõi trạng thái kết nối các node.
+- **Bộ Kiểm Thử Độ Bền Bảo Mật (Resilience Verification):** Tự động hóa kiểm thử (`verify-vpn-security.sh`) chứng minh khả năng chống lại Nghe lén (Packet Sniffing), MITM và Tấn công Phát lại (Handshake/Data Replays) thông qua các kịch bản thực tế.
 - **Bảo Mật (Hardening):** Áp dụng hardening theo môi trường đích: `ufw` cho Armbian/Debian ở Edge, `firewalld` cho Amazon Linux 2023 ở Cloud, kết hợp Fail2Ban và chỉ cho phép SSH bằng khoá.
 
 ## ⚙️ File Môi Trường
