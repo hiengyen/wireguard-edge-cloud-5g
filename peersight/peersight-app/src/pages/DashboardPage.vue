@@ -84,26 +84,64 @@
 
     <!-- Topology Map -->
     <div class="card" style="margin-bottom: var(--space-xl)">
-      <div class="card-header border-b">
+      <div class="card-header border-b" style="display:flex;justify-content:space-between;align-items:center">
         <h2 class="card-title" style="display:flex;align-items:center;gap:8px">
           <span class="material-symbols-outlined" style="color:var(--color-accent)">hub</span>
           {{ t('dashboard.topologyMap') }}
         </h2>
+        
+        <!-- Floating graph control button -->
+        <button class="btn btn-secondary" @click="showControls = !showControls" style="display:flex;align-items:center;gap:4px;font-size:12px;padding:4px 10px;height:auto">
+          <span class="material-symbols-outlined" style="font-size:16px">tune</span>
+          Graph Controls
+        </button>
       </div>
       <div class="card-body topology-card-body">
+        <!-- Floating Obsidian Graph Controls -->
+        <div v-if="showControls" class="graph-controls-panel">
+          <div class="controls-header">
+            <h4>Graph Physics</h4>
+            <button class="icon-btn-close" @click="showControls = false">
+              <span class="material-symbols-outlined" style="font-size:14px">close</span>
+            </button>
+          </div>
+          <div class="control-group">
+            <div class="label-row">
+              <span>Repulsion</span>
+              <code>{{ graphRepulsion }}</code>
+            </div>
+            <input type="range" min="1000" max="15000" step="500" v-model.number="graphRepulsion" />
+          </div>
+          <div class="control-group">
+            <div class="label-row">
+              <span>Link Distance</span>
+              <code>{{ graphLinkDist }}px</code>
+            </div>
+            <input type="range" min="50" max="250" step="10" v-model.number="graphLinkDist" />
+          </div>
+          <div class="control-group">
+            <div class="label-row">
+              <span>Gravity</span>
+              <code>{{ graphGravity }}</code>
+            </div>
+            <input type="range" min="0.001" max="0.05" step="0.001" v-model.number="graphGravity" />
+          </div>
+        </div>
+
         <div class="topology-container">
           <svg class="topo-svg" :viewBox="isMobile ? '0 0 400 500' : '0 0 800 400'">
             <!-- Connection Lines -->
-            <g v-for="node in hostNodes" :key="'line-' + node.id">
+            <g v-for="node in nodesList" :key="'line-' + node.id">
               <path
+                v-if="!node.isHub"
                 :d="getConnectionPath(node)"
-                :class="['connection-line', isOnline(node) ? 'active' : 'inactive']"
+                :class="['connection-line', node.status === 'online' ? 'active' : 'inactive']"
               />
               <!-- Animated glowing flow indicator -->
               <circle
-                v-if="isOnline(node)"
-                r="5"
-                fill="var(--color-accent, #5865f2)"
+                v-if="!node.isHub && node.status === 'online'"
+                r="3"
+                fill="#818cf8"
                 class="flow-particle"
               >
                 <animateMotion
@@ -114,35 +152,53 @@
               </circle>
             </g>
 
-            <!-- Central Hub -->
-            <g :transform="`translate(${isMobile ? 200 : 400}, ${isMobile ? 250 : 200})`" class="topo-node central-hub">
-              <circle r="40" fill="rgba(88, 101, 242, 0.12)" stroke="var(--color-accent)" stroke-width="2" />
-              <circle r="30" fill="rgba(88, 101, 242, 0.25)" />
-              <text class="material-symbols-outlined" font-size="34" text-anchor="middle" y="11" fill="var(--color-accent)">
+            <!-- Central Hub (Cloud Gateway) -->
+            <g
+              v-if="hubNode"
+              :transform="`translate(${hubNode.x}, ${hubNode.y})`"
+              class="topo-node central-hub"
+              @mousedown="startDrag($event, hubNode)"
+              @touchstart.passive="startDrag($event, hubNode)"
+            >
+              <circle r="36" fill="rgba(99, 102, 241, 0.15)" stroke="var(--color-accent)" stroke-width="1.5" class="outer-glow" />
+              <circle r="20" fill="var(--color-accent)" />
+              <text class="material-symbols-outlined" font-size="22" text-anchor="middle" y="7" fill="#ffffff">
                 cloud
               </text>
-              <text y="58" text-anchor="middle" fill="var(--color-text)" font-size="12" font-weight="700">{{ t('dashboard.nodeHub') }}</text>
+              <text y="50" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700">{{ hubNode.name }}</text>
             </g>
 
-            <!-- Edge Nodes -->
+            <!-- Edge Nodes (Obsidian Sleek Dot Style) -->
             <g
-              v-for="node in hostNodes"
+              v-for="node in edgeNodesOnly"
               :key="'node-' + node.id"
               :transform="`translate(${node.x}, ${node.y})`"
               class="topo-node edge-node"
-              @click="$router.push(`/hosts/${node.id}`)"
+              @mousedown="startDrag($event, node)"
+              @touchstart.passive="startDrag($event, node)"
+              @dblclick="$router.push(`/hosts/${node.id}`)"
             >
-              <circle r="28" :fill="isOnline(node) ? 'rgba(52, 211, 153, 0.1)' : 'rgba(239, 68, 68, 0.1)'" :stroke="isOnline(node) ? '#34d399' : '#f87171'" stroke-width="1.5" />
-              <circle r="20" :fill="isOnline(node) ? 'rgba(52, 211, 153, 0.2)' : 'rgba(239, 68, 68, 0.2)'" />
-              <text class="material-symbols-outlined" font-size="20" text-anchor="middle" y="7" :fill="isOnline(node) ? '#34d399' : '#f87171'">
-                router
-              </text>
-              <text y="46" text-anchor="middle" fill="var(--color-text-secondary)" font-size="11" font-weight="600">
+              <!-- Glowing outer ring -->
+              <circle
+                r="18"
+                :fill="node.status === 'online' ? 'rgba(52, 211, 153, 0.15)' : 'rgba(239, 68, 68, 0.15)'"
+                :stroke="node.status === 'online' ? 'rgba(52, 211, 153, 0.3)' : 'rgba(239, 68, 68, 0.3)'"
+                stroke-width="1"
+                class="outer-ring"
+              />
+              <!-- Solid core dot -->
+              <circle
+                r="6"
+                :fill="node.status === 'online' ? '#34d399' : '#f87171'"
+                class="core-dot"
+              />
+              <!-- Node Label -->
+              <text
+                y="30"
+                text-anchor="middle"
+                class="node-label"
+              >
                 {{ node.name }}
-              </text>
-              <rect x="-26" y="-44" width="52" height="14" rx="4" :fill="isOnline(node) ? 'rgba(52,211,153,0.1)' : 'rgba(239,68,68,0.1)'" />
-              <text y="-34" text-anchor="middle" :fill="isOnline(node) ? '#34d399' : '#f87171'" font-size="8" font-weight="700">
-                {{ isOnline(node) ? 'ONLINE' : 'OFFLINE' }}
               </text>
             </g>
           </svg>
@@ -321,11 +377,202 @@ function connectSSE() {
   }
 }
 
+// Graph View States & Configuration (Obsidian Style)
+const showControls = ref(false)
+const graphGravity = ref(0.01)
+const graphRepulsion = ref(8000)
+const graphLinkDist = ref(120)
+
+const nodesList = ref([])
+let physicsFrameId = null
+const draggedNode = ref(null)
+
+const edgeNodesOnly = computed(() => nodesList.value.filter(n => !n.isHub))
+const hubNode = computed(() => nodesList.value.find(n => n.isHub) || null)
+
+function initOrUpdateNodes() {
+  const hosts = hostStore.hosts
+  const width = isMobile.value ? 400 : 800
+  const height = isMobile.value ? 500 : 400
+  const centerX = width / 2
+  const centerY = height / 2
+
+  let hub = nodesList.value.find(n => n.isHub)
+  if (!hub) {
+    hub = {
+      id: 'hub',
+      name: 'VPN Cloud HUB',
+      isHub: true,
+      x: centerX,
+      y: centerY,
+      vx: 0,
+      vy: 0,
+      isDragging: false,
+      status: 'online'
+    }
+  } else {
+    if (!hub.isDragging) {
+      hub.x = centerX
+      hub.y = centerY
+    }
+  }
+
+  const newNodes = [hub]
+
+  hosts.forEach(h => {
+    let existing = nodesList.value.find(n => n.id === h.id)
+    if (!existing) {
+      const angle = Math.random() * Math.PI * 2
+      const radius = 100 + Math.random() * 50
+      existing = {
+        id: h.id,
+        name: h.name,
+        isHub: false,
+        x: centerX + Math.cos(angle) * radius,
+        y: centerY + Math.sin(angle) * radius,
+        vx: 0,
+        vy: 0,
+        isDragging: false,
+        status: isOnline(h) ? 'online' : 'offline',
+        agent_version: h.agent_version || h.agent_ver || ''
+      }
+    } else {
+      existing.status = isOnline(h) ? 'online' : 'offline'
+      existing.agent_version = h.agent_version || h.agent_ver || ''
+    }
+    newNodes.push(existing)
+  })
+
+  nodesList.value = newNodes
+}
+
+function updatePhysics() {
+  const width = isMobile.value ? 400 : 800
+  const height = isMobile.value ? 500 : 400
+  const centerX = width / 2
+  const centerY = height / 2
+
+  const k = 0.05
+  const restLength = graphLinkDist.value
+  const repulsion = graphRepulsion.value
+  const centerGravity = graphGravity.value
+  const damping = 0.85
+
+  for (let i = 0; i < nodesList.value.length; i++) {
+    const nodeA = nodesList.value[i]
+    if (nodeA.isDragging) continue
+
+    const dxCenter = centerX - nodeA.x
+    const dyCenter = centerY - nodeA.y
+    nodeA.vx += dxCenter * centerGravity
+    nodeA.vy += dyCenter * centerGravity
+
+    for (let j = 0; j < nodesList.value.length; j++) {
+      if (i === j) continue
+      const nodeB = nodesList.value[j]
+
+      const dx = nodeA.x - nodeB.x
+      const dy = nodeA.y - nodeB.y
+      const distSq = dx * dx + dy * dy + 0.1
+      const dist = Math.sqrt(distSq)
+
+      if (dist < 300) {
+        const force = repulsion / distSq
+        nodeA.vx += (dx / dist) * force
+        nodeA.vy += (dy / dist) * force
+      }
+    }
+  }
+
+  const hub = nodesList.value.find(n => n.isHub)
+  if (hub) {
+    nodesList.value.forEach(node => {
+      if (node.isHub || node.isDragging) return
+      
+      const dx = hub.x - node.x
+      const dy = hub.y - node.y
+      const dist = Math.sqrt(dx * dx + dy * dy) + 0.1
+      
+      const force = k * (dist - restLength)
+      node.vx += (dx / dist) * force
+      node.vy += (dy / dist) * force
+    })
+  }
+
+  nodesList.value.forEach(node => {
+    if (node.isDragging) {
+      node.vx = 0
+      node.vy = 0
+      return
+    }
+
+    node.x += node.vx
+    node.y += node.vy
+
+    node.vx *= damping
+    node.vy *= damping
+
+    const padding = 40
+    if (node.x < padding) { node.x = padding; node.vx *= -0.5; }
+    if (node.x > width - padding) { node.x = width - padding; node.vx *= -0.5; }
+    if (node.y < padding) { node.y = padding; node.vy *= -0.5; }
+    if (node.y > height - padding) { node.y = height - padding; node.vy *= -0.5; }
+  })
+
+  physicsFrameId = requestAnimationFrame(updatePhysics)
+}
+
+function startDrag(event, node) {
+  draggedNode.value = node
+  node.isDragging = true
+
+  const svg = document.querySelector('.topo-svg')
+  if (!svg) return
+  const rect = svg.getBoundingClientRect()
+
+  const handleMove = (e) => {
+    if (!draggedNode.value) return
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY
+    
+    const scaleX = (isMobile.value ? 400 : 800) / rect.width
+    const scaleY = (isMobile.value ? 500 : 400) / rect.height
+    
+    draggedNode.value.x = (clientX - rect.left) * scaleX
+    draggedNode.value.y = (clientY - rect.top) * scaleY
+  }
+
+  const handleEnd = () => {
+    if (draggedNode.value) {
+      draggedNode.value.isDragging = false
+      draggedNode.value = null
+    }
+    document.removeEventListener('mousemove', handleMove)
+    document.removeEventListener('mouseup', handleEnd)
+    document.removeEventListener('touchmove', handleMove)
+    document.removeEventListener('touchend', handleEnd)
+  }
+
+  document.addEventListener('mousemove', handleMove)
+  document.addEventListener('mouseup', handleEnd)
+  document.addEventListener('touchmove', handleMove, { passive: false })
+  document.addEventListener('touchend', handleEnd)
+}
+
+function getConnectionPath(node) {
+  const hub = nodesList.value.find(n => n.isHub)
+  if (!hub) return ''
+  return `M ${node.x} ${node.y} L ${hub.x} ${hub.y}`
+}
+
 onMounted(() => {
   refresh()
   connectSSE()
   handleResize()
   window.addEventListener('resize', handleResize)
+  
+  initOrUpdateNodes()
+  physicsFrameId = requestAnimationFrame(updatePhysics)
 })
 
 onUnmounted(() => {
@@ -333,6 +580,10 @@ onUnmounted(() => {
   statusChart?.destroy()
   alertChart?.destroy()
   window.removeEventListener('resize', handleResize)
+  
+  if (physicsFrameId) {
+    cancelAnimationFrame(physicsFrameId)
+  }
 })
 
 const totalRx = ref(0)
@@ -369,6 +620,7 @@ async function fetchBandwidthStats() {
 }
 
 watch(() => hostStore.hosts, () => {
+  initOrUpdateNodes()
   fetchBandwidthStats()
 }, { deep: true })
 
@@ -379,6 +631,7 @@ async function refresh() {
     alertStore.fetchAlerts()
   ])
   await fetchBandwidthStats()
+  initOrUpdateNodes()
 }
 
 const recentHosts = computed(() => hostStore.hosts.slice(0, 5))
@@ -391,57 +644,6 @@ const onlineHosts = computed(() =>
 const unresolvedAlerts = computed(() =>
   alertStore.alerts.filter(a => !a.resolved).length
 )
-
-const hostNodes = computed(() => {
-  const hosts = hostStore.hosts
-  const count = hosts.length
-  if (count === 0) return []
-
-  const hx = isMobile.value ? 200 : 400
-  const hy = isMobile.value ? 250 : 200
-  const rx = isMobile.value ? 120 : 260
-  const ry = isMobile.value ? 175 : 130 // Vertical ellipse on mobile, horizontal ellipse on desktop!
-
-  return hosts.map((h, i) => {
-    let angle
-    if (isMobile.value) {
-      if (count === 1) {
-        angle = -Math.PI / 2 // Top
-      } else if (count === 2) {
-        angle = i === 0 ? -Math.PI / 2 : Math.PI / 2 // Top and Bottom
-      } else {
-        angle = (i * 2 * Math.PI) / count - Math.PI / 2
-      }
-    } else {
-      if (count === 1) {
-        angle = Math.PI // Left
-      } else if (count === 2) {
-        angle = i === 0 ? 0 : Math.PI // Right and Left
-      } else {
-        angle = (i * 2 * Math.PI) / count - Math.PI / 2
-      }
-    }
-
-    const x = hx + rx * Math.cos(angle)
-    const y = hy + ry * Math.sin(angle)
-
-    return {
-      ...h,
-      x,
-      y
-    }
-  })
-})
-
-function getConnectionPath(node) {
-  const hx = isMobile.value ? 200 : 400
-  const hy = isMobile.value ? 250 : 200
-  const cx1 = (node.x + hx) / 2
-  const cy1 = node.y
-  const cx2 = (node.x + hx) / 2
-  const cy2 = hy
-  return `M ${node.x} ${node.y} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${hx} ${hy}`
-}
 
 // Chart rendering
 async function renderCharts() {
@@ -617,25 +819,24 @@ watch(locale, () => {
   to { transform: translateX(100%); opacity: 0; }
 }
 
-.border-b {
-  border-bottom: 1px solid var(--color-border);
-  padding-bottom: var(--space-md);
-  margin-bottom: var(--space-md);
-}
-
 .topology-card-body {
   padding: var(--space-xl);
   display: flex;
   justify-content: center;
   align-items: center;
-  background: #0d0d12;
+  background: #09090b !important; /* Obsidian black background */
+  background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 24px 24px;
   border-radius: var(--radius-lg);
   overflow: hidden;
+  position: relative;
+  min-height: 400px;
 }
 
 @media (max-width: 768px) {
   .topology-card-body {
     padding: var(--space-md);
+    min-height: 500px;
   }
 }
 
@@ -649,53 +850,181 @@ watch(locale, () => {
   width: 100%;
   height: auto;
   display: block;
+  overflow: visible;
 }
 
+/* Connection lines */
 .connection-line {
   fill: none;
-  stroke-width: 1.5;
+  stroke-width: 1px;
   transition: stroke 0.3s, stroke-width 0.3s;
 }
 
 .connection-line.active {
-  stroke: rgba(88, 101, 242, 0.4);
-  stroke-dasharray: 4 4;
-  animation: dash 30s linear infinite;
+  stroke: rgba(99, 102, 241, 0.25); /* Delicate indigo line */
 }
 
 .connection-line.inactive {
-  stroke: rgba(239, 68, 68, 0.2);
-  stroke-dasharray: 6 6;
+  stroke: rgba(239, 68, 68, 0.15); /* Delicate red line */
 }
 
-@keyframes dash {
-  to {
-    stroke-dashoffset: -1000;
+/* Glowing flow packets */
+.flow-particle {
+  filter: drop-shadow(0 0 5px #818cf8);
+}
+
+/* Dynamic Nodes */
+.topo-node {
+  cursor: grab;
+}
+.topo-node:active {
+  cursor: grabbing;
+}
+
+/* Core dot and outer rings */
+.topo-node .outer-ring {
+  transition: r 0.2s, stroke-width 0.2s, fill 0.2s, stroke 0.2s;
+}
+
+.topo-node:hover .outer-ring {
+  r: 22;
+  stroke-width: 1.5px;
+}
+
+.topo-node.central-hub .outer-glow {
+  animation: pulse-glow 3s infinite ease-in-out;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    r: 34;
+    stroke-opacity: 0.3;
+  }
+  50% {
+    r: 39;
+    stroke-opacity: 0.6;
   }
 }
 
-.flow-particle {
-  filter: drop-shadow(0 0 4px var(--color-accent));
+/* Obsidian labels */
+.node-label {
+  fill: #a1a1aa; /* Obsidian zinc-400 */
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  pointer-events: none;
+  transition: fill 0.2s, text-shadow 0.2s;
 }
 
-.topo-node {
+.topo-node:hover .node-label {
+  fill: #ffffff;
+  text-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
+}
+
+/* Floating Obsidian Controls Panel */
+.graph-controls-panel {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 220px;
+  background: rgba(24, 24, 27, 0.85); /* zinc-900 glassmorphism */
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: slideDownIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideDownIn {
+  from {
+    transform: translateY(-8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.controls-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: 6px;
+}
+
+.controls-header h4 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #f4f4f5;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.icon-btn-close {
+  background: transparent;
+  border: none;
+  color: #a1a1aa;
   cursor: pointer;
-  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  padding: 2px;
+  border-radius: 4px;
+  display: flex;
 }
 
-.topo-node:hover {
-  transform: scale(1.08);
+.icon-btn-close:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.06);
 }
 
-.edge-node text.material-symbols-outlined {
-  font-family: 'Material Symbols Outlined';
-  dominant-baseline: middle;
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.central-hub {
-  cursor: default;
+.control-group .label-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
 }
-.central-hub:hover {
-  transform: none;
+
+.control-group .label-row span {
+  color: #a1a1aa;
+}
+
+.control-group .label-row code {
+  color: #818cf8;
+  font-family: monospace;
+}
+
+.control-group input[type="range"] {
+  width: 100%;
+  height: 4px;
+  background: #3f3f46;
+  border-radius: 2px;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.control-group input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #818cf8;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.control-group input[type="range"]::-webkit-slider-thumb:hover {
+  background: #a5b4fc;
+  transform: scale(1.15);
 }
 </style>
