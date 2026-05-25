@@ -90,9 +90,9 @@
           {{ t('dashboard.topologyMap') }}
         </h2>
       </div>
-      <div class="card-body" style="padding:var(--space-xl);display:flex;justify-content:center;align-items:center;background:#0d0d12;border-radius:var(--radius-lg);overflow:hidden">
+      <div class="card-body topology-card-body">
         <div class="topology-container">
-          <svg class="topo-svg" viewBox="0 0 800 400">
+          <svg class="topo-svg" :viewBox="isMobile ? '0 0 400 500' : '0 0 800 400'">
             <!-- Connection Lines -->
             <g v-for="node in hostNodes" :key="'line-' + node.id">
               <path
@@ -102,7 +102,7 @@
               <!-- Animated glowing flow indicator -->
               <circle
                 v-if="isOnline(node)"
-                r="4"
+                r="5"
                 fill="var(--color-accent, #5865f2)"
                 class="flow-particle"
               >
@@ -115,13 +115,13 @@
             </g>
 
             <!-- Central Hub -->
-            <g transform="translate(400, 200)" class="topo-node central-hub">
-              <circle r="36" fill="rgba(88, 101, 242, 0.15)" stroke="var(--color-accent)" stroke-width="2" />
-              <circle r="28" fill="rgba(88, 101, 242, 0.3)" />
-              <text class="material-symbols-outlined" font-size="32" text-anchor="middle" y="10" fill="var(--color-accent)">
+            <g :transform="`translate(${isMobile ? 200 : 400}, ${isMobile ? 250 : 200})`" class="topo-node central-hub">
+              <circle r="40" fill="rgba(88, 101, 242, 0.12)" stroke="var(--color-accent)" stroke-width="2" />
+              <circle r="30" fill="rgba(88, 101, 242, 0.25)" />
+              <text class="material-symbols-outlined" font-size="34" text-anchor="middle" y="11" fill="var(--color-accent)">
                 cloud
               </text>
-              <text y="54" text-anchor="middle" fill="var(--color-text)" font-size="12" font-weight="700">{{ t('dashboard.nodeHub') }}</text>
+              <text y="58" text-anchor="middle" fill="var(--color-text)" font-size="12" font-weight="700">{{ t('dashboard.nodeHub') }}</text>
             </g>
 
             <!-- Edge Nodes -->
@@ -132,16 +132,16 @@
               class="topo-node edge-node"
               @click="$router.push(`/hosts/${node.id}`)"
             >
-              <circle r="24" :fill="isOnline(node) ? 'rgba(52, 211, 153, 0.1)' : 'rgba(239, 68, 68, 0.1)'" :stroke="isOnline(node) ? '#34d399' : '#f87171'" stroke-width="1.5" />
-              <circle r="16" :fill="isOnline(node) ? 'rgba(52, 211, 153, 0.2)' : 'rgba(239, 68, 68, 0.2)'" />
-              <text class="material-symbols-outlined" font-size="18" text-anchor="middle" y="6" :fill="isOnline(node) ? '#34d399' : '#f87171'">
+              <circle r="28" :fill="isOnline(node) ? 'rgba(52, 211, 153, 0.1)' : 'rgba(239, 68, 68, 0.1)'" :stroke="isOnline(node) ? '#34d399' : '#f87171'" stroke-width="1.5" />
+              <circle r="20" :fill="isOnline(node) ? 'rgba(52, 211, 153, 0.2)' : 'rgba(239, 68, 68, 0.2)'" />
+              <text class="material-symbols-outlined" font-size="20" text-anchor="middle" y="7" :fill="isOnline(node) ? '#34d399' : '#f87171'">
                 router
               </text>
-              <text y="42" text-anchor="middle" fill="var(--color-text-secondary)" font-size="11" font-weight="600">
+              <text y="46" text-anchor="middle" fill="var(--color-text-secondary)" font-size="11" font-weight="600">
                 {{ node.name }}
               </text>
-              <rect x="-24" y="-38" width="48" height="14" rx="4" :fill="isOnline(node) ? 'rgba(52,211,153,0.1)' : 'rgba(239,68,68,0.1)'" />
-              <text y="-28" text-anchor="middle" :fill="isOnline(node) ? '#34d399' : '#f87171'" font-size="8" font-weight="700">
+              <rect x="-26" y="-44" width="52" height="14" rx="4" :fill="isOnline(node) ? 'rgba(52,211,153,0.1)' : 'rgba(239,68,68,0.1)'" />
+              <text y="-34" text-anchor="middle" :fill="isOnline(node) ? '#34d399' : '#f87171'" font-size="8" font-weight="700">
                 {{ isOnline(node) ? 'ONLINE' : 'OFFLINE' }}
               </text>
             </g>
@@ -259,6 +259,12 @@ const peerStore = usePeerStore()
 const alertStore = useAlertStore()
 const { locale, t } = useI18n()
 
+// Responsive handling for Topology Map
+const isMobile = ref(false)
+function handleResize() {
+  isMobile.value = window.innerWidth <= 768
+}
+
 // Chart refs
 const statusChartEl = ref(null)
 const alertChartEl = ref(null)
@@ -319,12 +325,15 @@ function connectSSE() {
 onMounted(() => {
   refresh()
   connectSSE()
+  handleResize()
+  window.addEventListener('resize', handleResize)
 })
 
 onUnmounted(() => {
   eventSource?.close()
   statusChart?.destroy()
   alertChart?.destroy()
+  window.removeEventListener('resize', handleResize)
 })
 
 const totalRx = ref(0)
@@ -389,19 +398,33 @@ const hostNodes = computed(() => {
   const count = hosts.length
   if (count === 0) return []
 
+  const hx = isMobile.value ? 200 : 400
+  const hy = isMobile.value ? 250 : 200
+  const rx = isMobile.value ? 120 : 260
+  const ry = isMobile.value ? 175 : 130 // Vertical ellipse on mobile, horizontal ellipse on desktop!
+
   return hosts.map((h, i) => {
     let angle
-    if (count === 1) {
-      angle = Math.PI // Directly to the left
+    if (isMobile.value) {
+      if (count === 1) {
+        angle = -Math.PI / 2 // Top
+      } else if (count === 2) {
+        angle = i === 0 ? -Math.PI / 2 : Math.PI / 2 // Top and Bottom
+      } else {
+        angle = (i * 2 * Math.PI) / count - Math.PI / 2
+      }
     } else {
-      const indexFraction = count > 1 ? i / (count - 1) : 0.5
-      angle = Math.PI * 0.6 + indexFraction * Math.PI * 0.8
+      if (count === 1) {
+        angle = Math.PI // Left
+      } else if (count === 2) {
+        angle = i === 0 ? 0 : Math.PI // Right and Left
+      } else {
+        angle = (i * 2 * Math.PI) / count - Math.PI / 2
+      }
     }
 
-    const rx = 260
-    const ry = 120
-    const x = 400 + rx * Math.cos(angle)
-    const y = 200 + ry * Math.sin(angle)
+    const x = hx + rx * Math.cos(angle)
+    const y = hy + ry * Math.sin(angle)
 
     return {
       ...h,
@@ -412,11 +435,13 @@ const hostNodes = computed(() => {
 })
 
 function getConnectionPath(node) {
-  const cx1 = (node.x + 400) / 2
+  const hx = isMobile.value ? 200 : 400
+  const hy = isMobile.value ? 250 : 200
+  const cx1 = (node.x + hx) / 2
   const cy1 = node.y
-  const cx2 = (node.x + 400) / 2
-  const cy2 = 200
-  return `M ${node.x} ${node.y} C ${cx1} ${cy1}, ${cx2} ${cy2}, 400 200`
+  const cx2 = (node.x + hx) / 2
+  const cy2 = hy
+  return `M ${node.x} ${node.y} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${hx} ${hy}`
 }
 
 // Chart rendering
@@ -597,6 +622,22 @@ watch(locale, () => {
   border-bottom: 1px solid var(--color-border);
   padding-bottom: var(--space-md);
   margin-bottom: var(--space-md);
+}
+
+.topology-card-body {
+  padding: var(--space-xl);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #0d0d12;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .topology-card-body {
+    padding: var(--space-md);
+  }
 }
 
 .topology-container {
