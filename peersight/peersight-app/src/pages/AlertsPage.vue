@@ -220,17 +220,8 @@ function stopResize() {
   document.body.style.userSelect = ''
 }
 
-let refreshTimer = null
-
 onMounted(() => {
   fetchAlertsWithFilters()
-  refreshTimer = setInterval(fetchAlertsWithFilters, 5000)
-})
-
-onUnmounted(() => {
-  if (refreshTimer) {
-    clearInterval(refreshTimer)
-  }
 })
 
 watch([filter, levelFilter, typeFilter], () => {

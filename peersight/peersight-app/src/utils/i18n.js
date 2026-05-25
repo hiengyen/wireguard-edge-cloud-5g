@@ -67,7 +67,11 @@ const translations = {
       installCommand: 'Agent Installation Command',
       installInstructions: 'Copy the command below and run it with superuser permissions on the target host to automatically configure and register the peersight agent:',
       noInterfaces: 'No interfaces configured for this host.',
-      noEndpoints: 'No active WireGuard peer endpoints.'
+      noEndpoints: 'No active WireGuard peer endpoints.',
+      pushChange: 'Push Configuration Change',
+      addPeer: 'Add Peer',
+      removePeer: 'Remove Peer',
+      updateInterface: 'Update Interface'
     },
     peers: {
       title: 'Peers',
@@ -126,6 +130,7 @@ const translations = {
       updatePass: 'Update Password',
       passSuccess: 'Password updated successfully!',
       auditTitle: 'Configuration Audit Logs',
+      auditType: 'Audit Action Type',
       auditEmpty: 'No Logs Recorded',
       auditEmptyDesc: 'Configuration changes pushed to agents will appear here.',
       timestamp: 'Timestamp',
@@ -235,7 +240,11 @@ const translations = {
       installCommand: 'Lệnh cài đặt Agent',
       installInstructions: 'Sao chép lệnh dưới đây và chạy với quyền root (sudo) trên thiết bị Edge/Gateway để tự động thiết lập và đăng ký peersight-agent:',
       noInterfaces: 'Không có interface nào được cấu hình cho thiết bị này.',
-      noEndpoints: 'Không có WireGuard peer endpoint nào đang hoạt động.'
+      noEndpoints: 'Không có WireGuard peer endpoint nào đang hoạt động.',
+      pushChange: 'Đẩy thay đổi cấu hình',
+      addPeer: 'Thêm Peer',
+      removePeer: 'Xóa Peer',
+      updateInterface: 'Cập nhật Interface'
     },
     peers: {
       title: 'Kết nối (Peers)',
@@ -294,6 +303,7 @@ const translations = {
       updatePass: 'Cập nhật mật khẩu',
       passSuccess: 'Đổi mật khẩu thành công!',
       auditTitle: 'Lịch sử cấu hình hệ thống',
+      auditType: 'Loại thao tác',
       auditEmpty: 'Chưa ghi nhận lịch sử',
       auditEmptyDesc: 'Các cấu hình thay đổi đẩy xuống thiết bị agent sẽ xuất hiện ở đây.',
       timestamp: 'Thời gian',

@@ -257,17 +257,8 @@ import { useI18n } from '@/utils/i18n.js'
 
 const hostStore = useHostStore()
 const { t } = useI18n()
-let refreshTimer = null
-
 onMounted(() => {
   hostStore.fetchHosts()
-  refreshTimer = setInterval(() => hostStore.fetchHosts(), 5000)
-})
-
-onUnmounted(() => {
-  if (refreshTimer) {
-    clearInterval(refreshTimer)
-  }
 })
 
 // ── Inline Edit ─────────────────────────────────

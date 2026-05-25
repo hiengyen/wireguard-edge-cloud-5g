@@ -408,17 +408,8 @@ const tabs = computed(() => [
   { id: 'changes', label: t('hosts.changes'), icon: 'history', count: changes.value.filter(c => c.state === 'pending').length }
 ])
 
-let refreshTimer = null
-
 onMounted(() => {
   refreshAll()
-  refreshTimer = setInterval(refreshAll, 5000)
-})
-
-onUnmounted(() => {
-  if (refreshTimer) {
-    clearInterval(refreshTimer)
-  }
 })
 
 async function refreshAll() {

@@ -130,17 +130,8 @@ const peerToDelete = ref(null)
 const statusFilter = ref('all')
 const searchQuery = ref('')
 
-let refreshTimer = null
-
 onMounted(() => {
   fetchPeers()
-  refreshTimer = setInterval(fetchPeers, 5000)
-})
-
-onUnmounted(() => {
-  if (refreshTimer) {
-    clearInterval(refreshTimer)
-  }
 })
 
 watch([statusFilter, searchQuery], () => fetchPeers())
