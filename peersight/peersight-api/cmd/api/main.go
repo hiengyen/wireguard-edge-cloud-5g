@@ -99,8 +99,27 @@ func runOperationalAlertCheck(db *repository.DB, cfg *config.Config) {
 	if err == nil {
 		for _, host := range staleHosts {
 			hostID := host.ID
-			createOpenAlertOnce(ctx, db, orgID, &hostID, "host_stale", "warning",
-				fmt.Sprintf("Host %s has not pinged within %d seconds", host.Name, cfg.HostStaleSeconds))
+			var lastSeenDuration float64
+			if host.LastPing != nil {
+				lastSeenDuration = time.Since(*host.LastPing).Seconds()
+			} else {
+				lastSeenDuration = time.Since(host.CreatedAt).Seconds()
+			}
+
+			// If last ping exceeds 5 * stale threshold, upgrade to critical level
+			if lastSeenDuration >= float64(cfg.HostStaleSeconds*5) {
+				// Auto-resolve warning alert if it exists
+				_ = db.ResolveActiveAlertsByTypeAndHost(ctx, orgID, hostID, "host_stale")
+				
+				createOpenAlertOnce(ctx, db, orgID, &hostID, "host_down_extended", "critical",
+					fmt.Sprintf("Host %s has been OFFLINE for more than %d minutes (CRITICAL)!", host.Name, int(lastSeenDuration/60)))
+			} else {
+				// If a critical alert exists, resolve it
+				_ = db.ResolveActiveAlertsByTypeAndHost(ctx, orgID, hostID, "host_down_extended")
+				
+				createOpenAlertOnce(ctx, db, orgID, &hostID, "host_stale", "warning",
+					fmt.Sprintf("Host %s has not pinged within %d seconds", host.Name, cfg.HostStaleSeconds))
+			}
 		}
 	}
 	_ = db.AutoResolveHostAlerts(ctx, orgID, cfg.HostStaleSeconds)

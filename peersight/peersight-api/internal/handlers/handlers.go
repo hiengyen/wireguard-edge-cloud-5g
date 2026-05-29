@@ -933,6 +933,32 @@ func (h *PingHandler) Ping(c *gin.Context) {
 		return
 	}
 
+	// 3a. Record operational recovery Info alerts or heartbeat Debug logs
+	staleExists, _ := h.DB.OpenAlertExists(ctx, host.OrgID, &hostID, "host_stale")
+	downExists, _ := h.DB.OpenAlertExists(ctx, host.OrgID, &hostID, "host_down_extended")
+	if staleExists || downExists {
+		_ = h.DB.CreateAlert(ctx, &models.Alert{
+			OrgID:    host.OrgID,
+			HostID:   &hostID,
+			Type:     "host_recovered",
+			Level:    "info",
+			Message:  fmt.Sprintf("Host %s reconnected and is fully online.", host.Name),
+			Resolved: true,
+		})
+	}
+
+	// Log a debug level alert when the agent pings with a new version
+	if host.AgentVer != req.AgentVersion {
+		_ = h.DB.CreateAlert(ctx, &models.Alert{
+			OrgID:    host.OrgID,
+			HostID:   &hostID,
+			Type:     "agent_started",
+			Level:    "debug",
+			Message:  fmt.Sprintf("Agent on host %s started/upgraded with version %s", host.Name, req.AgentVersion),
+			Resolved: true,
+		})
+	}
+
 	// 4. Upsert interfaces and endpoints
 	for _, iface := range req.Interfaces {
 		if iface.PublicKey == "" {

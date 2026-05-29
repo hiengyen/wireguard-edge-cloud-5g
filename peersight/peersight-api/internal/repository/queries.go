@@ -761,7 +761,7 @@ func (db *DB) ResolveAlerts(ctx context.Context, ids []uuid.UUID) error {
 	return err
 }
 
-// AutoResolveHostAlerts automatically resolves 'host_stale' alerts for hosts that have pinged recently.
+// AutoResolveHostAlerts automatically resolves 'host_stale' and 'host_down_extended' alerts for hosts that have pinged recently.
 func (db *DB) AutoResolveHostAlerts(ctx context.Context, orgID uuid.UUID, thresholdSeconds int) error {
 	if thresholdSeconds <= 0 {
 		thresholdSeconds = 120
@@ -770,7 +770,7 @@ func (db *DB) AutoResolveHostAlerts(ctx context.Context, orgID uuid.UUID, thresh
 		`UPDATE alerts
 		    SET resolved = true
 		  WHERE org_id = $1
-		    AND type = 'host_stale'
+		    AND type IN ('host_stale', 'host_down_extended')
 		    AND resolved = false
 		    AND host_id IN (
 		        SELECT id FROM hosts
@@ -810,6 +810,18 @@ func (db *DB) ResolveActiveAlertsByType(ctx context.Context, orgID uuid.UUID, al
 		  WHERE org_id = $1
 		    AND type = $2
 		    AND resolved = false`, orgID, alertType)
+	return err
+}
+
+// ResolveActiveAlertsByTypeAndHost resolves all open alerts of a given type for a specific host.
+func (db *DB) ResolveActiveAlertsByTypeAndHost(ctx context.Context, orgID uuid.UUID, hostID uuid.UUID, alertType string) error {
+	_, err := db.Pool.Exec(ctx,
+		`UPDATE alerts
+		    SET resolved = true
+		  WHERE org_id = $1
+		    AND host_id = $2
+		    AND type = $3
+		    AND resolved = false`, orgID, hostID, alertType)
 	return err
 }
 
