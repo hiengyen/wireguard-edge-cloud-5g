@@ -13,6 +13,7 @@
           <option value="critical">Critical</option>
           <option value="warning">Warning</option>
           <option value="info">Info</option>
+          <option value="debug">Debug</option>
         </select>
         <input
           v-model.trim="typeFilter"

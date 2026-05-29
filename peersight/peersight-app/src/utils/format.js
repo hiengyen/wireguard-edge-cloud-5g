@@ -74,8 +74,8 @@ export function truncateKey(key) {
  * @returns {string}
  */
 export function alertClass(level) {
-  const map = { critical: 'offline', warning: 'warning', info: 'online' }
-  return map[level] || 'online'
+  const map = { critical: 'offline', warning: 'warning', info: 'info', debug: 'debug' }
+  return map[level] || 'info'
 }
 
 /**
@@ -84,6 +84,6 @@ export function alertClass(level) {
  * @returns {string}
  */
 export function alertIcon(level) {
-  const map = { critical: 'error', warning: 'warning', info: 'info' }
+  const map = { critical: 'error', warning: 'warning', info: 'info', debug: 'bug_report' }
   return map[level] || 'info'
 }

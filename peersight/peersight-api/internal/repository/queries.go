@@ -259,9 +259,9 @@ func (db *DB) ListPeerSummaries(ctx context.Context, orgID uuid.UUID, filter Pee
 				p.public_key,
 				p.created_at,
 				p.updated_at,
-				COALESCE(BOOL_OR(COALESCE(ep.available, false) OR ep.last_handshake >= NOW() - ($2 * INTERVAL '1 second')), false) AS active,
+				COALESCE(BOOL_OR((COALESCE(ep.available, false) OR ep.last_handshake >= NOW() - ($2 * INTERVAL '1 second')) AND h.last_ping >= NOW() - ($2 * INTERVAL '1 second')), false) AS active,
 				COUNT(ep.id)::int AS endpoint_count,
-				COUNT(ep.id) FILTER (WHERE COALESCE(ep.available, false) OR ep.last_handshake >= NOW() - ($2 * INTERVAL '1 second'))::int AS active_endpoint_count,
+				COUNT(ep.id) FILTER (WHERE (COALESCE(ep.available, false) OR ep.last_handshake >= NOW() - ($2 * INTERVAL '1 second')) AND h.last_ping >= NOW() - ($2 * INTERVAL '1 second'))::int AS active_endpoint_count,
 				COALESCE(
 					jsonb_agg(jsonb_build_object('id', h.id, 'name', h.name, 'interface_name', i.name)
 						ORDER BY ep.last_handshake DESC NULLS LAST, h.name, i.name)
