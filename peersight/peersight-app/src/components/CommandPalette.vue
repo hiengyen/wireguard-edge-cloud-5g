@@ -64,7 +64,7 @@
                 <span class="material-symbols-outlined item-icon peer">key</span>
                 <div class="item-details">
                   <div class="item-title">{{ p.name }}</div>
-                  <code class="item-subtitle truncate">{{ p.public_key }}</code>
+                  <code class="item-subtitle truncate">{{ truncateKey(p.public_key) }}</code>
                 </div>
                 <span class="material-symbols-outlined item-arrow">arrow_forward</span>
               </div>
@@ -100,6 +100,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useHostStore, usePeerStore, useAlertStore } from '@/stores/data.js'
 import { useI18n } from '@/utils/i18n.js'
+import { truncateKey } from '@/utils/format.js'
 
 const router = useRouter()
 const hostStore = useHostStore()

@@ -1,0 +1,60 @@
+# NixOS AI Agent Execution Rules (.cursorrules)
+
+You are running inside a developer environment powered by **NixOS**. Due to NixOS's strict shared-library mapping isolation, standard system binaries often fail with dynamic library linkage errors (e.g., `ImportError: libstdc++.so.6: cannot open shared object file`).
+
+To ensure complete independence and prevent environment breakages, you **MUST ALWAYS** execute development, compilation, plotting, and web-serving commands wrapped inside a **`nix-shell`** container with the exact package requirements.
+
+---
+
+## 1. Core Mandate
+- **NixOS Isolation:** **NEVER** run bare commands like `python3 script.py` or `npm run dev` directly on the host system if they rely on native libraries. **ALWAYS** wrap them inside `nix-shell -p <packages> --run "<command>"`.
+- **Workspace Boundary:** **NEVER** read, write, create, delete, or modify any files or directories located outside the defined project workspace directory (`/home/hiengyen/CODE/wireguard-edge-cloud-5g/`). All command execution paths, output assets, and scripts must remain strictly contained within this workspace boundary to guarantee system security.
+
+---
+
+## 2. Command Reference Guides
+
+### A. Python Plotting, Scripting, and Document Processing (docx/pptx)
+Use `nix-shell` with specific Python packages pre-provisioned:
+```bash
+nix-shell -p python312Packages.matplotlib python312Packages.numpy python312Packages.python-docx --run "python3 script.py"
+```
+
+### B. Mermaid / Diagram Compilation (mermaid-cli)
+Use the Puppeteer-sandboxed Chromium engine inside Nix shell:
+```bash
+nix-shell -p nodePackages.mermaid-cli --run "mmdc -i input.mmd -o output.png -s 3"
+```
+
+### C. Node.js & Frontend Web App Development (Vite/Vue)
+Use `nodejs` or specific node version packages:
+```bash
+nix-shell -p nodejs --run "npm run dev"
+```
+
+### D. Go API Backend (Peersight API development)
+Use the `go` package sandbox:
+```bash
+nix-shell -p go --run "go run cmd/main.go"
+```
+
+### E. Telemetry & Monitoring Tools
+Use package environments for Alloy, Prometheus, or Loki if required:
+```bash
+nix-shell -p grafana-alloy prometheus --run "<command>"
+```
+
+---
+
+## 3. Workspace Hygiene & Cleanups (Dọn dẹp tệp tin cũ)
+- **ALWAYS Delete Temporary Files & Backups:** When modifying or rebuilding compiled documents (like `.docx` or `.pptx`), immediately delete any temporary unpacked workspace directories (e.g., `unpacked_docx/`) and redundant backup files. Do NOT leave unused, temporary intermediate files in the project root.
+- **Idempotent Modifications:** When writing automation scripts to update documents (Word reports, slides), always implement robust cleanups to scan, locate, and **delete** the old versions of images, drawings, captions, or tables before inserting new ones to prevent duplicate components.
+
+---
+
+## 4. Benefits of these Rules
+1. **Prune Redundancy:** Keeps the project workspace extremely clean and uncluttered.
+2. **Isolated & Reproducible:** Keeps the host NixOS configuration 100% clean and pristine.
+3. **Error-Free Execution:** Bypasses any missing shared library wrapper bugs automatically.
+4. **Idempotent Environments:** Ensures any future AI agent or human developer can run the project tools instantly on any NixOS system without manually installing system-wide packages.
+

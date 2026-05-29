@@ -65,7 +65,7 @@ export function shortId(id) {
  */
 export function truncateKey(key) {
   if (!key) return '—'
-  return key.substring(0, 12) + '…' + key.substring(key.length - 6)
+  return key.substring(0, 4) + '***'
 }
 
 /**

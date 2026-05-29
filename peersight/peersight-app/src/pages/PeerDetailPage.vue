@@ -9,7 +9,7 @@
         <div>
           <h1 class="page-title">{{ peer?.name || t('common.loading') }}</h1>
           <div v-if="peer" class="pubkey-wrap">
-            <code class="pubkey">{{ peer.public_key }}</code>
+            <code class="pubkey">{{ truncateKey(peer.public_key) }}</code>
             <button class="copy-btn" @click="copyKey" title="Copy full key">
               <span class="material-symbols-outlined" style="font-size:16px">{{ copied ? 'check' : 'content_copy' }}</span>
             </button>
@@ -121,7 +121,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from '@/plugins/axios.js'
-import { formatTime, formatBytes, formatDate } from '@/utils/format.js'
+import { formatTime, formatBytes, formatDate, truncateKey } from '@/utils/format.js'
 import { useI18n } from '@/utils/i18n.js'
 
 const route = useRoute()
