@@ -30,75 +30,101 @@
       <p>Peers are discovered automatically when an agent reports its WireGuard state.</p>
     </div>
 
-    <div v-else class="card">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>{{ t('hosts.hostName') }}</th>
-            <th>Public Key</th>
-            <th>{{ t('common.status') }}</th>
-            <th>{{ t('peers.relatedHost') }}</th>
-            <th>{{ t('peers.allowedIps') }}</th>
-            <th>{{ t('peers.lastHandshake') }}</th>
-            <th>{{ t('peers.traffic') }}</th>
-            <th>{{ t('users.actions') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="peer in peerStore.peers" :key="peer.id">
-            <td style="font-weight:600">
-              <router-link :to="`/peers/${peer.id}`" class="peer-link">
-                <span class="material-symbols-outlined" style="font-size:18px;color:var(--color-success)">key</span>
-                {{ peer.name }}
-              </router-link>
-            </td>
-            <td>
-              <code class="pubkey">{{ truncateKey(peer.public_key) }}</code>
-              <button class="copy-btn" @click="copyKey(peer.public_key)" title="Copy full key">
-                <span class="material-symbols-outlined" style="font-size:14px">content_copy</span>
-              </button>
-            </td>
-            <td style="color:var(--color-text-secondary);font-size:var(--font-size-xs)">
-              <span class="badge" :class="peer.active ? 'online' : 'offline'">
-                <span class="badge-dot"></span>
-                {{ peer.active ? t('peers.active') : t('peers.inactive') }}
-              </span>
-            </td>
-            <td>
-              <template v-if="primaryHost(peer)">
-                <router-link :to="`/hosts/${primaryHost(peer).id}`" class="host-chip">
-                  <span class="material-symbols-outlined" style="font-size:15px;color:var(--color-accent)">dns</span>
-                  {{ primaryHost(peer).name }}
-                  <code>{{ primaryHost(peer).interface_name }}</code>
+    <div v-else class="card animate-fade" style="padding: 0; overflow: hidden;">
+      <div class="table-responsive">
+        <table class="data-table resizable-table">
+          <thead>
+            <tr>
+              <th :style="{ width: colWidths.name + 'px' }">
+                {{ t('hosts.hostName') }}
+                <div class="resize-handle" :class="{ active: activeResizeCol === 'name' }" @mousedown.stop.prevent="startResize($event, 'name')"></div>
+              </th>
+              <th :style="{ width: colWidths.public_key + 'px' }">
+                Public Key
+                <div class="resize-handle" :class="{ active: activeResizeCol === 'public_key' }" @mousedown.stop.prevent="startResize($event, 'public_key')"></div>
+              </th>
+              <th :style="{ width: colWidths.status + 'px' }">
+                {{ t('common.status') }}
+                <div class="resize-handle" :class="{ active: activeResizeCol === 'status' }" @mousedown.stop.prevent="startResize($event, 'status')"></div>
+              </th>
+              <th :style="{ width: colWidths.related_host + 'px' }">
+                {{ t('peers.relatedHost') }}
+                <div class="resize-handle" :class="{ active: activeResizeCol === 'related_host' }" @mousedown.stop.prevent="startResize($event, 'related_host')"></div>
+              </th>
+              <th :style="{ width: colWidths.allowed_ips + 'px' }">
+                {{ t('peers.allowedIps') }}
+                <div class="resize-handle" :class="{ active: activeResizeCol === 'allowed_ips' }" @mousedown.stop.prevent="startResize($event, 'allowed_ips')"></div>
+              </th>
+              <th :style="{ width: colWidths.last_handshake + 'px' }">
+                {{ t('peers.lastHandshake') }}
+                <div class="resize-handle" :class="{ active: activeResizeCol === 'last_handshake' }" @mousedown.stop.prevent="startResize($event, 'last_handshake')"></div>
+              </th>
+              <th :style="{ width: colWidths.traffic + 'px' }">
+                {{ t('peers.traffic') }}
+                <div class="resize-handle" :class="{ active: activeResizeCol === 'traffic' }" @mousedown.stop.prevent="startResize($event, 'traffic')"></div>
+              </th>
+              <th :style="{ width: colWidths.actions + 'px' }">
+                {{ t('users.actions') }}
+                <div class="resize-handle" :class="{ active: activeResizeCol === 'actions' }" @mousedown.stop.prevent="startResize($event, 'actions')"></div>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="peer in peerStore.peers" :key="peer.id">
+              <td style="font-weight:600">
+                <router-link :to="`/peers/${peer.id}`" class="peer-link">
+                  <span class="material-symbols-outlined" style="font-size:18px;color:var(--color-success)">key</span>
+                  {{ peer.name }}
                 </router-link>
-                <span v-if="extraHostCount(peer) > 0" class="more-chip">+{{ extraHostCount(peer) }}</span>
-              </template>
-              <span v-else class="muted">—</span>
-            </td>
-            <td>
-              <div v-if="peer.allowed_ips?.length" class="ip-list">
-                <code v-for="ip in peer.allowed_ips.slice(0, 2)" :key="ip" class="ip-chip">{{ ip }}</code>
-                <span v-if="peer.allowed_ips.length > 2" class="more-chip">+{{ peer.allowed_ips.length - 2 }}</span>
-              </div>
-              <span v-else class="muted">—</span>
-            </td>
-            <td style="color:var(--color-text-secondary);font-size:var(--font-size-xs);white-space:nowrap">
-              {{ formatTime(peer.last_handshake) }}
-            </td>
-            <td style="font-size:var(--font-size-xs);white-space:nowrap">
-              <span style="color:var(--color-success)">↓{{ formatBytes(peer.rx_bytes) }}</span>
-              <span style="color:var(--color-text-muted);margin:0 4px">/</span>
-              <span style="color:var(--color-info)">↑{{ formatBytes(peer.tx_bytes) }}</span>
-            </td>
-            <td>
-              <button class="btn btn-danger" style="font-size:var(--font-size-xs);padding:4px 10px" @click="confirmDelete(peer)">
-                <span class="material-symbols-outlined" style="font-size:14px">delete</span>
-                {{ t('common.delete') }}
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+              </td>
+              <td>
+                <code class="pubkey">{{ truncateKey(peer.public_key) }}</code>
+                <button class="copy-btn" @click="copyKey(peer.public_key)" title="Copy full key">
+                  <span class="material-symbols-outlined" style="font-size:14px">content_copy</span>
+                </button>
+              </td>
+              <td style="color:var(--color-text-secondary);font-size:var(--font-size-xs)">
+                <span class="badge" :class="peer.active ? 'online' : 'offline'">
+                  <span class="badge-dot"></span>
+                  {{ peer.active ? t('peers.active') : t('peers.inactive') }}
+                </span>
+              </td>
+              <td>
+                <template v-if="primaryHost(peer)">
+                  <router-link :to="`/hosts/${primaryHost(peer).id}`" class="host-chip">
+                    <span class="material-symbols-outlined" style="font-size:15px;color:var(--color-accent)">dns</span>
+                    {{ primaryHost(peer).name }}
+                    <code>{{ primaryHost(peer).interface_name }}</code>
+                  </router-link>
+                  <span v-if="extraHostCount(peer) > 0" class="more-chip">+{{ extraHostCount(peer) }}</span>
+                </template>
+                <span v-else class="muted">—</span>
+              </td>
+              <td>
+                <div v-if="peer.allowed_ips?.length" class="ip-list">
+                  <code v-for="ip in peer.allowed_ips.slice(0, 2)" :key="ip" class="ip-chip">{{ ip }}</code>
+                  <span v-if="peer.allowed_ips.length > 2" class="more-chip">+{{ peer.allowed_ips.length - 2 }}</span>
+                </div>
+                <span v-else class="muted">—</span>
+              </td>
+              <td style="color:var(--color-text-secondary);font-size:var(--font-size-xs);white-space:nowrap">
+                {{ formatTime(peer.last_handshake) }}
+              </td>
+              <td style="font-size:var(--font-size-xs);white-space:nowrap">
+                <span style="color:var(--color-success)">↓{{ formatBytes(peer.rx_bytes) }}</span>
+                <span style="color:var(--color-text-muted);margin:0 4px">/</span>
+                <span style="color:var(--color-info)">↑{{ formatBytes(peer.tx_bytes) }}</span>
+              </td>
+              <td>
+                <button class="btn btn-danger" style="font-size:var(--font-size-xs);padding:4px 10px" @click="confirmDelete(peer)">
+                  <span class="material-symbols-outlined" style="font-size:14px">delete</span>
+                  {{ t('common.delete') }}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <!-- Delete Confirmation Modal -->
@@ -129,6 +155,50 @@ const { t } = useI18n()
 const peerToDelete = ref(null)
 const statusFilter = ref('all')
 const searchQuery = ref('')
+
+// Resizable column widths (like Excel)
+const colWidths = ref({
+  name: 180,
+  public_key: 140,
+  status: 120,
+  related_host: 160,
+  allowed_ips: 160,
+  last_handshake: 140,
+  traffic: 160,
+  actions: 120
+})
+
+const activeResizeCol = ref(null)
+let startX = 0
+let startWidth = 0
+
+function startResize(event, colName) {
+  activeResizeCol.value = colName
+  startX = event.clientX
+  startWidth = colWidths.value[colName]
+  
+  document.addEventListener('mousemove', handleResize)
+  document.addEventListener('mouseup', stopResize)
+  
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+}
+
+function handleResize(event) {
+  if (!activeResizeCol.value) return
+  const diff = event.clientX - startX
+  const newWidth = Math.max(startWidth + diff, 60)
+  colWidths.value[activeResizeCol.value] = newWidth
+}
+
+function stopResize() {
+  activeResizeCol.value = null
+  document.removeEventListener('mousemove', handleResize)
+  document.removeEventListener('mouseup', stopResize)
+  
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+}
 
 onMounted(() => {
   fetchPeers()
@@ -284,5 +354,59 @@ async function deletePeer() {
 
 .muted {
   color: var(--color-text-muted);
+}
+
+/* Resizable columns & responsive styles */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.resizable-table {
+  table-layout: fixed;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.resizable-table th {
+  position: relative;
+  user-select: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resizable-table td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  z-index: 100;
+  border-right: 1px solid var(--color-border, #2a2e42);
+  transition: border-right-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.resize-handle:hover,
+.resize-handle.active {
+  border-right: 2px solid var(--color-accent, #4f6ef7);
+  background-color: rgba(79, 110, 247, 0.15);
+}
+
+.animate-fade {
+  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 </style>

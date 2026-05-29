@@ -22,59 +22,76 @@
       <div class="spinner" style="margin:0 auto"></div>
     </div>
 
-    <div v-else class="card">
-      <div v-if="userStore.users.length === 0" class="empty-state">
+    <div v-else class="card animate-fade" style="padding: 0; overflow: hidden;">
+      <div v-if="userStore.users.length === 0" class="empty-state" style="padding: var(--space-xl)">
         <span class="material-symbols-outlined">group</span>
         <h3>{{ t('users.noUsers') }}</h3>
         <p>{{ t('users.noUsersDesc') }}</p>
       </div>
-      <table v-else class="data-table">
-        <thead>
-          <tr>
-            <th>Email</th>
-            <th>ID</th>
-            <th>{{ t('settings.profile.role') }}</th>
-            <th>{{ t('common.time') }}</th>
-            <th style="text-align:right">{{ t('users.actions') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="user in userStore.users" :key="user.id">
-            <td style="font-weight:600">
-              <div style="display:flex;align-items:center;gap:8px">
-                <span class="material-symbols-outlined" style="font-size:18px;color:var(--color-accent)">person</span>
-                {{ user.email }}
-              </div>
-            </td>
-            <td><code class="mono-id">{{ shortId(user.id) }}</code></td>
-            <td>
-              <select 
-                class="form-input"
-                v-model="user.role" 
-                @change="updateRole(user.id, user.role)"
-                style="padding: 4px 8px; font-size: 13px;"
-                :disabled="user.id === authStore.userId"
-              >
-                <option value="admin">Admin</option>
-                <option value="operator">Operator</option>
-              </select>
-            </td>
-            <td style="color:var(--color-text-secondary);font-size:var(--font-size-xs)">
-              {{ formatTime(user.created_at) }}
-            </td>
-            <td style="text-align:right">
-              <button
-                class="btn btn-secondary" 
-                style="padding:4px 8px;color:var(--color-danger);border-color:rgba(239,68,68,0.2)"
-                @click="deleteUser(user.id)"
-                :disabled="user.id === authStore.userId"
-              >
-                <span class="material-symbols-outlined" style="font-size:16px">delete</span>
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div v-else class="table-responsive">
+        <table class="data-table resizable-table">
+          <thead>
+            <tr>
+              <th :style="{ width: colWidths.email + 'px' }">
+                Email
+                <div class="resize-handle" :class="{ active: activeResizeCol === 'email' }" @mousedown.stop.prevent="startResize($event, 'email')"></div>
+              </th>
+              <th :style="{ width: colWidths.id + 'px' }">
+                ID
+                <div class="resize-handle" :class="{ active: activeResizeCol === 'id' }" @mousedown.stop.prevent="startResize($event, 'id')"></div>
+              </th>
+              <th :style="{ width: colWidths.role + 'px' }">
+                {{ t('settings.profile.role') }}
+                <div class="resize-handle" :class="{ active: activeResizeCol === 'role' }" @mousedown.stop.prevent="startResize($event, 'role')"></div>
+              </th>
+              <th :style="{ width: colWidths.time + 'px' }">
+                {{ t('common.time') }}
+                <div class="resize-handle" :class="{ active: activeResizeCol === 'time' }" @mousedown.stop.prevent="startResize($event, 'time')"></div>
+              </th>
+              <th :style="{ width: colWidths.actions + 'px' }" style="text-align:right">
+                {{ t('users.actions') }}
+                <div class="resize-handle" :class="{ active: activeResizeCol === 'actions' }" @mousedown.stop.prevent="startResize($event, 'actions')"></div>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="user in userStore.users" :key="user.id">
+              <td style="font-weight:600">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span class="material-symbols-outlined" style="font-size:18px;color:var(--color-accent)">person</span>
+                  {{ user.email }}
+                </div>
+              </td>
+              <td><code class="mono-id">{{ shortId(user.id) }}</code></td>
+              <td>
+                <select 
+                  class="form-input"
+                  v-model="user.role" 
+                  @change="updateRole(user.id, user.role)"
+                  style="padding: 4px 8px; font-size: 13px;"
+                  :disabled="user.id === authStore.userId"
+                >
+                  <option value="admin">Admin</option>
+                  <option value="operator">Operator</option>
+                </select>
+              </td>
+              <td style="color:var(--color-text-secondary);font-size:var(--font-size-xs)">
+                {{ formatTime(user.created_at) }}
+              </td>
+              <td style="text-align:right">
+                <button
+                  class="btn btn-secondary" 
+                  style="padding:4px 8px;color:var(--color-danger);border-color:rgba(239,68,68,0.2)"
+                  @click="deleteUser(user.id)"
+                  :disabled="user.id === authStore.userId"
+                >
+                  <span class="material-symbols-outlined" style="font-size:16px">delete</span>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <div v-if="showCreateModal" class="modal-overlay" @click.self="closeCreateModal">
@@ -133,6 +150,47 @@ const showCreateModal = ref(false)
 const creating = ref(false)
 const createError = ref('')
 const newUser = ref({ email: '', password: '', role: 'operator' })
+
+// Resizable column widths (like Excel)
+const colWidths = ref({
+  email: 240,
+  id: 140,
+  role: 140,
+  time: 160,
+  actions: 120
+})
+
+const activeResizeCol = ref(null)
+let startX = 0
+let startWidth = 0
+
+function startResize(event, colName) {
+  activeResizeCol.value = colName
+  startX = event.clientX
+  startWidth = colWidths.value[colName]
+  
+  document.addEventListener('mousemove', handleResize)
+  document.addEventListener('mouseup', stopResize)
+  
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+}
+
+function handleResize(event) {
+  if (!activeResizeCol.value) return
+  const diff = event.clientX - startX
+  const newWidth = Math.max(startWidth + diff, 60)
+  colWidths.value[activeResizeCol.value] = newWidth
+}
+
+function stopResize() {
+  activeResizeCol.value = null
+  document.removeEventListener('mousemove', handleResize)
+  document.removeEventListener('mouseup', stopResize)
+  
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+}
 
 const canCreateUser = computed(() =>
   newUser.value.email &&
@@ -252,5 +310,59 @@ async function deleteUser(id) {
 .form-error {
   color: var(--color-danger);
   font-size: var(--font-size-xs);
+}
+
+/* Resizable columns & responsive styles */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.resizable-table {
+  table-layout: fixed;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.resizable-table th {
+  position: relative;
+  user-select: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resizable-table td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  z-index: 100;
+  border-right: 1px solid var(--color-border, #2a2e42);
+  transition: border-right-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.resize-handle:hover,
+.resize-handle.active {
+  border-right: 2px solid var(--color-accent, #4f6ef7);
+  background-color: rgba(79, 110, 247, 0.15);
+}
+
+.animate-fade {
+  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 </style>

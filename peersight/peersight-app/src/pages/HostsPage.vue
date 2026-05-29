@@ -28,77 +28,97 @@
     </div>
 
     <!-- Host table -->
-    <div v-else class="card">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>{{ t('hosts.hostName') }}</th>
-            <th>{{ t('hosts.hostId') }}</th>
-            <th>Agent</th>
-            <th>{{ t('hosts.lastSeen') }}</th>
-            <th>{{ t('common.status') }}</th>
-            <th style="text-align:right">{{ t('users.actions') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="host in hostStore.hosts" :key="host.id">
-            <!-- Name cell — inline edit mode -->
-            <td style="font-weight:600">
-              <div v-if="editingId === host.id" style="display:flex;align-items:center;gap:6px" @click.stop>
-                <input
-                  v-model="editName"
-                  class="inline-input"
-                  @keyup.enter="submitEdit(host.id)"
-                  @keyup.escape="cancelEdit"
-                  ref="editInput"
-                />
-                <button class="icon-btn green" @click.stop="submitEdit(host.id)" title="Save">
-                  <span class="material-symbols-outlined">check</span>
-                </button>
-                <button class="icon-btn muted" @click.stop="cancelEdit" title="Cancel">
-                  <span class="material-symbols-outlined">close</span>
-                </button>
-              </div>
-              <div v-else style="display:flex;align-items:center;gap:8px;cursor:pointer"
-                   @click="$router.push(`/hosts/${host.id}`)">
-                <span class="material-symbols-outlined" style="font-size:18px;color:var(--color-accent)">computer</span>
-                {{ host.name }}
-              </div>
-            </td>
+    <div v-else class="card animate-fade" style="padding: 0; overflow: hidden;">
+      <div class="table-responsive">
+        <table class="data-table resizable-table">
+          <thead>
+            <tr>
+              <th :style="{ width: colWidths.name + 'px' }">
+                {{ t('hosts.hostName') }}
+                <div class="resize-handle" :class="{ active: activeResizeCol === 'name' }" @mousedown.stop.prevent="startResize($event, 'name')"></div>
+              </th>
+              <th :style="{ width: colWidths.id + 'px' }">
+                {{ t('hosts.hostId') }}
+                <div class="resize-handle" :class="{ active: activeResizeCol === 'id' }" @mousedown.stop.prevent="startResize($event, 'id')"></div>
+              </th>
+              <th :style="{ width: colWidths.agent + 'px' }">
+                Agent
+                <div class="resize-handle" :class="{ active: activeResizeCol === 'agent' }" @mousedown.stop.prevent="startResize($event, 'agent')"></div>
+              </th>
+              <th :style="{ width: colWidths.last_seen + 'px' }">
+                {{ t('hosts.lastSeen') }}
+                <div class="resize-handle" :class="{ active: activeResizeCol === 'last_seen' }" @mousedown.stop.prevent="startResize($event, 'last_seen')"></div>
+              </th>
+              <th :style="{ width: colWidths.status + 'px' }">
+                {{ t('common.status') }}
+                <div class="resize-handle" :class="{ active: activeResizeCol === 'status' }" @mousedown.stop.prevent="startResize($event, 'status')"></div>
+              </th>
+              <th :style="{ width: colWidths.actions + 'px' }" style="text-align:right">
+                {{ t('users.actions') }}
+                <div class="resize-handle" :class="{ active: activeResizeCol === 'actions' }" @mousedown.stop.prevent="startResize($event, 'actions')"></div>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="host in hostStore.hosts" :key="host.id">
+              <!-- Name cell — inline edit mode -->
+              <td style="font-weight:600">
+                <div v-if="editingId === host.id" style="display:flex;align-items:center;gap:6px" @click.stop>
+                  <input
+                    v-model="editName"
+                    class="inline-input"
+                    @keyup.enter="submitEdit(host.id)"
+                    @keyup.escape="cancelEdit"
+                    ref="editInput"
+                  />
+                  <button class="icon-btn green" @click.stop="submitEdit(host.id)" title="Save">
+                    <span class="material-symbols-outlined">check</span>
+                  </button>
+                  <button class="icon-btn muted" @click.stop="cancelEdit" title="Cancel">
+                    <span class="material-symbols-outlined">close</span>
+                  </button>
+                </div>
+                <div v-else style="display:flex;align-items:center;gap:8px;cursor:pointer"
+                     @click="$router.push(`/hosts/${host.id}`)">
+                  <span class="material-symbols-outlined" style="font-size:18px;color:var(--color-accent)">computer</span>
+                  {{ host.name }}
+                </div>
+              </td>
 
-            <td @click="$router.push(`/hosts/${host.id}`)" style="cursor:pointer">
-              <code class="mono-id">{{ shortId(host.id) }}</code>
-            </td>
-            <td @click="$router.push(`/hosts/${host.id}`)" style="cursor:pointer">
-              <code style="font-size:var(--font-size-xs);color:var(--color-text-muted)">{{ host.agent_ver || host.agent_version || '—' }}</code>
-            </td>
-            <td @click="$router.push(`/hosts/${host.id}`)" style="cursor:pointer;color:var(--color-text-secondary);font-size:var(--font-size-xs)">
-              {{ formatTime(host.last_ping) }}
-            </td>
-            <td @click="$router.push(`/hosts/${host.id}`)" style="cursor:pointer">
-              <span class="badge" :class="isOnline(host) ? 'online' : 'offline'">
-                <span class="badge-dot"></span>
-                {{ isOnline(host) ? t('common.online') : t('common.offline') }}
-              </span>
-            </td>
+              <td @click="$router.push(`/hosts/${host.id}`)" style="cursor:pointer">
+                <code class="mono-id">{{ shortId(host.id) }}</code>
+              </td>
+              <td @click="$router.push(`/hosts/${host.id}`)" style="cursor:pointer">
+                <code style="font-size:var(--font-size-xs);color:var(--color-text-muted)">{{ host.agent_ver || host.agent_version || '—' }}</code>
+              </td>
+              <td @click="$router.push(`/hosts/${host.id}`)" style="cursor:pointer;color:var(--color-text-secondary);font-size:var(--font-size-xs)">
+                {{ formatTime(host.last_ping) }}
+              </td>
+              <td @click="$router.push(`/hosts/${host.id}`)" style="cursor:pointer">
+                <span class="badge" :class="isOnline(host) ? 'online' : 'offline'">
+                  <span class="badge-dot"></span>
+                  {{ isOnline(host) ? t('common.online') : t('common.offline') }}
+                </span>
+              </td>
 
-            <!-- Actions -->
-            <td style="text-align:right">
-              <div style="display:flex;justify-content:flex-end;gap:4px" @click.stop>
-                <button class="icon-btn" @click.stop="startEdit(host)" :title="t('hosts.rename')">
-                  <span class="material-symbols-outlined">edit</span>
-                </button>
-                <button class="icon-btn" @click.stop="openTokenModal(host)" :title="t('settings.generateToken')">
-                  <span class="material-symbols-outlined">key</span>
-                </button>
-                <button class="icon-btn red" @click.stop="confirmDelete(host)" :title="t('common.delete')">
-                  <span class="material-symbols-outlined">delete</span>
-                </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+              <!-- Actions -->
+              <td style="text-align:right">
+                <div style="display:flex;justify-content:flex-end;gap:4px" @click.stop>
+                  <button class="icon-btn" @click.stop="startEdit(host)" :title="t('hosts.rename')">
+                    <span class="material-symbols-outlined">edit</span>
+                  </button>
+                  <button class="icon-btn" @click.stop="openTokenModal(host)" :title="t('settings.generateToken')">
+                    <span class="material-symbols-outlined">key</span>
+                  </button>
+                  <button class="icon-btn red" @click.stop="confirmDelete(host)" :title="t('common.delete')">
+                    <span class="material-symbols-outlined">delete</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <!-- ═══════════════════════════════════════════
@@ -257,6 +277,49 @@ import { useI18n } from '@/utils/i18n.js'
 
 const hostStore = useHostStore()
 const { t } = useI18n()
+
+// Resizable column widths (like Excel)
+const colWidths = ref({
+  name: 180,
+  id: 140,
+  agent: 140,
+  last_seen: 160,
+  status: 120,
+  actions: 140
+})
+
+const activeResizeCol = ref(null)
+let startX = 0
+let startWidth = 0
+
+function startResize(event, colName) {
+  activeResizeCol.value = colName
+  startX = event.clientX
+  startWidth = colWidths.value[colName]
+  
+  document.addEventListener('mousemove', handleResize)
+  document.addEventListener('mouseup', stopResize)
+  
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+}
+
+function handleResize(event) {
+  if (!activeResizeCol.value) return
+  const diff = event.clientX - startX
+  const newWidth = Math.max(startWidth + diff, 60)
+  colWidths.value[activeResizeCol.value] = newWidth
+}
+
+function stopResize() {
+  activeResizeCol.value = null
+  document.removeEventListener('mousemove', handleResize)
+  document.removeEventListener('mouseup', stopResize)
+  
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+}
+
 onMounted(() => {
   hostStore.fetchHosts()
 })
@@ -543,4 +606,58 @@ function copy(value, key) {
   border-radius: 50%; animation: spin .6s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* Resizable columns & responsive styles */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.resizable-table {
+  table-layout: fixed;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.resizable-table th {
+  position: relative;
+  user-select: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resizable-table td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  z-index: 100;
+  border-right: 1px solid var(--color-border, #2a2e42);
+  transition: border-right-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.resize-handle:hover,
+.resize-handle.active {
+  border-right: 2px solid var(--color-accent, #4f6ef7);
+  background-color: rgba(79, 110, 247, 0.15);
+}
+
+.animate-fade {
+  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 </style>
