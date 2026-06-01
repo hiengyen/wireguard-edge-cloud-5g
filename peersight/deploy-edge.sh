@@ -73,7 +73,7 @@ if [[ "$BUILD_MODE" == "native" ]]; then
     info "Building peersight-agent ($(uname -m))..."
     (
         cd "${SCRIPT_DIR}/peersight-agent"
-        CGO_ENABLED=0 go build -ldflags="-s -w" -o "${SCRIPT_DIR}/peersight-agent-built" ./cmd/agent
+        CGO_ENABLED=0 go build -buildvcs=false -ldflags="-s -w" -o "${SCRIPT_DIR}/peersight-agent-built" ./cmd/agent
     )
     mv "${SCRIPT_DIR}/peersight-agent-built" "${AGENT_BINARY}"
     chmod +x "${AGENT_BINARY}"

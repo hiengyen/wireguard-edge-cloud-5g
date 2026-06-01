@@ -3,13 +3,13 @@
 all: api agent broker ## Build all Go binaries
 
 api: ## Build peersight-api
-	cd peersight-api && go build -o ../peersight-api ./cmd/api
+	cd peersight-api && go build -buildvcs=false -o ../peersight-api ./cmd/api
 
 agent: ## Build peersight-agent
-	cd peersight-agent && go build -o ../peersight-agent ./cmd/agent
+	cd peersight-agent && go build -buildvcs=false -o ../peersight-agent ./cmd/agent
 
 broker: ## Build peersight-broker
-	cd peersight-broker && go build -o ../peersight-broker ./cmd/broker
+	cd peersight-broker && go build -buildvcs=false -o ../peersight-broker ./cmd/broker
 
 app: ## Build peersight-app (Vue.js)
 	cd peersight-app && npm install && npm run build

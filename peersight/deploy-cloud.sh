@@ -66,7 +66,7 @@ fi
 info "Building peersight-agent binary..."
 (
     cd "${SCRIPT_DIR}/peersight-agent"
-    CGO_ENABLED=0 go build -ldflags="-s -w" -o peersight-agent ./cmd/agent
+    CGO_ENABLED=0 go build -buildvcs=false -ldflags="-s -w" -o peersight-agent ./cmd/agent
 )
 # Copy the built binary to /usr/local/bin
 cp "${SCRIPT_DIR}/peersight-agent/peersight-agent" /usr/local/bin/peersight-agent
