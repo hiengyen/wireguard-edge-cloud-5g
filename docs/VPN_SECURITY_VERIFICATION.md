@@ -1,5 +1,239 @@
-# Hướng dẫn Kịch bản Kiểm thử Bảo mật VPN
-## Xác minh khả năng chống Eavesdropping, MITM và Replay Attacks
+# VPN Security Verification Guide | Hướng Dẫn Kịch Bản Kiểm Thử Bảo Mật VPN
+
+🇬🇧 [English](#-english) | 🇻🇳 [Tiếng Việt](#-tiếng-việt)
+
+---
+
+## 🇬🇧 English
+
+## VPN Security Verification Guide
+### Verifying Resistance to Eavesdropping, MITM, and Replay Attacks
+
+This document provides practical, safe test scenarios to demonstrate the core security properties of the WireGuard VPN solution deployed in the `wireguard-edge-cloud-5g` project.
+
+The VPN system in this project utilizes a **Client-to-Site (Edge-to-Cloud)** model with the overlay subnet `10.8.0.0/24` (Cloud Gateway: `10.8.0.1`, Edge Clients: `10.8.0.2/32`, `10.8.0.3/32`, ...). Because WireGuard is built on modern cryptographic foundations (**Noise Protocol Framework**, **Curve25519**, **ChaCha20**, **Poly1305**, **BLAKE2s**), it resists common network attacks by default without requiring complex configurations.
+
+Below are practical scenarios that engineering teams or security auditors can perform to verify these security guarantees.
+
+---
+
+```mermaid
+graph TD
+    subgraph Edge Node (10.8.0.2)
+        A[Application / Alloy] -->|Cleartext| B(wg0 interface)
+    end
+    subgraph Underlay Network (Physical Network / Internet)
+        B -->|ChaCha20-Poly1305 Encryption| C{Network Transmission Channel}
+        C -->|Encrypted packet on port 51820| D[Attacker / Sniffer]
+    end
+    subgraph Cloud Gateway (10.8.0.1)
+        C -->|Decryption & MAC Check| E(wg0 interface)
+        E -->|Cleartext| F[Prometheus / Loki / Grafana]
+    end
+    style D fill:#ffcccc,stroke:#ff3333,stroke-width:2px;
+```
+
+---
+
+### 1. Scenario 1: Proving Eavesdropping / Sniffing Resistance
+
+#### Goal
+Prove that an attacker situated on the physical transmission path (e.g., sharing the same Wi-Fi, at the ISP level, or controlling a transit router) can only see encrypted UDP packets and cannot read the actual data payloads moving through the VPN tunnel.
+
+#### Steps to Execute
+
+1. **Environment Preparation:**
+   - Ensure the VPN connection between the Edge Client (`10.8.0.2`) and Cloud Gateway (`10.8.0.1`) is active and stable.
+   - Identify the physical network interface (underlay interface, e.g., `eth0`, `wlan0`, or 5G `wwan0`) and the virtual VPN interface (`wg0`).
+
+2. **Launch Sniffer on the Physical Network Interface:**
+   On the Edge Client or an intermediate transit node, run `tcpdump` to capture packets on the public physical interface:
+   ```bash
+   # Replace eth0 with your actual physical interface
+   sudo tcpdump -i eth0 udp port 51820 -XX -c 20 -w /tmp/underlay_traffic.pcap
+   ```
+   *(This captures 20 packets on WireGuard port `51820` and saves them to a pcap file).*
+
+3. **Generate Traffic inside the VPN:**
+   While `tcpdump` is running, open another terminal on the Edge Node and send sensitive data across the overlay network (e.g., ping or send system logs to Loki):
+   ```bash
+   ping -c 5 10.8.0.1
+   # Or test Alloy's log push flow
+   curl -H "Content-Type: application/json" -XPOST -d '{"streams": [{"stream": {"job": "test"}, "values": [["'"$(date +%s%N)"'", "This is extremely sensitive information!"]]}]}' http://10.8.0.1:3100/loki/api/v1/push
+   ```
+
+4. **Analyze the Captured Output:**
+   Read the captured pcap file to inspect packet contents:
+   ```bash
+   tcpdump -r /tmp/underlay_traffic.pcap -XX
+   ```
+
+#### Expected Results & Security Proof
+* **No Internal IP Leakage:** The source and destination IPs shown on the packets are only the physical public IPs of the Edge Node and the Cloud Gateway. The overlay IP addresses (`10.8.0.1` or `10.8.0.2`) are completely hidden.
+* **Integrity and Encryption:** The data displayed in hex and ASCII consists entirely of high-entropy random bytes. You will not find any cleartext strings like `"This is extremely sensitive information!"` or application protocol structures (HTTP, Loki, syslog).
+* **Conclusion:** The eavesdropping attack fails completely because all packets passing through the physical network are symmetrically encrypted using the **ChaCha20** algorithm.
+
+---
+
+### 2. Scenario 2: Proving Resistance to Man-in-the-Middle (MITM) & Tampering
+
+MITM attacks against VPNs typically focus on either **(A) Impersonation** or **(B) Data Tampering**.
+
+### Vector A: Server Impersonation
+
+#### How WireGuard Protects
+WireGuard uses static public-key cryptography for pre-shared authentication. The client only accepts handshakes from servers whose private keys match the configured server public key in the client configuration `/etc/wireguard/wg0.conf`.
+
+#### Simulated Attack Scenario
+Assume an attacker performs DNS Spoofing or ARP Spoofing to redirect traffic from the Edge Client to a rogue gateway under their control.
+
+#### Steps to Execute
+1. **Apply Faulty Configuration (Simulating Rogue Server Public Key):**
+   On the Edge Client, modify the Server Public Key in the configuration to an invalid key (simulating a server without the correct matching private key).
+   ```bash
+   # Backup original config
+   sudo cp /etc/wireguard/wg0.conf /etc/wireguard/wg0.conf.bak
+   
+   # Edit the configuration, changing the server PublicKey to a dummy valid string
+   ```
+
+2. **Restart the VPN Interface:**
+   ```bash
+   sudo wg-quick down wg0
+   sudo wg-quick up wg0
+   ```
+
+3. **Check Connection Status:**
+   ```bash
+   sudo wg show wg0
+   ping -c 3 10.8.0.1
+   ```
+
+#### Expected Results & Security Proof
+* The `wg0` interface fails to establish a connection. Running `sudo wg show` will not display a `latest handshake` timestamp, or the handshake attempt duration will increase indefinitely without establishing.
+* All outgoing packets from the client, encrypted with the incorrect public key, are silently discarded by the real server, and the client similarly rejects any responses from a server lacking the matching private key.
+* **Conclusion:** An attacker attempting MITM cannot decrypt the initial handshake packets and cannot establish a tunnel, even if they successfully route the traffic to their own server.
+
+---
+
+### Vector B: Data Tampering
+
+#### How WireGuard Protects
+Every packet transported in the WireGuard tunnel is authenticated and encrypted using AEAD (Authenticated Encryption with Associated Data) via **ChaCha20-Poly1305**. Poly1305 produces a 16-byte Message Authentication Code (MAC) tag for every packet.
+
+#### Simulated Attack Scenario
+An attacker intercepts packets on the physical path, modifies one or more bits (e.g., altering a command or metric sent to the API), and forwards the tampered packet to the destination.
+
+#### Steps & Theoretical Proof
+Because AEAD encryption is handled directly in the OS kernel driver:
+1. When the Cloud Gateway receives a tampered VPN packet, the WireGuard kernel module recalculates the Poly1305 tag using the symmetric session key.
+2. Due to the modified payload, the recalculated Poly1305 tag will **not match** the tag embedded in the packet.
+3. WireGuard **immediately drops the packet silently** without sending any error response to the sender (preventing side-channel leakage).
+
+#### Verification via Kernel Logs
+You can enable WireGuard debug logging on the Cloud Gateway to observe the system's response to invalid or tampered packets:
+```bash
+# Enable dynamic debug log for the wireguard module (requires root)
+echo "module wireguard +p" | sudo tee /sys/kernel/debug/dynamic_debug/control
+
+# Monitor system logs in real time
+sudo dmesg -wT | grep wireguard
+```
+When a tampered or corrupted packet is received on port `51820`, the kernel logs lines such as:
+`wireguard: wg0: Packet has invalid mac...` or `Packet has invalid tag...` and discards it silently, ensuring absolute application-level security.
+
+---
+
+### 3. Scenario 3: Proving Replay Attack Resistance
+
+#### Goal
+Prove that capturing a valid packet from the wire (such as a Handshake Initiation packet, or a transport packet containing an alert trigger) and replaying it later will be completely rejected by WireGuard, causing no duplicated action or session hijack.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Edge as Edge Node (10.8.0.2)
+    participant Attacker as Replayer (Attacker)
+    participant Cloud as Cloud Gateway (10.8.0.1)
+
+    Edge->>Cloud: Send Handshake Initiation (Contains Timestamp T1)
+    Note over Attacker: Intercepts & clones packet
+    Cloud-->>Edge: Responds with Handshake Response (Success)
+
+    Note over Attacker: Waits 30 seconds...
+    Attacker->>Cloud: Replays Handshake Initiation (Timestamp T1)
+    Note over Cloud: Checks Timestamp T1 <= T_max (T1)<br/>SILENTLY DROPS PACKET
+```
+
+#### How WireGuard Protects against Replay
+1. **For Handshake Initiation Packets:**
+   - WireGuard incorporates a **TAI64N** timestamp (nanosecond precision) inside the handshake payload.
+   - The server maintains the largest timestamp received from each peer (`T_max`).
+   - If the server receives a new handshake initiation with timestamp `T_new` where `T_new <= T_max`, the server **drops the packet immediately**.
+2. **For Transport Data Packets:**
+   - Every data packet contains a monotonically increasing 64-bit sequence counter.
+   - The receiver uses a **sliding window** of size 2048 packets to track received sequences.
+   - Any packet with a duplicate sequence number or a sequence that falls too far behind the sliding window is discarded immediately.
+
+#### Practical Verification Steps
+
+1. **Prepare Capture & Replay Tools:**
+   We will use `tcpdump` to capture a handshake packet from the Edge Client and `tcpreplay` (or `netcat`) to replay it on the physical interface.
+
+2. **Capture the Handshake Initiation Packet:**
+   On the Edge Client, stop the VPN and prepare the capture:
+   ```bash
+   sudo wg-quick down wg0
+   
+   # Capture exactly 1 Handshake Initiation packet (usually the first outgoing UDP packet)
+   sudo tcpdump -i eth0 udp port 51820 -c 1 -w /tmp/handshake_init.pcap
+   ```
+   In a separate terminal, bring the VPN up to trigger the handshake:
+   ```bash
+   sudo wg-quick up wg0
+   ```
+   `/tmp/handshake_init.pcap` now contains exactly one valid, encrypted Handshake Initiation packet.
+
+3. **Execute the Replay Attack:**
+   Wait 10-20 seconds for the legitimate session to establish. On an attacker-simulated node (or on the client host simulating a compromised physical NIC), replay the captured handshake packet:
+   ```bash
+   # Replay the captured handshake packet
+   sudo tcpreplay -i eth0 /tmp/handshake_init.pcap
+   ```
+
+4. **Verify the Cloud Gateway Reaction:**
+   Monitor kernel logs and VPN state on the Cloud Gateway:
+   ```bash
+   sudo wg show wg0
+   sudo dmesg -wT | grep wireguard
+   ```
+
+#### Expected Results & Security Proof
+* The active session between the Edge Client and Cloud Gateway **remains entirely uninterrupted**. The `transfer` statistics and the `latest handshake` timestamp are not reset or altered.
+* The Cloud Gateway does not respond to the replayed packet. The packet is dropped at the kernel driver layer because the replayed TAI64N timestamp is less than or equal to the recorded timestamp already received from the client.
+* **Conclusion:** Replay attacks fail completely. The system is immune to both handshake and data replays.
+
+---
+
+### 4. Summary of Security Verification Results
+
+| Attack Vector | Attack Method | WireGuard Defense Mechanism | Test Status | Security Conclusion |
+| :--- | :--- | :--- | :---: | :--- |
+| **Eavesdropping** | Sniff traffic on router/ISP using `tcpdump`. | Symmetric encryption via **ChaCha20** on all payloads and inner IPs. | **PASS** | Captured bytes are completely random; inner architecture is hidden. |
+| **MITM - Impersonation** | Redirect traffic to a Rogue Server (DNS/ARP Spoofing). | Noise_IK handshake bound to Server **Static Public Key** configured on Client. | **PASS** | Client refuses to handshake; traffic block is maintained. |
+| **MITM - Tampering** | Mutate bits on physical line before forwarding. | Integrity check using **Poly1305 MAC** tag on every AEAD transport packet. | **PASS** | Recipient recalculates MAC tag, detects mismatch, and drops packet at kernel layer. |
+| **Replay Attack** | Intercept and replay old handshake or data packet. | **TAI64N timestamps** for handshakes and **sliding window sequence numbers** for data. | **PASS** | Replayed packet is ignored instantly; current session runs uninterrupted. |
+
+---
+> [!NOTE]
+> To maintain this absolute security level, it is critical to protect the private keys (`private.key`) on both the Cloud Gateway (`/etc/wireguard/private.key`) and the Edge Nodes. Access to these keys should be strictly restricted (`chmod 600`, root access only).
+
+---
+
+## 🇻🇳 Tiếng Việt
+
+## Hướng dẫn Kịch bản Kiểm thử Bảo mật VPN
+### Xác minh khả năng chống Eavesdropping, MITM và Replay Attacks
 
 Tài liệu này cung cấp các kịch bản kiểm thử thực tế và an toàn nhằm chứng minh các tính chất bảo mật cốt lõi của giải pháp WireGuard VPN được triển khai trong dự án `wireguard-edge-cloud-5g`. 
 
@@ -81,13 +315,12 @@ Giả sử kẻ tấn công thực hiện DNS Spoofing hoặc ARP Spoofing để
 
 #### Các bước thực hiện
 1. **Thiết lập cấu hình lỗi (Mô phỏng bắt tay với Server giả mạo):**
-   Trên Edge Client, chúng ta thử sửa đổi Public Key của Server trong file cấu hình sang một khóa không hợp lệ (mô phỏng việc trỏ đến một Server không có Private Key khớp với cấu hình ban đầu).
+   On the Edge Client (trên máy khách Edge), sao chép cấu hình để dự phòng:
    ```bash
    # Sao lưu cấu hình cũ
    sudo cp /etc/wireguard/wg0.conf /etc/wireguard/wg0.conf.bak
    
-   # Sửa đổi cấu hình, thay đổi khóa public_key của Server thành một chuỗi ngẫu nhiên hợp lệ
-   # Ví dụ thay thế dòng PublicKey = <Server_Real_Public_Key> bằng một khóa giả
+   # Sửa đổi cấu hình, thay đổi khóa PublicKey của Server thành một chuỗi sai ngẫu nhiên
    ```
 
 2. **Khởi động lại giao diện VPN:**
@@ -214,7 +447,7 @@ sequenceDiagram
 | Kiểu Tấn Công | Phương Pháp Tấn Công | Cơ Chế Bảo Vệ Của WireGuard | Trạng Thế Kiểm Thử | Kết Luận Bảo Mật |
 | :--- | :--- | :--- | :---: | :--- |
 | **Nghe lén (Eavesdropping)** | Sniffing lưu lượng trên cổng vật lý của router/ISP bằng `tcpdump`. | Mã hóa đối xứng **ChaCha20** toàn bộ phần payload dữ liệu và IP nội bộ. | **ĐẠT (PASS)** | Dữ liệu thu được hoàn toàn là byte ngẫu nhiên, bảo mật tuyệt đối. |
-| **Xen giữa (MITM) - Giả mạo** | Chuyển hướng traffic sang Server giả mạo (DNS/ARP Spoofing). | Bắt tay Noise_IK ràng buộc bằng **Khóa công khai tĩnh** đã cấu hình trước của Server. | **ĐẠT (PASS)** | Client từ chối bắt tay với Server giả mạo; luồng dữ liệu bị khóa hoàn toàn. |
+| **Xen giữa (MITM) - Giả mạo** | Chuyển hướng traffic sang Server giả mạo (DNS/ARP Spoofing). | Bắt tay Noise_IK handshake ràng buộc bằng **Khóa công khai tĩnh** đã cấu hình trước của Server. | **ĐẠT (PASS)** | Client từ chối bắt tay với Server giả mạo; luồng dữ liệu bị khóa hoàn toàn. |
 | **Xen giữa (MITM) - Sửa đổi** | Sửa đổi các bit dữ liệu trên đường truyền vật lý trước khi chuyển tiếp. | Xác thực toàn vẹn dữ liệu bằng thẻ **Poly1305 MAC** đi kèm mỗi gói tin AEAD. | **ĐẠT (PASS)** | Server/Client tự động phát hiện sai lệch MAC và hủy gói tin âm thầm ở tầng Kernel. |
 | **Phát lại (Replay Attack)** | Bắt gói tin handshake hoặc gói dữ liệu cũ và gửi lại sau đó. | Sử dụng nhãn thời gian **TAI64N** cho handshake và **cửa sổ trượt sequence counter** cho dữ liệu. | **ĐẠT (PASS)** | Gói tin phát lại bị bỏ qua lập tức, không gây ảnh hưởng đến session đang chạy. |
 

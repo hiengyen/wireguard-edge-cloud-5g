@@ -1,4 +1,160 @@
-# Hướng dẫn Chạy Benchmark trên Cloud Gateway (AWS EC2)
+# Cloud Gateway Benchmark Guide | Hướng Dẫn Chạy Benchmark Trên Cloud Gateway (AWS EC2)
+
+🇬🇧 [English](#-english) | 🇻🇳 [Tiếng Việt](#-tiếng-việt)
+
+---
+
+## 🇬🇧 English
+
+This document provides a step-by-step guide to preparing your cloud infrastructure and executing the complete benchmark suite from your Edge device to the AWS EC2 Gateway provisioned via Terraform.
+
+> [!NOTE]
+> The public IP of the Cloud EC2 instance auto-detected from your Terraform state is: **`52.74.220.78`**.
+> The default WireGuard overlay IP of the Cloud Gateway is: **`10.8.0.1`**.
+
+---
+
+## E2E Benchmark Workflow
+
+The benchmarking workflow consists of three main phases:
+
+```mermaid
+graph TD
+    A[Phase 1: Cloud-Side Preparation] -->|Open iperf3 & Monitoring| B[Phase 2: VPN Connection from Edge]
+    B -->|Ping 10.8.0.1 OK| C[Phase 3: Execute Benchmark from Edge]
+    C -->|Generate logs/CSV reports| D[Phase 4: Analyze & Parse Results]
+```
+
+---
+
+## Phase 1: Cloud-Side Preparation (AWS EC2)
+
+To measure network performance, bandwidth, and observability health, you need to run server-side listener services on the EC2 instance first.
+
+### 1.1. SSH into the Cloud Gateway
+Use your SSH key pair (`wg-key-pair`) to connect to the EC2 instance:
+```bash
+ssh -i ~/.ssh/wg-key-pair.pem ec2-user@52.74.220.78
+```
+
+### 1.2. Launch `iperf3` Server in Daemon Mode
+The bandwidth suites (Suite 02 and 04) transfer TCP/UDP traffic directly to EC2 port `5201`. Start the iperf3 server in background daemon mode:
+```bash
+iperf3 -s -D
+```
+*Verify that the port is listening successfully:*
+```bash
+ss -lntp | grep 5201
+```
+
+### 1.3. Launch the Monitoring Stack
+To allow Suite 03 (Services) to test Prometheus, Loki, and Grafana, spin up the Docker Compose monitoring stack:
+```bash
+# Navigate to the monitoring directory on EC2
+cd ~/wireguard-edge-cloud-5g/cloud/monitoring
+
+# Start the stack using the wrapper
+sudo -E bash setup-monitoring.sh
+# Or run directly via docker compose:
+# sudo -E docker compose --env-file ../../.env up -d --force-recreate
+```
+*Confirm all services are healthy:*
+```bash
+curl http://127.0.0.1:9090/-/healthy  # Prometheus
+curl http://127.0.0.1:3100/ready      # Loki
+curl http://127.0.0.1:3000/api/health # Grafana
+```
+
+---
+
+## Phase 2: Establish WireGuard Connection from the Edge Node
+
+Benchmarks must be conducted over the encrypted VPN tunnel to capture latency overhead and bandwidth degradation.
+
+1. Ensure the WireGuard interface is up on the Edge Node:
+   ```bash
+   sudo systemctl start wg-quick@wg0
+   ```
+2. Verify tunnel status:
+   ```bash
+   sudo wg show
+   ```
+3. Test end-to-end overlay connectivity to the Cloud Gateway:
+   ```bash
+   ping -c 5 10.8.0.1
+   ```
+   > [!IMPORTANT]
+   > If you cannot ping `10.8.0.1`, the benchmark suite will fail immediately at Suite 01. Double-check your AWS security group rules or ensure the endpoint in your Edge `wg0.conf` points correctly to `52.74.220.78:64203`.
+
+---
+
+## Phase 3: Execute Benchmark from the Edge Node
+
+Once connected, return to the **Edge Node** shell to run the benchmark suite.
+
+### 3.1. Run All Non-Destructive Suites
+Measure latency, TCP/UDP throughput, and monitoring service health without disrupting the connection:
+```bash
+cd /home/hiengyen/CODE/wireguard-edge-cloud-5g
+bash benchmark/run_all.sh
+```
+
+### 3.2. Run All Suites including Destructive Scenarios
+These scenarios measure 5G cellular reconnection latency (WWAN Reconnect) and failover recovery windows. **Requires root (sudo) and will temporarily disrupt networking**:
+```bash
+sudo -E bash benchmark/run_all.sh --allow-destructive
+```
+
+### 3.3. Run Specific Test Suites
+If you want to target only throughput or service performance:
+```bash
+# Run only Suite 01 (Connectivity) and Suite 02 (Bandwidth)
+bash benchmark/run_all.sh --suite 01,02
+
+# Run only Suite 03 (Services)
+bash benchmark/run_all.sh --suite 03
+```
+
+### 3.4. Inline Environment Overrides
+You can adjust benchmark thresholds and testing durations on the command line without editing script source code:
+```bash
+# Run iperf for 30 seconds with 8 parallel streams
+IPERF3_DURATION=30 IPERF3_PARALLEL=8 bash benchmark/run_all.sh --suite 02
+
+# Measure the WireGuard encryption overhead by testing directly against the public IP
+CLOUD_PUBLIC_IP=52.74.220.78 bash benchmark/run_all.sh --suite 02
+```
+
+---
+
+## Phase 4: Analyze & Parse Results
+
+### 4.1. Sample Console Output
+During execution, results are displayed interactively in the terminal:
+```text
+[14:30:21] Running: 01-A Ping Latency
+  ✔ PASS  WG-overlay → cloud-gateway: RTT=42ms loss=0% jitter=3ms
+  ✔ PASS  Internet RTT → 8.8.8.8: RTT=28ms loss=0%
+  ✔ 01-A Ping Latency: PASS (2P 0W in 4s)
+```
+
+### 4.2. Detailed Reports
+All raw text reports, structured JSON outputs, and measurement CSVs are saved in `benchmark/reports/` (this directory is ignored by Git):
+```text
+benchmark/reports/
+├── run_all_20260519_143021.log        # Master log file of the entire run
+├── 01-ping-latency_143022.txt         # Detailed ping RTT logs
+├── iperf3_tcp_20260519_143045.txt     # Raw JSON output from iperf3
+├── sustained_20260519_143200.csv      # Second-by-second throughput stats
+└── monitoring_load_20260519_143310.csv # Scraper query latency (Prometheus, Loki)
+```
+
+> [!TIP]
+> You can import the second-by-second `sustained_*.csv` file into Excel, Google Sheets, or directly visualize it on your Grafana dashboard to chart the stability of your 5G network under load over time.
+
+---
+
+## 🇻🇳 Tiếng Việt
 
 Tài liệu này cung cấp hướng dẫn từng bước để chuẩn bị hạ tầng Cloud và thực hiện toàn bộ suite benchmark từ thiết bị Edge của bạn đến AWS EC2 Gateway đã được deploy bằng Terraform.
 
