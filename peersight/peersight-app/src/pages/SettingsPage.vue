@@ -124,6 +124,53 @@
         </div>
       </div>
 
+      <!-- Broker Token Card -->
+      <div class="card settings-card">
+        <div class="card-header border-b">
+          <h2 class="card-title" style="display:flex;align-items:center;gap:8px">
+            <span class="material-symbols-outlined" style="color:var(--color-success)">router</span>
+            {{ t('settings.brokerTokenCardTitle') }}
+          </h2>
+        </div>
+        <div class="card-body">
+          <p class="settings-desc">
+            {{ t('settings.brokerTokenDesc') }}
+          </p>
+
+          <div v-if="generatedBrokerToken" class="token-result animate-fade">
+            <div class="success-alert">
+              <span class="material-symbols-outlined">check_circle</span>
+              <span>{{ t('settings.tokenSuccess') }}</span>
+            </div>
+            
+            <div class="token-box">
+              <code class="token-text">{{ showBrokerToken ? generatedBrokerToken : maskToken(generatedBrokerToken) }}</code>
+              <div class="token-actions">
+                <button class="icon-btn" @click="showBrokerToken = !showBrokerToken" :title="showBrokerToken ? 'Hide token' : 'Show token'">
+                  <span class="material-symbols-outlined">{{ showBrokerToken ? 'visibility_off' : 'visibility' }}</span>
+                </button>
+                <button class="icon-btn" @click="copyBrokerToken" :title="copiedBroker ? t('common.copied') : t('common.copy')">
+                  <span class="material-symbols-outlined">{{ copiedBroker ? 'check' : 'content_copy' }}</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="warning-alert">
+              <span class="material-symbols-outlined">warning</span>
+              <span>{{ t('settings.tokenWarning') }}</span>
+            </div>
+          </div>
+
+          <div class="btn-wrap">
+            <button class="btn btn-primary" :disabled="brokerLoading" @click="generateBrokerTokenAction" style="display:flex;align-items:center;gap:8px">
+              <span v-if="brokerLoading" class="spinner-sm"></span>
+              <span v-else class="material-symbols-outlined" style="font-size:18px">api</span>
+              {{ t('settings.generateBrokerToken') }}
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Diagnostics Card -->
       <div class="card settings-card">
         <div class="card-header border-b">
@@ -302,6 +349,11 @@ const generatedToken = ref('')
 const showToken = ref(false)
 const copied = ref(false)
 
+const brokerLoading = ref(false)
+const generatedBrokerToken = ref('')
+const showBrokerToken = ref(false)
+const copiedBroker = ref(false)
+
 const diagnostics = ref({})
 const diagnosticsLoading = ref(false)
 const diagnosticsError = ref(false)
@@ -373,6 +425,31 @@ function copyToken() {
   copied.value = true
   setTimeout(() => {
     copied.value = false
+  }, 2000)
+}
+
+async function generateBrokerTokenAction() {
+  brokerLoading.value = true
+  showBrokerToken.value = false
+  copiedBroker.value = false
+  try {
+    const token = await hostStore.generateBrokerToken()
+    if (token) {
+      generatedBrokerToken.value = token
+    }
+  } catch (err) {
+    console.error('Failed to generate broker token:', err)
+  } finally {
+    brokerLoading.value = false
+  }
+}
+
+function copyBrokerToken() {
+  if (!generatedBrokerToken.value) return
+  navigator.clipboard.writeText(generatedBrokerToken.value)
+  copiedBroker.value = true
+  setTimeout(() => {
+    copiedBroker.value = false
   }, 2000)
 }
 </script>

@@ -36,6 +36,11 @@ export const useHostStore = defineStore('hosts', () => {
     return res.data?.agent_token || null
   }
 
+  async function generateBrokerToken() {
+    const res = await api.post('/admin/broker-tokens')
+    return res.data?.broker_token || null
+  }
+
   async function updateHost(id, name) {
     const res = await api.put(`/hosts/${id}`, { name })
     const updated = res.data?.data
@@ -51,7 +56,7 @@ export const useHostStore = defineStore('hosts', () => {
     hosts.value = hosts.value.filter(h => h.id !== id)
   }
 
-  return { hosts, loading, fetchHosts, createHost, generateAgentToken, updateHost, deleteHost }
+  return { hosts, loading, fetchHosts, createHost, generateAgentToken, generateBrokerToken, updateHost, deleteHost }
 })
 
 export const usePeerStore = defineStore('peers', () => {
