@@ -1,0 +1,9 @@
+=== 01-wg-tunnel — Wed Jun  3 17:47:57 +07 2026 ===
+PASS=5  FAIL=0  WARN=1
+
+  PASS: Interface wg0 exists (state=UNKNOWN)
+  PASS: Peers configured: 1
+  PASS: Peer rO8udTds0bg/CkEa…: last handshake 80s ago (OK)
+  PASS: Traffic flowing: RX=4305132B TX=19590180B
+  WARN: Could not parse allowed-IPs — verify manually: sudo wg show wg0
+  PASS: Overlay IP 10.8.0.1 is reachable
