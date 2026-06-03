@@ -1,0 +1,38 @@
+
+[1m[0;34m══════════════════════════════════════════════[0m
+[1m  04-B  Monitoring Stack Load Test[0m
+[1m[0;34m══════════════════════════════════════════════[0m
+[0;34m[15:06:11][0m Load testing: prometheus-health (30 requests, concurrency=10)
+[0;36m  ℹ INFO[0m  prometheus-health: n=30 fail=0 mean=131ms p50=127ms p95=147ms p99=147ms max=147ms
+[0;32m  ✔ PASS[0m  prometheus-health: p95=147ms mean=131ms
+[0;34m[15:06:12][0m Load testing: prometheus-query (30 requests, concurrency=10)
+[0;36m  ℹ INFO[0m  prometheus-query: n=30 fail=0 mean=130ms p50=128ms p95=143ms p99=144ms max=144ms
+[0;32m  ✔ PASS[0m  prometheus-query: p95=143ms mean=130ms
+[0;34m[15:06:13][0m Load testing: prometheus-range (30 requests, concurrency=10)
+[0;36m  ℹ INFO[0m  prometheus-range: n=30 fail=0 mean=296ms p50=287ms p95=351ms p99=379ms max=379ms
+[0;32m  ✔ PASS[0m  prometheus-range: p95=351ms mean=296ms
+[0;34m[15:06:14][0m Load testing: loki-ready (30 requests, concurrency=10)
+[0;36m  ℹ INFO[0m  loki-ready: n=30 fail=0 mean=133ms p50=132ms p95=145ms p99=145ms max=145ms
+[0;32m  ✔ PASS[0m  loki-ready: p95=145ms mean=133ms
+[0;34m[15:06:15][0m Load testing: loki-query (30 requests, concurrency=10)
+[0;36m  ℹ INFO[0m  loki-query: n=30 fail=0 mean=0ms p50=ms p95=ms p99=ms max=ms
+[0;33m  ⚠ WARN[0m  loki-query: p95=ms exceeds 3000ms
+[0;32m  ✔ PASS[0m  loki-query: p95=ms mean=0ms
+[0;34m[15:06:15][0m Load testing: grafana-health (20 requests, concurrency=10)
+[0;36m  ℹ INFO[0m  grafana-health: n=20 fail=0 mean=137ms p50=137ms p95=148ms p99=148ms max=148ms
+[0;32m  ✔ PASS[0m  grafana-health: p95=148ms mean=137ms
+[0;34m[15:06:16][0m Load testing: grafana-datasrc (20 requests, concurrency=10)
+[0;36m  ℹ INFO[0m  grafana-datasrc: n=20 fail=0 mean=0ms p50=ms p95=ms p99=ms max=ms
+[0;33m  ⚠ WARN[0m  grafana-datasrc: p95=ms exceeds 3000ms
+[0;32m  ✔ PASS[0m  grafana-datasrc: p95=ms mean=0ms
+[0;34m[15:06:17][0m Load testing: node-exporter-edge (15 requests, concurrency=10)
+[0;36m  ℹ INFO[0m  node-exporter-edge: n=15 fail=0 mean=169ms p50=132ms p95=295ms p99=295ms max=295ms
+[0;32m  ✔ PASS[0m  node-exporter-edge: p95=295ms mean=169ms
+[0;36m  ℹ INFO[0m  CSV report saved: /home/hieu/wireguard-edge-cloud-5g/benchmark/04-load/reports/monitoring_load_20260519_150611.csv
+
+[1m[0;34m══════════════════════════════════════════════[0m
+[1m  SUMMARY — 04-monitoring-load[0m
+[1m[0;34m══════════════════════════════════════════════[0m
+  [0;32mPASS: 8[0m  |  [0;31mFAIL: 0[0m  |  [0;33mWARN: 2[0m
+
+[0;36m  ℹ INFO[0m  Report saved: /home/hieu/wireguard-edge-cloud-5g/benchmark/04-load/reports/04-monitoring-load_20260519_150617.txt

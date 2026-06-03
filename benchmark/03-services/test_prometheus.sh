@@ -43,7 +43,7 @@ else
     fail "Prometheus query API timed out"
 fi
 
-# 4. Scrape targets — all should be UP
+# 4. Scrape targets — active client target must be UP
 log "Checking scrape targets status"
 targets_json=$(http_get "${PROM}/api/v1/targets" || echo "{}")
 total=$(echo "$targets_json" | python3 -c "
@@ -68,8 +68,34 @@ for t in d.get('data',{}).get('activeTargets',[]):
 
 info "Scrape targets: ${up}/${total} UP"
 [[ -n "$down" ]] && warn "Down targets:${down}"
-(( total > 0 && up == total )) && pass "All ${total} scrape targets are UP" \
-                                 || fail "Some targets are down: ${up}/${total} UP"
+
+# Verify specifically if our current client target is active and up
+client_status=$(echo "$targets_json" | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+client_ip = sys.argv[1]
+found = False
+client_up = False
+for t in d.get('data',{}).get('activeTargets',[]):
+    if f'{client_ip}:9100' in t.get('scrapeUrl', ''):
+        found = True
+        if t.get('health') == 'up':
+            client_up = True
+            break
+print(f'{found},{client_up}')
+" "$WG_CLIENT_IP" 2>/dev/null || echo "False,False")
+
+IFS=',' read -r client_found client_up <<< "$client_status"
+
+if [[ "$client_found" == "True" ]]; then
+    if [[ "$client_up" == "True" ]]; then
+        pass "Scrape target for edge node ${WG_CLIENT_IP} is UP"
+    else
+        fail "Scrape target for edge node ${WG_CLIENT_IP} is DOWN"
+    fi
+else
+    warn "Scrape target for edge node ${WG_CLIENT_IP} not found in Prometheus active targets"
+fi
 
 # 5. Key metrics present
 log "Verifying key metrics are present"

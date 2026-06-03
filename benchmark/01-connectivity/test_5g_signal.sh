@@ -38,9 +38,15 @@ if [[ -z "$QMI_DEVICE" ]]; then
 else
     pass "QMI device: ${QMI_DEVICE}"
 
+    # Check if we should route qmicli via qmi-proxy (-p)
+    QMI_PROXY_FLAG=""
+    if sudo qmicli -p -d "$QMI_DEVICE" --nas-get-serving-system &>/dev/null; then
+        QMI_PROXY_FLAG="-p"
+    fi
+
     # 4. Network registration state
     log "Checking network registration"
-    reg_info=$(sudo qmicli -d "$QMI_DEVICE" --nas-get-serving-system 2>/dev/null || true)
+    reg_info=$(sudo qmicli $QMI_PROXY_FLAG -d "$QMI_DEVICE" --nas-get-serving-system 2>/dev/null || true)
     if [[ -n "$reg_info" ]]; then
         reg_state=$(echo "$reg_info" | grep -i 'Registration state' | awk -F"'" '{print $2}')
         network=$(echo  "$reg_info" | grep -i 'Description'         | awk -F"'" '{print $2}')
@@ -58,7 +64,7 @@ else
 
     # 5. Signal strength (LTE/5G RSRP/RSRQ)
     log "Querying signal strength"
-    sig_info=$(sudo qmicli -d "$QMI_DEVICE" --nas-get-signal-info 2>/dev/null || true)
+    sig_info=$(sudo qmicli $QMI_PROXY_FLAG -d "$QMI_DEVICE" --nas-get-signal-info 2>/dev/null || true)
     if [[ -n "$sig_info" ]]; then
         echo "$sig_info" | sed 's/^/    /'
 
@@ -81,7 +87,7 @@ else
 
     # 6. Data connection stats
     log "Querying data session stats"
-    ds_info=$(sudo qmicli -d "$QMI_DEVICE" --wds-get-packet-statistics 2>/dev/null || true)
+    ds_info=$(sudo qmicli $QMI_PROXY_FLAG -d "$QMI_DEVICE" --wds-get-packet-statistics 2>/dev/null || true)
     if [[ -n "$ds_info" ]]; then
         tx=$(echo "$ds_info" | grep -i 'TX bytes' | grep -oE '[0-9]+')
         rx=$(echo "$ds_info" | grep -i 'RX bytes' | grep -oE '[0-9]+')

@@ -69,7 +69,7 @@ fi
 # 6. Allowed-IPs coverage
 log "Checking allowed-IPs configuration"
 allowed=$(sudo wg show "$WG_INTERFACE" allowed-ips 2>/dev/null)
-if echo "$allowed" | grep -qE '^[A-Za-z0-9+/=]+ +[0-9./,]+$'; then
+if [[ -n "$allowed" ]] && echo "$allowed" | grep -qE '^[A-Za-z0-9+/=]+[[:space:]]+[0-9./,[:space:]]+$'; then
     pass "Allowed-IPs entries present"
 else
     warn "Could not parse allowed-IPs — verify manually: sudo wg show ${WG_INTERFACE}"

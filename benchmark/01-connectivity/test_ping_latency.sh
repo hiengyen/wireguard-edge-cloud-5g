@@ -62,12 +62,15 @@ else
     info "Skipping internet-via-WireGuard test (set WG_ALLOWED_INTERNET=1 to enable)"
 fi
 
-# 4. Large packet ping to detect MTU issues (WireGuard default MTU 1420)
+# 4. Large packet ping to detect MTU issues (WireGuard configured MTU)
 log "Large packet ping to detect MTU fragmentation"
-if ping -c 5 -s 1300 -M do "$WG_SERVER_IP" &>/dev/null; then
-    pass "MTU-1300: no fragmentation over WireGuard tunnel"
+wg_mtu=$(ip link show "$WG_INTERFACE" 2>/dev/null | grep -oE 'mtu [0-9]+' | awk '{print $2}' || echo "1420")
+ping_payload=$(( wg_mtu - 28 ))
+
+if ping -c 5 -s "$ping_payload" -M do "$WG_SERVER_IP" &>/dev/null; then
+    pass "MTU-${wg_mtu}: no fragmentation over WireGuard tunnel (ping payload ${ping_payload}B)"
 else
-    warn "MTU-1300: fragmentation or drop detected — check WireGuard MTU setting"
+    warn "MTU-${wg_mtu}: fragmentation or drop detected with payload ${ping_payload}B — check WireGuard MTU setting"
 fi
 
 # 5. WWAN interface latency baseline (if 5G is up)

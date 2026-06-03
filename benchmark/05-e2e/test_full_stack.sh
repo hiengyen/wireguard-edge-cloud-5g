@@ -73,7 +73,7 @@ check_service "Node-Exporter (edge)"  "${NODE_EXPORTER_EDGE}/metrics"
 log "[Phase 4] Metrics pipeline (Prometheus → edge scrape)"
 
 edge_up=$(curl -sf --max-time "$HTTP_TIMEOUT" \
-    "${PROMETHEUS_URL}/api/v1/query?query=up{job%3D%22edge-node%22}" 2>/dev/null | \
+    "${PROMETHEUS_URL}/api/v1/query?query=up{job%3D%22edge-nodes%22,instance%3D%22${WG_CLIENT_IP}%3A9100%22}" 2>/dev/null | \
     python3 -c "
 import sys, json
 d = json.load(sys.stdin)
@@ -92,18 +92,26 @@ fi
 # ─── Phase 5: Log pipeline ─────────────────────────────────────────────────────
 log "[Phase 5] Log pipeline (edge → Alloy → Loki)"
 
-log_label=$(python3 -c "import urllib.parse; print(urllib.parse.quote('{job=\"edge-journal\"}'))" 2>/dev/null || echo "")
+log_query="count_over_time({job=\"edge-journal\"}[1h])"
+log_label=$(python3 -c "import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1]))" "$log_query" 2>/dev/null || echo "")
 if [[ -n "$log_label" ]]; then
     log_result=$(curl -sf --max-time "$HTTP_TIMEOUT" \
-        "${LOKI_URL}/loki/api/v1/query?query=${log_label}&limit=1" 2>/dev/null | \
+        "${LOKI_URL}/loki/api/v1/query?query=${log_label}" 2>/dev/null | \
         python3 -c "
 import sys, json
 d = json.load(sys.stdin)
-print(len(d.get('data',{}).get('result',[])))
+results = d.get('data',{}).get('result',[])
+count = 0
+if results:
+    try:
+        count = float(results[0].get('value', [0, 0])[1])
+    except:
+        pass
+print(int(count))
 " 2>/dev/null || echo "0")
 
     (( log_result > 0 )) \
-        && pass "P5: edge-journal logs present in Loki" \
+        && pass "P5: edge-journal logs present in Loki (${log_result} lines in last hour)" \
         || warn "P5: No edge-journal logs in Loki — check Grafana Alloy on edge node"
 fi
 

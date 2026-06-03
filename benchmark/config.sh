@@ -2,6 +2,65 @@
 # Shared configuration and helpers for all benchmark scripts
 set -euo pipefail
 
+# ─── Environment & Auto-detection ─────────────────────────────────────────────
+# Load .env file from project root if it exists
+SCRIPT_DIR_FOR_ENV="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "${SCRIPT_DIR_FOR_ENV}/../.env" ]]; then
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        # Ignore comments and empty lines
+        [[ "$line" =~ ^[[:space:]]*# ]] && continue
+        [[ "$line" =~ ^[[:space:]]*$ ]] && continue
+        # Extract key and value
+        if [[ "$line" =~ ^([^=]+)=(.*)$ ]]; then
+            key="${BASH_REMATCH[1]}"
+            val="${BASH_REMATCH[2]}"
+            # Strip outer single/double quotes if present
+            val="${val%\"}"
+            val="${val#\"}"
+            val="${val%\'}"
+            val="${val#\'}"
+            # Only set and export if not already set in environment
+            if [[ -z "${!key:-}" ]]; then
+                export "$key"="$val"
+            fi
+        fi
+    done < "${SCRIPT_DIR_FOR_ENV}/../.env"
+fi
+
+# Auto-detect Cloud Public IP from Terraform state if not set
+if [[ -z "${CLOUD_PUBLIC_IP:-}" ]]; then
+    STATE_FILE="${SCRIPT_DIR_FOR_ENV}/../cloud/terraform/ec2/terraform.tfstate"
+    if [[ -f "$STATE_FILE" ]]; then
+        CLOUD_PUBLIC_IP=$(python3 -c "import json; d=json.load(open('$STATE_FILE')); print(d.get('outputs', {}).get('public_ip', {}).get('value', ''))" 2>/dev/null || echo "")
+        if [[ -n "$CLOUD_PUBLIC_IP" ]]; then
+            export CLOUD_PUBLIC_IP
+        fi
+    fi
+fi
+
+# Auto-detect SSH key location
+if [[ -z "${SSH_KEY:-}" ]]; then
+    # Try user's home directory if run via sudo
+    REAL_HOME="${HOME}"
+    if [[ -n "${SUDO_USER:-}" ]]; then
+        REAL_HOME=$(getent passwd "$SUDO_USER" | cut -d: -f6 || echo "/home/${SUDO_USER}")
+    fi
+    
+    # Check common SSH key paths
+    for key_path in \
+        "${REAL_HOME}/.ssh/id_rsa" \
+        "${REAL_HOME}/.ssh/id_ed25519" \
+        "${REAL_HOME}/.ssh/id_ecdsa" \
+        "${REAL_HOME}/.ssh/wg-key-pair" \
+        "${REAL_HOME}/.ssh/wg-key-pair.pem"; do
+        if [[ -f "$key_path" ]]; then
+            export SSH_KEY="$key_path"
+            break
+        fi
+    done
+fi
+
+
 # ─── Network topology ─────────────────────────────────────────────────────────
 WG_SERVER_IP="${WG_SERVER_IP:-10.8.0.1}"          # Cloud gateway WireGuard IP
 WG_CLIENT_IP="${WG_CLIENT_IP:-10.8.0.2}"          # This edge node WireGuard IP

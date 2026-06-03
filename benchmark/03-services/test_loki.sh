@@ -80,7 +80,11 @@ print(d.get('data', []))
 " 2>/dev/null || echo "[]")
 info "Loki label names: ${labels}"
 
-if echo "$labels" | grep -q '"job"'; then
+if echo "$edge_result" | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+sys.exit(0 if 'job' in d.get('data', []) else 1)
+" 2>/dev/null; then
     pass "Label 'job' exists in Loki"
 else
     warn "Label 'job' not found — Alloy may not be shipping logs yet"
