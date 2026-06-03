@@ -453,14 +453,34 @@ For this default endpoint to work, you must have started the cloud monitoring st
 >
 > **Always verify and sync the Edge clock before running Alloy:**
 >
-> ```bash
-> date
-> # Sync using NTP if it's incorrect:
-> sudo timedatectl set-ntp true
-> sudo systemctl restart systemd-timesyncd
-> # Or set manually:
-> sudo date -s "2026-05-18 00:20:00"
-> ```
+> * **Option A: Automatic NTP Sync (Internet Access Required)**
+>   ```bash
+>   date
+>   sudo timedatectl set-ntp true
+>   sudo systemctl restart systemd-timesyncd
+>   ```
+>
+> * **Option B: Manual Clock Sync**
+>   ```bash
+>   sudo date -s "2026-06-03 15:12:20"
+>   ```
+>
+> * **Option C: GPS/GNSS Offline Time Synchronization (Quectel Module)**
+>   If the Edge node has no internet connection for NTP, use the built-in GPS on the Quectel RM502Q-GL module:
+>   1. Route and enable GNSS output via AT commands (sent to `/dev/ttyUSB2` or `/dev/ttyMHI2`):
+>      ```bash
+>      sudo sh -c 'echo -e "AT+QGPSCFG=\"outport\",\"usbnmea\"\r" > /dev/ttyUSB2'
+>      sudo sh -c 'echo -e "AT+QGPS=1\r" > /dev/ttyUSB2'
+>      ```
+>   2. Verify NMEA data stream is active: `cat /dev/ttyUSB1` (or `/dev/ttyMHI1`).
+>   3. Install `gpsd` and `ntpsec`: `sudo apt-get install gpsd gpsd-clients ntpsec -y`.
+>   4. Configure `/etc/default/gpsd` to use your NMEA serial port (e.g. `DEVICES="/dev/ttyUSB1"`). Restart it: `sudo systemctl restart gpsd`.
+>   5. Stop the default NTP client: `sudo systemctl disable --now systemd-timesyncd`.
+>   6. Add the following reference clock to `/etc/ntpsec/ntp.conf`:
+>      ```text
+>      refclock shm unit 0 time1 0.125 refid GPS prefer
+>      ```
+>   7. Restart NTPsec: `sudo systemctl restart ntpsec`.
 
 ```bash
 set -a && . ./.env && set +a
@@ -1121,14 +1141,34 @@ Cấu hình mặc định của Alloy sẽ đọc log hệ thống từ `journal
 >
 > **Luôn xác thực và đồng bộ thời gian của Edge Node trước khi khởi chạy Alloy:**
 >
-> ```bash
-> date
-> # Tự động đồng bộ thời gian NTP qua Internet:
-> sudo timedatectl set-ntp true
-> sudo systemctl restart systemd-timesyncd
-> # Hoặc điều chỉnh giờ hệ thống thủ công bằng tay:
-> sudo date -s "2026-05-18 00:20:00"
-> ```
+> * **Cách A: Tự động đồng bộ NTP (Yêu cầu kết nối Internet)**
+>   ```bash
+>   date
+>   sudo timedatectl set-ntp true
+>   sudo systemctl restart systemd-timesyncd
+>   ```
+>
+> * **Cách B: Đồng bộ thủ công bằng tay**
+>   ```bash
+>   sudo date -s "2026-06-03 15:12:20"
+>   ```
+>
+> * **Cách C: Đồng bộ ngoại tuyến qua GPS/GNSS (Module Quectel)**
+>   Nếu thiết bị Edge không có kết nối internet để chạy NTP, bạn có thể sử dụng GPS tích hợp trên module Quectel RM502Q-GL:
+>   1. Định tuyến và kích hoạt GNSS qua lệnh AT (gửi tới cổng AT, thường là `/dev/ttyUSB2` hoặc `/dev/ttyMHI2`):
+>      ```bash
+>      sudo sh -c 'echo -e "AT+QGPSCFG=\"outport\",\"usbnmea\"\r" > /dev/ttyUSB2'
+>      sudo sh -c 'echo -e "AT+QGPS=1\r" > /dev/ttyUSB2'
+>      ```
+>   2. Kiểm tra luồng dữ liệu NMEA hoạt động: `cat /dev/ttyUSB1` (hoặc `/dev/ttyMHI1`).
+>   3. Cài đặt `gpsd` và `ntpsec`: `sudo apt-get install gpsd gpsd-clients ntpsec -y`.
+>   4. Cấu hình `/etc/default/gpsd` sử dụng cổng NMEA (ví dụ: `DEVICES="/dev/ttyUSB1"`). Khởi động lại: `sudo systemctl restart gpsd`.
+>   5. Tắt client NTP mặc định của hệ thống: `sudo systemctl disable --now systemd-timesyncd`.
+>   6. Thêm cấu hình đồng hồ tham chiếu sau vào `/etc/ntpsec/ntp.conf`:
+>      ```text
+>      refclock shm unit 0 time1 0.125 refid GPS prefer
+>      ```
+>   7. Khởi động lại dịch vụ NTPsec: `sudo systemctl restart ntpsec`.
 
 ```bash
 set -a && . ./.env && set +a

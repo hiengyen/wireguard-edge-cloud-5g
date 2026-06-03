@@ -740,16 +740,39 @@ Because embedded ARM SBCs (like Orange Pi) do not have an RTC battery backup, th
   # Always restart Alloy after updating the clock:
   sudo systemctl restart alloy
   ```
-- **Tiếng Việt khắc phục:**
-  Kiểm tra giờ trên Edge bằng lệnh `date`. Sửa lỗi lệch giờ ngay lập tức mà không cần khởi động lại máy:
-  ```bash
-  # Bật đồng bộ giờ NTP tự động qua internet:
-  sudo timedatectl set-ntp true
-  sudo systemctl restart systemd-timesyncd
-  # Hoặc chỉnh giờ thủ công bằng tay (ví dụ: ngày 18 tháng 5 năm 2026):
-  sudo date -s "2026-05-18 00:20:00"
-  # Luôn nhớ khởi động lại Alloy để xả log với mốc giờ mới:
-  sudo systemctl restart alloy
+- **English Offline GPS/GNSS Fix (Quectel Module):**
+  If the Edge node has no internet connection for NTP, use the built-in GPS on the Quectel RM502Q-GL module:
+  1. Route and enable GNSS output via AT commands (sent to the AT port, usually `/dev/ttyUSB2` or `/dev/ttyMHI2`):
+     ```bash
+     sudo sh -c 'echo -e "AT+QGPSCFG=\"outport\",\"usbnmea\"\r" > /dev/ttyUSB2'
+     sudo sh -c 'echo -e "AT+QGPS=1\r" > /dev/ttyUSB2'
+     ```
+  2. Verify NMEA data stream is active: `cat /dev/ttyUSB1` (or `/dev/ttyMHI1`).
+  3. Install `gpsd` and `ntpsec`: `sudo apt-get install gpsd gpsd-clients ntpsec -y`.
+  4. Configure `/etc/default/gpsd` to use your NMEA serial port (e.g. `DEVICES="/dev/ttyUSB1"`). Restart it: `sudo systemctl restart gpsd`.
+  5. Stop the default NTP client: `sudo systemctl disable --now systemd-timesyncd`.
+  6. Add the following reference clock to `/etc/ntpsec/ntp.conf`:
+     ```text
+     refclock shm unit 0 time1 0.125 refid GPS prefer
+     ```
+  7. Restart NTPsec: `sudo systemctl restart ntpsec`.
+
+- **Tiếng Việt khắc phục ngoại tuyến qua GPS/GNSS (Module Quectel):**
+  Nếu thiết bị Edge không có kết nối internet để chạy NTP, bạn có thể dùng GPS tích hợp trên module Quectel RM502Q-GL:
+  1. Định tuyến và kích hoạt GNSS qua lệnh AT (gửi tới cổng AT, thường là `/dev/ttyUSB2` hoặc `/dev/ttyMHI2`):
+     ```bash
+     sudo sh -c 'echo -e "AT+QGPSCFG=\"outport\",\"usbnmea\"\r" > /dev/ttyUSB2'
+     sudo sh -c 'echo -e "AT+QGPS=1\r" > /dev/ttyUSB2'
+     ```
+  2. Kiểm tra luồng dữ liệu NMEA hoạt động: `cat /dev/ttyUSB1` (hoặc `/dev/ttyMHI1`).
+  3. Cài đặt `gpsd` và `ntpsec`: `sudo apt-get install gpsd gpsd-clients ntpsec -y`.
+  4. Cấu hình `/etc/default/gpsd` sử dụng cổng NMEA (ví dụ: `DEVICES="/dev/ttyUSB1"`). Khởi động lại: `sudo systemctl restart gpsd`.
+  5. Tắt client NTP mặc định của hệ thống: `sudo systemctl disable --now systemd-timesyncd`.
+  6. Thêm cấu hình đồng hồ tham chiếu sau vào `/etc/ntpsec/ntp.conf`:
+     ```text
+     refclock shm unit 0 time1 0.125 refid GPS prefer
+     ```
+  7. Khởi động lại dịch vụ NTPsec: `sudo systemctl restart ntpsec`.
   ```
 
 **5G CGNAT Stealth Topology Note / Lưu ý về cơ chế ẩn mình sau 5G CGNAT**
