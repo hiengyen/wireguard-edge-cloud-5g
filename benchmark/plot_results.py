@@ -19,6 +19,18 @@ def setup_style():
     plt.rcParams['legend.edgecolor'] = '#E0E0E0'
     plt.rcParams['legend.fancybox'] = True
 
+def clean_float(val):
+    if not val:
+        return 0.0
+    if isinstance(val, (int, float)):
+        return float(val)
+    # Extract only digit, dot, minus characters
+    cleaned = re.sub(r'[^\d\.\-]', '', str(val))
+    try:
+        return float(cleaned) if cleaned else 0.0
+    except ValueError:
+        return 0.0
+
 def parse_latest_logs(reports_dir):
     metrics = {
         'direct_down': 0.0, 'direct_up': 0.0,
@@ -46,43 +58,43 @@ def parse_latest_logs(reports_dir):
             if wg_match:
                 # If there was a parsing bug in the script where min="mdev", avg="=", max="val", jitter="min avg mdev"
                 if wg_match.group(1) == "mdev" and wg_match.group(2) == "=":
-                    metrics['wg_lat'] = float(wg_match.group(5)) # actual average
-                    metrics['wg_jit'] = float(wg_match.group(6)) # actual jitter
+                    metrics['wg_lat'] = clean_float(wg_match.group(5)) # actual average
+                    metrics['wg_jit'] = clean_float(wg_match.group(6)) # actual jitter
                 else:
-                    metrics['wg_lat'] = float(wg_match.group(2))
-                    metrics['wg_jit'] = float(wg_match.group(4))
+                    metrics['wg_lat'] = clean_float(wg_match.group(2))
+                    metrics['wg_jit'] = clean_float(wg_match.group(4))
             else:
                 # Try fallback matching for corrected script output
                 wg_match_correct = re.search(r'WG-overlay → cloud-gateway.*?avg=([\d\.]+)ms.*?jitter=([\d\.]+)ms', content)
                 if wg_match_correct:
-                    metrics['wg_lat'] = float(wg_match_correct.group(1))
-                    metrics['wg_jit'] = float(wg_match_correct.group(2))
+                    metrics['wg_lat'] = clean_float(wg_match_correct.group(1))
+                    metrics['wg_jit'] = clean_float(wg_match_correct.group(2))
                 else:
                     # Generic RTT parser
                     wg_match_rtt = re.search(r'WG-overlay → cloud-gateway.*?RTT=([\d\.]+)ms.*?jitter=([\d\.]+)ms', content)
                     if wg_match_rtt:
-                        metrics['wg_lat'] = float(wg_match_rtt.group(1))
-                        metrics['wg_jit'] = float(wg_match_rtt.group(2))
+                        metrics['wg_lat'] = clean_float(wg_match_rtt.group(1))
+                        metrics['wg_jit'] = clean_float(wg_match_rtt.group(2))
 
             # Parse 5G-uplink line
             direct_match = re.search(r'5G-uplink → 8.8.8.8.*?min=(\S+).*?avg=(\S+).*?max=(\S+).*?jitter=(\S+)\s+(\S+)\s+(\S+)', content)
             if direct_match:
                 if direct_match.group(1) == "mdev" and direct_match.group(2) == "=":
-                    metrics['direct_lat'] = float(direct_match.group(5))
-                    metrics['direct_jit'] = float(direct_match.group(6))
+                    metrics['direct_lat'] = clean_float(direct_match.group(5))
+                    metrics['direct_jit'] = clean_float(direct_match.group(6))
                 else:
-                    metrics['direct_lat'] = float(direct_match.group(2))
-                    metrics['direct_jit'] = float(direct_match.group(4))
+                    metrics['direct_lat'] = clean_float(direct_match.group(2))
+                    metrics['direct_jit'] = clean_float(direct_match.group(4))
             else:
                 direct_match_correct = re.search(r'5G-uplink → 8.8.8.8.*?avg=([\d\.]+)ms.*?jitter=([\d\.]+)ms', content)
                 if direct_match_correct:
-                    metrics['direct_lat'] = float(direct_match_correct.group(1))
-                    metrics['direct_jit'] = float(direct_match_correct.group(2))
+                    metrics['direct_lat'] = clean_float(direct_match_correct.group(1))
+                    metrics['direct_jit'] = clean_float(direct_match_correct.group(2))
                 else:
                     direct_match_rtt = re.search(r'5G-uplink → 8.8.8.8.*?RTT=([\d\.]+)ms.*?jitter=([\d\.]+)ms', content)
                     if direct_match_rtt:
-                        metrics['direct_lat'] = float(direct_match_rtt.group(1))
-                        metrics['direct_jit'] = float(direct_match_rtt.group(2))
+                        metrics['direct_lat'] = clean_float(direct_match_rtt.group(1))
+                        metrics['direct_jit'] = clean_float(direct_match_rtt.group(2))
 
     # 2. Parse TCP Bandwidth Log
     tcp_logs = glob.glob(os.path.join(reports_dir, "test_iperf3_tcp_*.log"))
