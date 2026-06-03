@@ -1,0 +1,29 @@
+
+[1m[0;34m══════════════════════════════════════════════[0m
+[1m  03-A  Prometheus Service[0m
+[1m[0;34m══════════════════════════════════════════════[0m
+[0;34m[21:12:15][0m Checking Prometheus health: http://10.8.0.1:9090/-/healthy
+[0;32m  ✔ PASS[0m  Prometheus healthy: Prometheus Server is Healthy.
+[0;34m[21:12:15][0m Checking Prometheus ready: http://10.8.0.1:9090/-/ready
+[0;32m  ✔ PASS[0m  Prometheus ready
+[0;34m[21:12:15][0m Measuring query API response time
+[0;32m  ✔ PASS[0m  Query API latency: 124ms
+[0;34m[21:12:15][0m Checking scrape targets status
+[0;36m  ℹ INFO[0m  Scrape targets: 3/4 UP
+[0;33m  ⚠ WARN[0m  Down targets:  DOWN: edge-nodes @ http://10.8.0.3:9100/metrics
+[0;31m  ✘ FAIL[0m  Some targets are down: 3/4 UP
+[0;34m[21:12:16][0m Verifying key metrics are present
+[0;32m  ✔ PASS[0m  Metric present: up (all targets) (4 series)
+[0;32m  ✔ PASS[0m  Metric present: node CPU (cloud) (80 series)
+[0;32m  ✔ PASS[0m  Metric present: node memory (2 series)
+[0;32m  ✔ PASS[0m  Metric present: node disk (11 series)
+[0;32m  ✔ PASS[0m  Metric present: network RX bytes (18 series)
+[0;34m[21:12:17][0m Checking Prometheus storage
+[0;36m  ℹ INFO[0m  Active time series: 3018
+
+[1m[0;34m══════════════════════════════════════════════[0m
+[1m  SUMMARY — 03-prometheus[0m
+[1m[0;34m══════════════════════════════════════════════[0m
+  [0;32mPASS: 8[0m  |  [0;31mFAIL: 1[0m  |  [0;33mWARN: 1[0m
+
+[0;36m  ℹ INFO[0m  Report saved: /home/hieu/wireguard-edge-cloud-5g/benchmark/03-services/reports/03-prometheus_20260603_211217.txt

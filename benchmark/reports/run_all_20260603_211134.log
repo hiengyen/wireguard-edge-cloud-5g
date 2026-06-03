@@ -1,0 +1,14 @@
+01-A Ping Latency: P=2 F=0 W=2 t=24s
+01-B WireGuard Tunnel: P=5 F=0 W=1 t=2s
+01-C 5G Signal Quality: P=4 F=0 W=2 t=10s
+02-A TCP Bandwidth: P=0 F=1 W=0 t=0s
+02-B UDP Bandwidth & Jitter: P=1 F=1 W=0 t=2s
+02-C rsync File Transfer: P=0 F=1 W=0 t=1s
+02-D WireGuard Overhead: P=0 F=0 W=1 t=0s
+03-A Prometheus: P=8 F=1 W=1 t=2s
+03-B Loki: P=5 F=0 W=1 t=3s
+03-C Grafana: P=4 F=1 W=0 t=2s
+03-D Node Exporter: P=14 F=0 W=0 t=0s
+04-A Sustained Bandwidth: P=1 F=0 W=0 t=1s
+04-B Monitoring Load: P=8 F=0 W=0 t=7s
+05-A Full Stack: P=9 F=0 W=3 t=6s

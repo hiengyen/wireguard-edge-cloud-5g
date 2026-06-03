@@ -1,0 +1,13 @@
+
+[1m[0;34m══════════════════════════════════════════════[0m
+[1m  02-C  File Transfer Benchmark (rsync over WireGuard)[0m
+[1m[0;34m══════════════════════════════════════════════[0m
+[0;34m[21:12:14][0m Checking SSH access to 10.8.0.1 as ec2-user
+[0;31m  ✘ FAIL[0m  Cannot SSH to 10.8.0.1 — check SSH key and WireGuard tunnel
+
+[1m[0;34m══════════════════════════════════════════════[0m
+[1m  SUMMARY — 02-rsync-transfer[0m
+[1m[0;34m══════════════════════════════════════════════[0m
+  [0;32mPASS: 0[0m  |  [0;31mFAIL: 1[0m  |  [0;33mWARN: 0[0m
+
+[0;36m  ℹ INFO[0m  Report saved: /home/hieu/wireguard-edge-cloud-5g/benchmark/02-bandwidth/reports/02-rsync-transfer_20260603_211215.txt

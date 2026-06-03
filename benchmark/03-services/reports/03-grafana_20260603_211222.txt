@@ -1,0 +1,8 @@
+=== 03-grafana — Wed Jun  3 21:12:22 +07 2026 ===
+PASS=4  FAIL=1  WARN=0
+
+  PASS: Grafana health: database=ok
+  PASS: Grafana API latency: 130ms
+  FAIL: No data sources found — provisioning may have failed
+  PASS: Grafana dashboards: 0 found
+  PASS: Grafana is operational (version=13.0.1)

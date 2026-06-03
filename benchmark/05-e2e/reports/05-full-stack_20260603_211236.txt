@@ -1,0 +1,15 @@
+=== 05-full-stack — Wed Jun  3 21:12:36 +07 2026 ===
+PASS=9  FAIL=0  WARN=3
+
+  PASS: P1: 5G WWAN connected (wwan0 = 6.126.165.41/30)
+  PASS: P2: WireGuard interface wg0 exists
+  PASS: P2: Overlay reachable → 10.8.0.1 (avg RTT=75.010ms)
+  PASS: P2: WireGuard handshake fresh (12s ago)
+  PASS: P3: Prometheus is UP
+  PASS: P3: Loki is UP
+  PASS: P3: Grafana is UP
+  PASS: P3: Node-Exporter (cloud) is UP
+  PASS: P3: Node-Exporter (edge) is UP
+  WARN: P4: Edge node scrape target not found in Prometheus — update prometheus.yml with correct IP
+  WARN: P5: No edge-journal logs in Loki — check Grafana Alloy on edge node
+  WARN: P6: Low bandwidth (0.0 Mbps)

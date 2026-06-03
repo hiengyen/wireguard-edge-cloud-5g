@@ -1,0 +1,11 @@
+=== 04-monitoring-load — Wed Jun  3 21:07:26 +07 2026 ===
+PASS=8  FAIL=0  WARN=0
+
+  PASS: prometheus-health: p95=158ms mean=146ms
+  PASS: prometheus-query: p95=159ms mean=143ms
+  PASS: prometheus-range: p95=422ms mean=337ms
+  PASS: loki-ready: p95=156ms mean=141ms
+  PASS: loki-query: p95=0ms mean=0ms
+  PASS: grafana-health: p95=156ms mean=143ms
+  PASS: grafana-datasrc: p95=0ms mean=0ms
+  PASS: node-exporter-edge: p95=244ms mean=153ms
