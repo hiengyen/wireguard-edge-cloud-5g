@@ -1,4 +1,0 @@
-=== 02-wg-overhead — Fri Jun  5 00:04:23 +07 2026 ===
-PASS=0  FAIL=0  WARN=1
-
-  WARN: CLOUD_PUBLIC_IP not set — skipping direct vs VPN comparison

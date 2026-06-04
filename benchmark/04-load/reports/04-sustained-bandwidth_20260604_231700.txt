@@ -1,7 +1,0 @@
-=== 04-sustained-bandwidth — Thu Jun  4 23:17:00 +07 2026 ===
-PASS=4  FAIL=0  WARN=0
-
-  PASS: iperf3 server reachable
-  PASS: sustained-uplink   (60s): sustained 43.45Mbps ±12.9%
-  PASS: sustained-downlink (60s): sustained 15.30Mbps ±8.6%
-  PASS: sustained-bidir    (60s): sustained 47.77Mbps ±7.2%
