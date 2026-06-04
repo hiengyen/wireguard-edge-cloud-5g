@@ -47,5 +47,6 @@ plans/
 
 
 dataset/
+docx/
 .agents/
 gen_docx_documents/
