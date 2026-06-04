@@ -1,0 +1,11 @@
+=== 02-tcp-bandwidth — Fri Jun  5 01:29:29 +07 2026 ===
+PASS=5  FAIL=0  WARN=3
+
+  PASS: iperf3 server reachable
+  WARN: TCP-uplink   (4P × 10s): high retransmits=320
+  PASS: TCP-uplink   (4P × 10s): 43.07 Mbps (threshold=5 Mbps)
+  WARN: TCP-downlink (reverse, 4P × 10s): high retransmits=140
+  PASS: TCP-downlink (reverse, 4P × 10s): 14.27 Mbps (threshold=5 Mbps)
+  PASS: TCP-single-stream (1P × 10s): 42.96 Mbps (threshold=5 Mbps)
+  WARN: TCP-window-512K: kernel rejected requested socket buffer (512K); tune net.core.rmem_max/net.core.wmem_max or lower TCP_WINDOW_SIZE
+  PASS: TCP-bidirectional: 45.19 Mbps (threshold=5 Mbps)

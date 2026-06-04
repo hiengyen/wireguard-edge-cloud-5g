@@ -1,0 +1,17 @@
+=== 03-node-exporter — Fri Jun  5 01:32:52 +07 2026 ===
+PASS=14  FAIL=0  WARN=0
+
+  PASS: cloud-gateway: metrics endpoint reachable
+  PASS: cloud-gateway: rich metrics (340 families)
+  PASS: cloud-gateway: CPU metrics present
+  PASS: cloud-gateway: memory metrics present
+  PASS: cloud-gateway: disk metrics present
+  PASS: cloud-gateway: network metrics present (br-08591a7f02d0 br-b65866c209e4 docker0 ens5 lo veth55064a3 veth8ee6ba8 vethbdc949d vethcfcb161 vetheb4a02b vethf3c9143 vethf9b6c2c wg0 )
+  PASS: cloud-gateway: WireGuard interface visible in metrics
+  PASS: edge-node (local): metrics endpoint reachable
+  PASS: edge-node (local): rich metrics (311 families)
+  PASS: edge-node (local): CPU metrics present
+  PASS: edge-node (local): memory metrics present
+  PASS: edge-node (local): disk metrics present
+  PASS: edge-node (local): network metrics present (docker0 enP3p49s0 lo wg0 wwan0 )
+  PASS: edge-node (local): WireGuard interface visible in metrics

@@ -1,0 +1,9 @@
+=== 03-grafana — Fri Jun  5 01:32:51 +07 2026 ===
+PASS=4  FAIL=0  WARN=2
+
+  PASS: Grafana health: database=ok
+  PASS: Grafana API latency: 141ms
+  WARN: Data source 'Loki': health status unavailable
+  WARN: Data source 'Prometheus': health status unavailable
+  PASS: Grafana dashboards: 3 found
+  PASS: Grafana is operational (version=13.0.1)

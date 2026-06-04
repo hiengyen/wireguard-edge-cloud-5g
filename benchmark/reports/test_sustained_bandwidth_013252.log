@@ -1,0 +1,23 @@
+
+[1m[0;34m══════════════════════════════════════════════[0m
+[1m  04-A  Sustained Bandwidth (60s)[0m
+[1m[0;34m══════════════════════════════════════════════[0m
+[0;34m[01:32:52][0m Checking iperf3 server at 10.8.0.1:5201
+[0;32m  ✔ PASS[0m  iperf3 server reachable
+[0;34m[01:32:54][0m Starting sustained-uplink   (60s) (60s)
+[0;36m  ℹ INFO[0m  sustained-uplink   (60s): mean=47.45Mbps min=41.94 max=59.76 variance=9.9%
+[0;32m  ✔ PASS[0m  sustained-uplink   (60s): sustained 47.45Mbps ±9.9%
+[0;34m[01:33:55][0m Starting sustained-downlink (60s) (60s)
+[0;36m  ℹ INFO[0m  sustained-downlink (60s): mean=14.40Mbps min=11.69 max=16.39 variance=9.8%
+[0;32m  ✔ PASS[0m  sustained-downlink (60s): sustained 14.40Mbps ±9.8%
+[0;34m[01:34:56][0m Starting sustained-bidir    (60s) (60s)
+[0;36m  ℹ INFO[0m  sustained-bidir    (60s): mean=53.25Mbps min=45.94 max=68.66 variance=10.3%
+[0;32m  ✔ PASS[0m  sustained-bidir    (60s): sustained 53.25Mbps ±10.3%
+[0;36m  ℹ INFO[0m  CSV report saved: ./reports/sustained_20260605_013252.csv
+
+[1m[0;34m══════════════════════════════════════════════[0m
+[1m  SUMMARY — 04-sustained-bandwidth[0m
+[1m[0;34m══════════════════════════════════════════════[0m
+  [0;32mPASS: 4[0m  |  [0;31mFAIL: 0[0m  |  [0;33mWARN: 0[0m
+
+[0;36m  ℹ INFO[0m  Report saved: ./reports/04-sustained-bandwidth_20260605_013557.txt

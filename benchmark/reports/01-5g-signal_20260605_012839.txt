@@ -1,0 +1,9 @@
+=== 01-5g-signal — Fri Jun  5 01:28:39 +07 2026 ===
+PASS=4  FAIL=0  WARN=2
+
+  PASS: WWAN interface found: wwan0
+  PASS: WWAN interface has IP: 26.101.153.243/29
+  PASS: QMI device: /dev/cdc-wdm0
+  WARN: Could not query serving system — check QMI permissions (may need sudo)
+  WARN: Could not query signal info from QMI device
+  PASS: DNS resolution working
