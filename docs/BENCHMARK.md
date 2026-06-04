@@ -61,7 +61,7 @@ iperf3 -s -D
 
 ## ⚙️ Configuration
 
-All tuneable parameters live in [`benchmark/config.sh`](../benchmark/config.sh). Override any value via environment variable before running a script — no file edits needed. For repeatable runs, copy [`.env.benchmark.example`](../.env.benchmark.example) to `.env.benchmark` and load it before running the suite.
+All tuneable parameters live in [`benchmark/config.sh`](../benchmark/config.sh). Override any value via environment variable before running a script — no file edits needed. For repeatable runs, copy [`.env.benchmark.example`](../.env.benchmark.example) to `.env.benchmark`; benchmark scripts auto-load it when present.
 
 ### Key variables
 
@@ -112,7 +112,6 @@ All tuneable parameters live in [`benchmark/config.sh`](../benchmark/config.sh).
 
 ```bash
 cd /path/to/wireguard-edge-cloud-5g
-set -a && . ./.env.benchmark && set +a
 bash benchmark/run_all.sh
 ```
 
@@ -146,8 +145,7 @@ IPERF3_DURATION=30 IPERF3_PARALLEL=8 bash benchmark/run_all.sh 02
 # Lower latency threshold for high-quality 5G
 MAX_RTT_MS=80 bash benchmark/run_all.sh 01
 
-# Use .env.benchmark values for service URLs and passwords
-set -a && . ./.env.benchmark && set +a
+# Use auto-loaded .env.benchmark values for service URLs and passwords
 bash benchmark/run_all.sh 03
 ```
 
@@ -426,7 +424,7 @@ iperf3 -s -D
 
 ## ⚙️ Cấu Hình
 
-Tất cả các tham số có thể tinh chỉnh đều nằm trong file [`benchmark/config.sh`](../benchmark/config.sh). Bạn có thể ghi đè bất kỳ giá trị nào thông qua biến môi trường trước khi chạy script mà không cần sửa file trực tiếp. Với các lần chạy lặp lại, copy [`.env.benchmark.example`](../.env.benchmark.example) thành `.env.benchmark` rồi nạp file này trước khi chạy suite.
+Tất cả các tham số có thể tinh chỉnh đều nằm trong file [`benchmark/config.sh`](../benchmark/config.sh). Bạn có thể ghi đè bất kỳ giá trị nào thông qua biến môi trường trước khi chạy script mà không cần sửa file trực tiếp. Với các lần chạy lặp lại, copy [`.env.benchmark.example`](../.env.benchmark.example) thành `.env.benchmark`; các script benchmark sẽ tự nạp file này khi tồn tại.
 
 ### Các biến chính
 
@@ -477,7 +475,6 @@ Tất cả các tham số có thể tinh chỉnh đều nằm trong file [`bench
 
 ```bash
 cd /path/to/wireguard-edge-cloud-5g
-set -a && . ./.env.benchmark && set +a
 bash benchmark/run_all.sh
 ```
 
@@ -511,8 +508,7 @@ IPERF3_DURATION=30 IPERF3_PARALLEL=8 bash benchmark/run_all.sh 02
 # Hạ ngưỡng chấp nhận độ trễ áp dụng cho mạng 5G chất lượng cao
 MAX_RTT_MS=80 bash benchmark/run_all.sh 01
 
-# Sử dụng biến từ .env.benchmark cho URL dịch vụ và mật khẩu
-set -a && . ./.env.benchmark && set +a
+# Sử dụng biến auto-loaded từ .env.benchmark cho URL dịch vụ và mật khẩu
 bash benchmark/run_all.sh 03
 ```
 

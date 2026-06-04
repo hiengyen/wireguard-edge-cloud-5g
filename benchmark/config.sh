@@ -3,15 +3,17 @@
 set -euo pipefail
 
 # ─── Environment & Auto-detection ─────────────────────────────────────────────
-# Load .env file from project root if it exists
 SCRIPT_DIR_FOR_ENV="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [[ -f "${SCRIPT_DIR_FOR_ENV}/../.env" ]]; then
+load_env_file() {
+    local env_file="$1"
+    [[ -f "$env_file" ]] || return 0
+
     while IFS= read -r line || [[ -n "$line" ]]; do
         # Ignore comments and empty lines
         [[ "$line" =~ ^[[:space:]]*# ]] && continue
         [[ "$line" =~ ^[[:space:]]*$ ]] && continue
         # Extract key and value
-        if [[ "$line" =~ ^([^=]+)=(.*)$ ]]; then
+        if [[ "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
             key="${BASH_REMATCH[1]}"
             val="${BASH_REMATCH[2]}"
             # Strip outer single/double quotes if present
@@ -24,8 +26,13 @@ if [[ -f "${SCRIPT_DIR_FOR_ENV}/../.env" ]]; then
                 export "$key"="$val"
             fi
         fi
-    done < "${SCRIPT_DIR_FOR_ENV}/../.env"
-fi
+    done < "$env_file"
+}
+
+# Load project-wide env first, then benchmark-specific values for keys that
+# are still unset. Explicitly exported shell variables keep highest priority.
+load_env_file "${SCRIPT_DIR_FOR_ENV}/../.env"
+load_env_file "${SCRIPT_DIR_FOR_ENV}/../.env.benchmark"
 
 # Auto-detect Cloud Public IP from Terraform state if not set
 if [[ -z "${CLOUD_PUBLIC_IP:-}" ]]; then
