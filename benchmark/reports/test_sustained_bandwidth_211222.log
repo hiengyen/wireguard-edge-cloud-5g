@@ -1,7 +1,0 @@
-
-[1m[0;34m══════════════════════════════════════════════[0m
-[1m  04-A  Sustained Bandwidth (60s)[0m
-[1m[0;34m══════════════════════════════════════════════[0m
-[0;34m[21:12:22][0m Checking iperf3 server at 10.8.0.1:5201
-[0;32m  ✔ PASS[0m  iperf3 server reachable
-[0;34m[21:12:23][0m Starting sustained-uplink   (60s) (60s)

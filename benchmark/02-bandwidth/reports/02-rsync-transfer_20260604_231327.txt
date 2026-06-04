@@ -1,0 +1,4 @@
+=== 02-rsync-transfer — Thu Jun  4 23:13:27 +07 2026 ===
+PASS=0  FAIL=1  WARN=0
+
+  FAIL: Cannot SSH to 10.8.0.1 — check SSH key and WireGuard tunnel

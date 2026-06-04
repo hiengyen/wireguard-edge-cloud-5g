@@ -1,9 +1,0 @@
-=== 03-loki — Wed Jun  3 21:07:18 +07 2026 ===
-PASS=5  FAIL=0  WARN=1
-
-  PASS: Loki ready: ready
-  PASS: Loki ready latency: 137ms
-  PASS: Log push to Loki succeeded
-  PASS: Query returned 1 log line(s) for _benchmark_probe job
-  WARN: Label 'job' not found — Alloy may not be shipping logs yet
-  PASS: Logs are being ingested (rate=0.387/s)

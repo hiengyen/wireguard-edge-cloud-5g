@@ -1,4 +1,0 @@
-=== 02-tcp-bandwidth — Wed Jun  3 17:48:03 +07 2026 ===
-PASS=0  FAIL=1  WARN=0
-
-  FAIL: iperf3 server unreachable at 10.8.0.1:5201

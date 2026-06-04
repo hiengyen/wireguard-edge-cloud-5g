@@ -1,8 +1,0 @@
-
-[1m[0;34m══════════════════════════════════════════════[0m
-[1m  02-B  UDP Bandwidth & Jitter (iperf3)[0m
-[1m[0;34m══════════════════════════════════════════════[0m
-[0;34m[21:12:12][0m Verifying iperf3 server at 10.8.0.1:5201
-[0;32m  ✔ PASS[0m  iperf3 server reachable (UDP)
-[0;34m[21:12:14][0m Running: UDP-1Mbps   (uplink) at target 1M
-[0;31m  ✘ FAIL[0m  UDP-1Mbps   (uplink): iperf3 error: unable to connect to server: No route to host

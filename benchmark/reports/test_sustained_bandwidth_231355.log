@@ -1,0 +1,23 @@
+
+[1m[0;34m══════════════════════════════════════════════[0m
+[1m  04-A  Sustained Bandwidth (60s)[0m
+[1m[0;34m══════════════════════════════════════════════[0m
+[0;34m[23:13:56][0m Checking iperf3 server at 10.8.0.1:5201
+[0;32m  ✔ PASS[0m  iperf3 server reachable
+[0;34m[23:13:57][0m Starting sustained-uplink   (60s) (60s)
+[0;36m  ℹ INFO[0m  sustained-uplink   (60s): mean=43.45Mbps min=37.75 max=59.97 variance=12.9%
+[0;32m  ✔ PASS[0m  sustained-uplink   (60s): sustained 43.45Mbps ±12.9%
+[0;34m[23:14:58][0m Starting sustained-downlink (60s) (60s)
+[0;36m  ℹ INFO[0m  sustained-downlink (60s): mean=15.30Mbps min=13.05 max=17.75 variance=8.6%
+[0;32m  ✔ PASS[0m  sustained-downlink (60s): sustained 15.30Mbps ±8.6%
+[0;34m[23:15:59][0m Starting sustained-bidir    (60s) (60s)
+[0;36m  ℹ INFO[0m  sustained-bidir    (60s): mean=47.77Mbps min=39.63 max=53.99 variance=7.2%
+[0;32m  ✔ PASS[0m  sustained-bidir    (60s): sustained 47.77Mbps ±7.2%
+[0;36m  ℹ INFO[0m  CSV report saved: /home/hieu/wireguard-edge-cloud-5g/benchmark/04-load/reports/sustained_20260604_231355.csv
+
+[1m[0;34m══════════════════════════════════════════════[0m
+[1m  SUMMARY — 04-sustained-bandwidth[0m
+[1m[0;34m══════════════════════════════════════════════[0m
+  [0;32mPASS: 4[0m  |  [0;31mFAIL: 0[0m  |  [0;33mWARN: 0[0m
+
+[0;36m  ℹ INFO[0m  Report saved: /home/hieu/wireguard-edge-cloud-5g/benchmark/04-load/reports/04-sustained-bandwidth_20260604_231700.txt

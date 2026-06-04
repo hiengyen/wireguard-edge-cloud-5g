@@ -1,0 +1,13 @@
+
+[1m[0;34m══════════════════════════════════════════════[0m
+[1m  02-D  WireGuard Encryption Overhead[0m
+[1m[0;34m══════════════════════════════════════════════[0m
+[0;33m  ⚠ WARN[0m  CLOUD_PUBLIC_IP not set — skipping direct vs VPN comparison
+[0;36m  ℹ INFO[0m  Set: export CLOUD_PUBLIC_IP=<ec2-public-ip> to enable this test
+
+[1m[0;34m══════════════════════════════════════════════[0m
+[1m  SUMMARY — 02-wg-overhead[0m
+[1m[0;34m══════════════════════════════════════════════[0m
+  [0;32mPASS: 0[0m  |  [0;31mFAIL: 0[0m  |  [0;33mWARN: 1[0m
+
+[0;36m  ℹ INFO[0m  Report saved: /home/hieu/wireguard-edge-cloud-5g/benchmark/02-bandwidth/reports/02-wg-overhead_20260604_231327.txt

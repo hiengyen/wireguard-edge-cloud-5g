@@ -1,0 +1,13 @@
+=== 02-udp-bandwidth — Thu Jun  4 23:13:26 +07 2026 ===
+PASS=8  FAIL=2  WARN=0
+
+  PASS: iperf3 server reachable (UDP)
+  FAIL: UDP-1Mbps   (uplink): 1.00 Mbps below min 2 Mbps
+  PASS: UDP-5Mbps   (uplink): 5.00 Mbps jitter=2.666ms loss=0.00%
+  PASS: UDP-10Mbps  (uplink): 10.00 Mbps jitter=1.609ms loss=0.74%
+  PASS: UDP-20Mbps  (uplink): 20.00 Mbps jitter=0.740ms loss=0.00%
+  PASS: UDP-50Mbps  (uplink): 44.36 Mbps jitter=0.320ms loss=0.00%
+  PASS: UDP-10Mbps  (downlink): 10.00 Mbps jitter=1.435ms loss=0.01%
+  PASS: UDP-20Mbps  (downlink): 20.00 Mbps jitter=0.732ms loss=0.00%
+  FAIL: UDP-VoIP    (64kbps, 160B pkt): 0.06 Mbps below min 2 Mbps
+  PASS: UDP-large-pkt (5Mbps, 1300B): 5.00 Mbps jitter=3.082ms loss=0.00%

@@ -1,0 +1,39 @@
+label,interval_start,mbps
+sustained-uplink   (60s),0.0,59.97
+sustained-uplink   (60s),5.0,41.94
+sustained-uplink   (60s),10.0,37.75
+sustained-uplink   (60s),15.0,41.94
+sustained-uplink   (60s),20.0,46.14
+sustained-uplink   (60s),25.0,41.94
+sustained-uplink   (60s),30.0,44.04
+sustained-uplink   (60s),35.0,37.75
+sustained-uplink   (60s),40.0,41.94
+sustained-uplink   (60s),45.0,46.14
+sustained-uplink   (60s),50.0,39.85
+sustained-uplink   (60s),55.0,41.94
+label,interval_start,mbps
+sustained-downlink (60s),0.0,16.13
+sustained-downlink (60s),5.0,13.90
+sustained-downlink (60s),10.0,15.59
+sustained-downlink (60s),15.0,15.06
+sustained-downlink (60s),20.0,14.69
+sustained-downlink (60s),25.0,16.47
+sustained-downlink (60s),30.0,17.75
+sustained-downlink (60s),35.0,13.50
+sustained-downlink (60s),40.0,13.05
+sustained-downlink (60s),45.0,15.77
+sustained-downlink (60s),50.0,16.64
+sustained-downlink (60s),55.0,15.04
+label,interval_start,mbps
+sustained-bidir    (60s),0.0,52.59
+sustained-bidir    (60s),5.0,53.99
+sustained-bidir    (60s),10.0,48.72
+sustained-bidir    (60s),15.0,49.80
+sustained-bidir    (60s),20.0,45.06
+sustained-bidir    (60s),25.0,46.67
+sustained-bidir    (60s),30.0,39.63
+sustained-bidir    (60s),35.0,46.58
+sustained-bidir    (60s),40.0,47.86
+sustained-bidir    (60s),45.0,47.12
+sustained-bidir    (60s),50.0,47.51
+sustained-bidir    (60s),55.0,47.67

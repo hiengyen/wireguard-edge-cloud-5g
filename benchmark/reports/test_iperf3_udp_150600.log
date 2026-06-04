@@ -1,9 +1,0 @@
-
-[1m[0;34m══════════════════════════════════════════════[0m
-[1m  02-B  UDP Bandwidth & Jitter (iperf3)[0m
-[1m[0;34m══════════════════════════════════════════════[0m
-[0;34m[15:06:00][0m Verifying iperf3 server at 10.8.0.1:5201
-[0;32m  ✔ PASS[0m  iperf3 server reachable (UDP)
-[0;34m[15:06:00][0m Running: UDP-1Mbps   (uplink) at target 1M
-[0;36m  ℹ INFO[0m  UDP-1Mbps   (uplink): 0.00 Mbps  jitter=0.000ms  loss=0.00%  lost_pkts=0
-[0;31m  ✘ FAIL[0m  UDP-1Mbps   (uplink): 0.00 Mbps below min 2 Mbps

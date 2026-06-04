@@ -1,0 +1,9 @@
+=== 03-loki — Thu Jun  4 23:13:33 +07 2026 ===
+PASS=6  FAIL=0  WARN=0
+
+  PASS: Loki ready: ready
+  PASS: Loki ready latency: 155ms
+  PASS: Log push to Loki succeeded
+  PASS: Query returned 1 log line(s) for _benchmark_probe job
+  PASS: Label 'job' exists in Loki
+  PASS: Logs are being ingested (rate=0.327/s)
