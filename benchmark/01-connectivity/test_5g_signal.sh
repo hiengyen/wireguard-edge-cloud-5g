@@ -11,6 +11,16 @@ require_cmd qmicli ip
 MIN_RSRP="${MIN_RSRP:--110}"    # dBm: acceptable LTE/5G RSRP (good = > -80)
 MIN_RSRQ="${MIN_RSRQ:--20}"     # dB:  acceptable LTE/5G RSRQ (good = > -10)
 
+qmi_cmd() {
+    if [[ $EUID -eq 0 ]]; then
+        qmicli "$@"
+    elif command -v sudo &>/dev/null && sudo -n true 2>/dev/null; then
+        sudo -n qmicli "$@"
+    else
+        qmicli "$@"
+    fi
+}
+
 # 1. WWAN interface detection
 if [[ -z "$WWAN_INTERFACE" ]]; then
     fail "No WWAN interface found (expected ww*) — is the modem connected?"
@@ -40,13 +50,13 @@ else
 
     # Check if we should route qmicli via qmi-proxy (-p)
     QMI_PROXY_FLAG=""
-    if sudo qmicli -p -d "$QMI_DEVICE" --nas-get-serving-system &>/dev/null; then
+    if qmi_cmd -p -d "$QMI_DEVICE" --nas-get-serving-system &>/dev/null; then
         QMI_PROXY_FLAG="-p"
     fi
 
     # 4. Network registration state
     log "Checking network registration"
-    reg_info=$(sudo qmicli $QMI_PROXY_FLAG -d "$QMI_DEVICE" --nas-get-serving-system 2>/dev/null || true)
+    reg_info=$(qmi_cmd $QMI_PROXY_FLAG -d "$QMI_DEVICE" --nas-get-serving-system 2>/dev/null || true)
     if [[ -n "$reg_info" ]]; then
         reg_state=$(echo "$reg_info" | grep -i 'Registration state' | awk -F"'" '{print $2}')
         network=$(echo  "$reg_info" | grep -i 'Description'         | awk -F"'" '{print $2}')
@@ -59,12 +69,12 @@ else
             fail "Network registration: ${reg_state} (expected 'registered')"
         fi
     else
-        warn "Could not query serving system — check QMI permissions (may need sudo)"
+        warn "Could not query serving system — run with sudo -E or grant access to ${QMI_DEVICE}"
     fi
 
     # 5. Signal strength (LTE/5G RSRP/RSRQ)
     log "Querying signal strength"
-    sig_info=$(sudo qmicli $QMI_PROXY_FLAG -d "$QMI_DEVICE" --nas-get-signal-info 2>/dev/null || true)
+    sig_info=$(qmi_cmd $QMI_PROXY_FLAG -d "$QMI_DEVICE" --nas-get-signal-info 2>/dev/null || true)
     if [[ -n "$sig_info" ]]; then
         echo "$sig_info" | sed 's/^/    /'
 
@@ -82,12 +92,12 @@ else
         fi
         [[ -n "$snr"  ]] && info "SNR=${snr}dB"
     else
-        warn "Could not query signal info from QMI device"
+        warn "Could not query signal info from QMI device — run with sudo -E or grant access to ${QMI_DEVICE}"
     fi
 
     # 6. Data connection stats
     log "Querying data session stats"
-    ds_info=$(sudo qmicli $QMI_PROXY_FLAG -d "$QMI_DEVICE" --wds-get-packet-statistics 2>/dev/null || true)
+    ds_info=$(qmi_cmd $QMI_PROXY_FLAG -d "$QMI_DEVICE" --wds-get-packet-statistics 2>/dev/null || true)
     if [[ -n "$ds_info" ]]; then
         tx=$(echo "$ds_info" | grep -i 'TX bytes' | grep -oE '[0-9]+')
         rx=$(echo "$ds_info" | grep -i 'RX bytes' | grep -oE '[0-9]+')

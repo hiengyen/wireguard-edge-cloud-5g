@@ -4,8 +4,14 @@ set -euo pipefail
 
 # ─── Environment & Auto-detection ─────────────────────────────────────────────
 SCRIPT_DIR_FOR_ENV="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+declare -A EXPLICIT_ENV=()
+while IFS='=' read -r key _; do
+    EXPLICIT_ENV["$key"]=1
+done < <(env)
+
 load_env_file() {
     local env_file="$1"
+    local override_existing="${2:-0}"
     [[ -f "$env_file" ]] || return 0
 
     while IFS= read -r line || [[ -n "$line" ]]; do
@@ -21,18 +27,22 @@ load_env_file() {
             val="${val#\"}"
             val="${val%\'}"
             val="${val#\'}"
-            # Only set and export if not already set in environment
-            if [[ -z "${!key:-}" ]]; then
+            # Explicitly exported shell variables keep highest priority.
+            if [[ -n "${EXPLICIT_ENV[$key]:-}" ]]; then
+                continue
+            fi
+            if [[ "$override_existing" == "1" || -z "${!key:-}" ]]; then
                 export "$key"="$val"
             fi
         fi
     done < "$env_file"
 }
 
-# Load project-wide env first, then benchmark-specific values for keys that
-# are still unset. Explicitly exported shell variables keep highest priority.
-load_env_file "${SCRIPT_DIR_FOR_ENV}/../.env"
-load_env_file "${SCRIPT_DIR_FOR_ENV}/../.env.benchmark"
+# Load project-wide env first, then benchmark-specific values. The benchmark
+# env intentionally overrides .env defaults, while inline/exported variables
+# supplied by the caller still win.
+load_env_file "${SCRIPT_DIR_FOR_ENV}/../.env" 0
+load_env_file "${SCRIPT_DIR_FOR_ENV}/../.env.benchmark" 1
 
 # Auto-detect Cloud Public IP from Terraform state if not set
 if [[ -z "${CLOUD_PUBLIC_IP:-}" ]]; then
