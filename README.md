@@ -111,11 +111,18 @@ wireguard-edge-cloud-5g/
 - **Security Resilience Verification:** Automated suite (`verify-vpn-security.sh`) validating WireGuard immunity against packet sniffing (Eavesdropping), MITM, and Handshake/Data Replays.
 - **Hardening:** Best-practice security including OS-aware firewalling (`ufw` on Armbian/Debian, `firewalld` on Amazon Linux 2023), Fail2Ban, and key-only SSH.
 
-## ⚙️ Environment File
+## ⚙️ Environment Files
 
-The repository includes [`.env.example`](/home/hiengyen/CODE/wireguard-edge-cloud-5g/.env.example:1) to centralize deployment and runtime variables.
+The repository includes a full reference [`.env.example`](/home/hiengyen/CODE/wireguard-edge-cloud-5g/.env.example:1) plus smaller role-specific templates:
+
+- [`.env.cloud.example`](/home/hiengyen/CODE/wireguard-edge-cloud-5g/.env.cloud.example:1): Terraform, cloud monitoring, cloud hardening, PeerSight cloud
+- [`.env.edge.example`](/home/hiengyen/CODE/wireguard-edge-cloud-5g/.env.edge.example:1): edge WireGuard, WWAN, Alloy, PeerSight agent
+- [`.env.benchmark.example`](/home/hiengyen/CODE/wireguard-edge-cloud-5g/.env.benchmark.example:1): benchmark suite targets and thresholds
+- [`.env.peersight-local.example`](/home/hiengyen/CODE/wireguard-edge-cloud-5g/.env.peersight-local.example:1): local PeerSight API/app/agent/broker development
+
 For the full production-oriented rollout sequence, see [DEPLOYMENT.md](/home/hiengyen/CODE/wireguard-edge-cloud-5g/docs/DEPLOYMENT.md:1).
 For a compact command cheat sheet, see [COMMANDS.md](/home/hiengyen/CODE/wireguard-edge-cloud-5g/docs/COMMANDS.md:1).
+For the environment split and loading rules, see [ENVIRONMENT.md](/home/hiengyen/CODE/wireguard-edge-cloud-5g/docs/ENVIRONMENT.md:1).
 
 Important groups:
 - `TF_VAR_*`: Terraform inputs for cloud provisioning
@@ -130,11 +137,15 @@ Set both `TF_VAR_wireguard_port` and `WIREGUARD_PORT` to the same value if you c
 Recommended workflow:
 
 ```bash
-cp .env.example .env
-set -a && . ./.env && set +a
+cp .env.cloud.example .env.cloud
+cp .env.edge.example .env.edge
+cp .env.benchmark.example .env.benchmark
+
+# Load only the file needed for the component you are deploying.
+set -a && . ./.env.cloud && set +a
 ```
 
-After that, Terraform, Docker Compose, and shell scripts can reuse the same exported values.
+The real files are git-ignored. Keep secrets in `.env.cloud`, `.env.edge`, `.env.benchmark`, or `.env.peersight-local`, not in the `*.example` files.
 
 ---
 
@@ -145,8 +156,8 @@ After that, Terraform, Docker Compose, and shell scripts can reuse the same expo
 Deploy the Cloud Server using Terraform:
 
 ```bash
-cp .env.example .env
-set -a && . ./.env && set +a
+cp .env.cloud.example .env.cloud
+set -a && . ./.env.cloud && set +a
 cd cloud/terraform/ec2
 terraform init
 terraform plan -out=tfplan
@@ -163,6 +174,8 @@ Connect your Quectel 5G Module via USB/M.2 to the Edge SBC (e.g., Orange Pi). Yo
 
 **Option A: Systemd Service (Native)**
 ```bash
+cp .env.edge.example .env.edge
+set -a && . ./.env.edge && set +a
 cd edge/5g-wwan
 sudo -E bash install.sh
 ```
@@ -173,6 +186,7 @@ The edge installer also provisions the common operator toolset:
 
 **Option B: Docker Containerized (Alternative)**
 ```bash
+set -a && . ./.env.edge && set +a
 cd edge/5g-wwan/docker
 sudo -E docker compose up -d
 ```
@@ -182,6 +196,7 @@ sudo -E docker compose up -d
 Once connected to the internet, join the VPN overlay by running the client setup script:
 
 ```bash
+set -a && . ./.env.edge && set +a
 sudo -E bash edge/vpn/setup-wg-client.sh
 ```
 
@@ -232,8 +247,8 @@ To start the stack:
 
 ```bash
 cd cloud/monitoring
-# Use -E to preserve environment variables loaded from .env
-sudo -E docker compose --env-file ../../.env up -d --force-recreate
+# Use -E to preserve environment variables loaded from .env.cloud
+sudo -E docker compose --env-file ../../.env.cloud up -d --force-recreate
 ```
 
 Or use the wrapper script which validates `GRAFANA_ADMIN_PASSWORD` and applies `ALLOW_MONITORING_OVER_WIREGUARD` automatically:
@@ -242,7 +257,7 @@ Or use the wrapper script which validates `GRAFANA_ADMIN_PASSWORD` and applies `
 sudo -E bash cloud/monitoring/setup-monitoring.sh
 ```
 
-If you want to reach Grafana, Prometheus, and Loki through the WireGuard overlay instead of SSH tunneling, set `ALLOW_MONITORING_OVER_WIREGUARD=true` in `.env`, then re-run:
+If you want to reach Grafana, Prometheus, and Loki through the WireGuard overlay instead of SSH tunneling, set `ALLOW_MONITORING_OVER_WIREGUARD=true` in `.env.cloud`, then re-run:
 
 ```bash
 sudo -E bash shared/scripts/hardening.sh
@@ -282,7 +297,7 @@ For the Alloy UI line to work, open port 12345 on the edge UFW once:
 To forward edge logs to Loki with Alloy after WireGuard is up:
 
 ```bash
-set -a && . ./.env && set +a
+set -a && . ./.env.edge && set +a
 sudo -E bash edge/observability/alloy/install-alloy.sh
 ```
 
@@ -320,7 +335,7 @@ bash benchmark/run_all.sh
 bash benchmark/run_all.sh --suite 01,02
 
 # Services health only (after monitoring stack is up)
-set -a && . .env && set +a
+set -a && . ./.env.benchmark && set +a
 bash benchmark/run_all.sh --suite 03
 
 # Full stack smoke test
@@ -444,8 +459,15 @@ wireguard-edge-cloud-5g/
 
 ## ⚙️ File Môi Trường
 
-Repo có sẵn file [`.env.example`](/home/hiengyen/CODE/wireguard-edge-cloud-5g/.env.example:1) để gom các biến triển khai và runtime.
+Repo có sẵn file tham chiếu đầy đủ [`.env.example`](/home/hiengyen/CODE/wireguard-edge-cloud-5g/.env.example:1) và các template nhỏ theo từng vai trò:
+
+- [`.env.cloud.example`](/home/hiengyen/CODE/wireguard-edge-cloud-5g/.env.cloud.example:1): Terraform, monitoring cloud, hardening cloud, PeerSight cloud
+- [`.env.edge.example`](/home/hiengyen/CODE/wireguard-edge-cloud-5g/.env.edge.example:1): WireGuard edge, WWAN, Alloy, PeerSight agent
+- [`.env.benchmark.example`](/home/hiengyen/CODE/wireguard-edge-cloud-5g/.env.benchmark.example:1): target và ngưỡng benchmark
+- [`.env.peersight-local.example`](/home/hiengyen/CODE/wireguard-edge-cloud-5g/.env.peersight-local.example:1): phát triển PeerSight local
+
 Danh sách lệnh dùng thường xuyên được gom trong [COMMANDS.md](/home/hiengyen/CODE/wireguard-edge-cloud-5g/docs/COMMANDS.md:1).
+Luật tách và nạp biến được mô tả trong [ENVIRONMENT.md](/home/hiengyen/CODE/wireguard-edge-cloud-5g/docs/ENVIRONMENT.md:1).
 
 Các nhóm biến chính:
 - `TF_VAR_*`: đầu vào Terraform cho phần cloud
@@ -458,11 +480,15 @@ Các nhóm biến chính:
 Quy trình khuyên dùng:
 
 ```bash
-cp .env.example .env
-set -a && . ./.env && set +a
+cp .env.cloud.example .env.cloud
+cp .env.edge.example .env.edge
+cp .env.benchmark.example .env.benchmark
+
+# Chỉ nạp file cần cho thành phần đang triển khai.
+set -a && . ./.env.cloud && set +a
 ```
 
-Sau đó Terraform, Docker Compose và các shell script sẽ dùng chung được các biến này.
+Các file thật `.env.cloud`, `.env.edge`, `.env.benchmark`, `.env.peersight-local` đã được git-ignore. Không ghi secret vào các file `*.example`.
 
 ---
 
@@ -473,8 +499,8 @@ Sau đó Terraform, Docker Compose và các shell script sẽ dùng chung đư�
 Xây dựng Server Cloud qua Terraform:
 
 ```bash
-cp .env.example .env
-set -a && . ./.env && set +a
+cp .env.cloud.example .env.cloud
+set -a && . ./.env.cloud && set +a
 cd cloud/terraform/ec2
 terraform init
 terraform plan -out=tfplan
@@ -493,6 +519,8 @@ Bạn có thể chọn 1 trong 2 cách triển khai:
 
 **Cách 1: Chạy trực tiếp qua Systemd (Khuyên dùng)**
 ```bash
+cp .env.edge.example .env.edge
+set -a && . ./.env.edge && set +a
 cd edge/5g-wwan
 sudo -E bash install.sh
 ```
@@ -503,6 +531,7 @@ Trình cài đặt edge cũng cài sẵn bộ công cụ vận hành:
 
 **Cách 2: Đóng gói siêu sạch qua Docker (Alternative)**
 ```bash
+set -a && . ./.env.edge && set +a
 cd edge/5g-wwan/docker
 sudo -E docker compose up -d
 ```
@@ -512,6 +541,7 @@ sudo -E docker compose up -d
 Sau khi có kết nối Internet do SIM cấp, tạo cấu hình và tham gia vào mạng:
 
 ```bash
+set -a && . ./.env.edge && set +a
 sudo -E bash edge/vpn/setup-wg-client.sh
 ```
 
@@ -562,8 +592,8 @@ Hệ thống giám sát đi kèm sẵn **Dashboard Tổng Hợp (Unified Edge & 
 
 ```bash
 cd cloud/monitoring
-# Sử dụng flag -E để giữ các biến môi trường được tải từ file .env
-sudo -E docker compose --env-file ../../.env up -d --force-recreate
+# Sử dụng flag -E để giữ các biến môi trường được tải từ file .env.cloud
+sudo -E docker compose --env-file ../../.env.cloud up -d --force-recreate
 ```
 
 Hoặc dùng wrapper script để tự validate `GRAFANA_ADMIN_PASSWORD` và tự áp dụng `ALLOW_MONITORING_OVER_WIREGUARD`:
@@ -572,7 +602,7 @@ Hoặc dùng wrapper script để tự validate `GRAFANA_ADMIN_PASSWORD` và t�
 sudo -E bash cloud/monitoring/setup-monitoring.sh
 ```
 
-Nếu muốn truy cập Grafana, Prometheus và Loki qua đường hầm WireGuard thay vì SSH tunnel, đặt `ALLOW_MONITORING_OVER_WIREGUARD=true` trong `.env` rồi chạy lại:
+Nếu muốn truy cập Grafana, Prometheus và Loki qua đường hầm WireGuard thay vì SSH tunnel, đặt `ALLOW_MONITORING_OVER_WIREGUARD=true` trong `.env.cloud` rồi chạy lại:
 
 ```bash
 sudo -E bash shared/scripts/hardening.sh
@@ -612,7 +642,7 @@ Sau đó mở:
 Đẩy log edge về Loki bằng Alloy sau khi WireGuard đã chạy:
 
 ```bash
-set -a && . ./.env && set +a
+set -a && . ./.env.edge && set +a
 sudo -E bash edge/observability/alloy/install-alloy.sh
 ```
 
@@ -652,7 +682,7 @@ bash benchmark/run_all.sh
 bash benchmark/run_all.sh --suite 01,02
 
 # Chỉ kiểm tra sức khoẻ dịch vụ (sau khi monitoring stack đã lên)
-set -a && . .env && set +a
+set -a && . ./.env.benchmark && set +a
 bash benchmark/run_all.sh --suite 03
 
 # Smoke test toàn stack
@@ -677,8 +707,8 @@ The containers must be restarted for the new bind address to take effect:
 
 ```bash
 cd cloud/monitoring
-sudo docker compose --env-file ../../.env down
-sudo docker compose --env-file ../../.env up -d
+sudo docker compose --env-file ../../.env.cloud down
+sudo docker compose --env-file ../../.env.cloud up -d
 curl http://10.8.0.1:3100/ready
 ```
 
@@ -786,7 +816,7 @@ If you rename a job in `prometheus.yml` (e.g. from `cloud-gateway` to `cloud-nod
 Nếu bạn đổi tên cấu hình job (VD từ `cloud-gateway` thành `cloud-node`), tên cũ vẫn sẽ kẹt lại trong menu thả xuống của Grafana 15 ngày. Để dọn dẹp ngay, hãy xóa volume của Prometheus và khởi động lại:
 ```bash
 cd cloud/monitoring
-set -a && source ../../.env && set +a
+set -a && source ../../.env.cloud && set +a
 docker compose stop prometheus
 docker compose rm -f prometheus
 docker volume rm monitoring_prometheus_data

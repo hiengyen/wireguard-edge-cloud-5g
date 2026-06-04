@@ -113,7 +113,7 @@ The deployment lifecycle is fully managed by shell scripts in the `peersight/` d
 Ensure you have completed the base infrastructure setup described in [DEPLOYMENT.md](DEPLOYMENT.md):
 - Cloud Gateway is running with VPN address `10.8.0.1`
 - Edge Node is connected to the VPN at `10.8.0.2`
-- The `.env` file contains the PeerSight variables (see `.env.example` for reference)
+- `.env.cloud` contains PeerSight cloud variables and `.env.edge` contains the node-specific agent variables. See [ENVIRONMENT.md](ENVIRONMENT.md) for the split.
 
 ### 5.1 Cloud Gateway Packages
 ```bash
@@ -149,7 +149,7 @@ PeerSight enforces a strict **Zero-Trust** network overlay.
 To apply the hardening configuration:
 ```bash
 cd ~/wireguard-edge-cloud-5g
-set -a && . ./.env && set +a
+set -a && . ./.env.cloud && set +a
 sudo -E bash shared/scripts/hardening.sh
 ```
 
@@ -161,7 +161,7 @@ SSH into the Cloud Gateway and run the automated orchestrator:
 
 ```bash
 cd ~/wireguard-edge-cloud-5g
-set -a && . ./.env && set +a
+set -a && . ./.env.cloud && set +a
 sudo -E bash peersight/deploy-cloud.sh
 ```
 
@@ -322,7 +322,7 @@ sudo journalctl -u peersight-agent -f
      | jq -r '.broker_token')
    echo "$BROKER_TOKEN"
    ```
-2. Add it to the Cloud Gateway's `.env` file:
+2. Add it to the Cloud Gateway's `.env.cloud` file:
    ```bash
    PEERSIGHT_BROKER_TOKEN=<YOUR_BROKER_TOKEN>
    PEERSIGHT_BROKER_ID=cloud-broker-1
@@ -361,7 +361,7 @@ sudo -E bash uninstall.sh
 
 ## 12. Detailed Configuration Reference
 
-These variables are defined in `.env` and consumed by the PeerSight modules.
+These variables are defined in `.env.cloud`, `.env.edge`, or `.env.peersight-local` depending on where PeerSight is running.
 
 ### 12.1 API Server Variables (`peersight-api`)
 
@@ -541,7 +541,7 @@ Vòng đời triển khai hệ thống được quản lý hoàn toàn bằng c�
 Đảm bảo bạn đã hoàn thành thiết lập hạ tầng cơ sở như mô tả trong tài liệu [DEPLOYMENT.md](DEPLOYMENT.md):
 - Cloud Gateway đang chạy với IP VPN `10.8.0.1`.
 - Edge Node đã kết nối thành công vào VPN tại địa chỉ `10.8.0.2`.
-- Tệp tin `.env` đã được điền các biến cấu hình cho PeerSight (tham khảo `.env.example`).
+- Tệp `.env.cloud` chứa biến PeerSight phía cloud và `.env.edge` chứa biến agent riêng từng node. Xem [ENVIRONMENT.md](ENVIRONMENT.md) để biết quy ước tách file.
 
 ### 5.1 Các Gói Cần Thiết Trên Cloud Gateway
 ```bash
@@ -577,7 +577,7 @@ PeerSight thực thi các chính sách bảo mật mạng **Zero-Trust** cực k
 Để áp dụng cấu hình làm cứng hệ thống bảo mật:
 ```bash
 cd ~/wireguard-edge-cloud-5g
-set -a && . ./.env && set +a
+set -a && . ./.env.cloud && set +a
 sudo -E bash shared/scripts/hardening.sh
 ```
 
@@ -589,7 +589,7 @@ Kết nối SSH vào Cloud Gateway và khởi chạy lệnh sau:
 
 ```bash
 cd ~/wireguard-edge-cloud-5g
-set -a && . ./.env && set +a
+set -a && . ./.env.cloud && set +a
 sudo -E bash peersight/deploy-cloud.sh
 ```
 
@@ -750,7 +750,7 @@ sudo journalctl -u peersight-agent -f
      | jq -r '.broker_token')
    echo "$BROKER_TOKEN"
    ```
-2. Cập nhật mã này vào tệp `.env` trên Cloud Gateway:
+2. Cập nhật mã này vào tệp `.env.cloud` trên Cloud Gateway:
    ```bash
    PEERSIGHT_BROKER_TOKEN=<YOUR_BROKER_TOKEN>
    PEERSIGHT_BROKER_ID=cloud-broker-1
@@ -789,7 +789,7 @@ sudo -E bash uninstall.sh
 
 ## 12. Tham Chiếu Cấu Hình Chi Tiết
 
-Các biến môi trường dưới đây được khai báo trong file `.env` và được nạp vào các module của PeerSight.
+Các biến môi trường dưới đây được khai báo trong `.env.cloud`, `.env.edge`, hoặc `.env.peersight-local` tùy vị trí chạy PeerSight.
 
 ### 12.1 Biến Của Máy Chủ API (`peersight-api`)
 

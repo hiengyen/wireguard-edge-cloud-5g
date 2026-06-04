@@ -61,7 +61,7 @@ iperf3 -s -D
 
 ## ⚙️ Configuration
 
-All tuneable parameters live in [`benchmark/config.sh`](../benchmark/config.sh). Override any value via environment variable before running a script — no file edits needed.
+All tuneable parameters live in [`benchmark/config.sh`](../benchmark/config.sh). Override any value via environment variable before running a script — no file edits needed. For repeatable runs, copy [`.env.benchmark.example`](../.env.benchmark.example) to `.env.benchmark` and load it before running the suite.
 
 ### Key variables
 
@@ -110,6 +110,7 @@ All tuneable parameters live in [`benchmark/config.sh`](../benchmark/config.sh).
 
 ```bash
 cd /path/to/wireguard-edge-cloud-5g
+set -a && . ./.env.benchmark && set +a
 bash benchmark/run_all.sh
 ```
 
@@ -143,8 +144,8 @@ IPERF3_DURATION=30 IPERF3_PARALLEL=8 bash benchmark/run_all.sh 02
 # Lower latency threshold for high-quality 5G
 MAX_RTT_MS=80 bash benchmark/run_all.sh 01
 
-# Use .env values for service URLs and passwords
-set -a && . .env && set +a
+# Use .env.benchmark values for service URLs and passwords
+set -a && . ./.env.benchmark && set +a
 bash benchmark/run_all.sh 03
 ```
 
@@ -220,8 +221,8 @@ CLOUD_PUBLIC_IP=<ec2-public-ip> bash benchmark/02-bandwidth/test_wg_overhead.sh
 **Prerequisite:** monitoring stack must be running.
 
 ```bash
-set -a && . .env && set +a
-cd cloud/monitoring && sudo -E docker compose up -d
+set -a && . ./.env.cloud && set +a
+cd cloud/monitoring && sudo -E docker compose --env-file ../../.env.cloud up -d
 ```
 
 ---
@@ -423,7 +424,7 @@ iperf3 -s -D
 
 ## ⚙️ Cấu Hình
 
-Tất cả các tham số có thể tinh chỉnh đều nằm trong file [`benchmark/config.sh`](../benchmark/config.sh). Bạn có thể ghi đè bất kỳ giá trị nào thông qua biến môi trường trước khi chạy script mà không cần sửa file trực tiếp.
+Tất cả các tham số có thể tinh chỉnh đều nằm trong file [`benchmark/config.sh`](../benchmark/config.sh). Bạn có thể ghi đè bất kỳ giá trị nào thông qua biến môi trường trước khi chạy script mà không cần sửa file trực tiếp. Với các lần chạy lặp lại, copy [`.env.benchmark.example`](../.env.benchmark.example) thành `.env.benchmark` rồi nạp file này trước khi chạy suite.
 
 ### Các biến chính
 
@@ -472,6 +473,7 @@ Tất cả các tham số có thể tinh chỉnh đều nằm trong file [`bench
 
 ```bash
 cd /path/to/wireguard-edge-cloud-5g
+set -a && . ./.env.benchmark && set +a
 bash benchmark/run_all.sh
 ```
 
@@ -505,8 +507,8 @@ IPERF3_DURATION=30 IPERF3_PARALLEL=8 bash benchmark/run_all.sh 02
 # Hạ ngưỡng chấp nhận độ trễ áp dụng cho mạng 5G chất lượng cao
 MAX_RTT_MS=80 bash benchmark/run_all.sh 01
 
-# Sử dụng các biến môi trường từ file .env cho URL dịch vụ và mật khẩu
-set -a && . .env && set +a
+# Sử dụng biến từ .env.benchmark cho URL dịch vụ và mật khẩu
+set -a && . ./.env.benchmark && set +a
 bash benchmark/run_all.sh 03
 ```
 
@@ -582,8 +584,8 @@ CLOUD_PUBLIC_IP=<ec2-public-ip> bash benchmark/02-bandwidth/test_wg_overhead.sh
 **Điều kiện tiên quyết:** Cụm giám sát (monitoring stack) phải đang chạy.
 
 ```bash
-set -a && . .env && set +a
-cd cloud/monitoring && sudo -E docker compose up -d
+set -a && . ./.env.cloud && set +a
+cd cloud/monitoring && sudo -E docker compose --env-file ../../.env.cloud up -d
 ```
 
 ---

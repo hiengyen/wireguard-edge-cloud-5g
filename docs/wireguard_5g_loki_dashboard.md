@@ -135,7 +135,7 @@ Run the command below in the cloud gateway workspace:
 
 ```bash
 cd cloud/monitoring
-sudo -E docker compose --env-file ../../.env up -d --force-recreate
+sudo -E docker compose --env-file ../../.env.cloud up -d --force-recreate
 ```
 
 ### Step 2: Access Grafana UIs
@@ -286,7 +286,7 @@ Khởi chạy câu lệnh sau tại thư mục giám sát của Cloud Gateway:
 
 ```bash
 cd cloud/monitoring
-sudo -E docker compose --env-file ../../.env up -d --force-recreate
+sudo -E docker compose --env-file ../../.env.cloud up -d --force-recreate
 ```
 
 ### Bước 2: Truy cập giao diện Grafana Web UI

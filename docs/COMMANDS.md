@@ -14,8 +14,12 @@ The cloud node is the WireGuard server/gateway and each edge node joins as a cli
 ## Environment
 
 ```bash
-cp .env.example .env
-set -a && . ./.env && set +a
+cp .env.cloud.example .env.cloud
+cp .env.edge.example .env.edge
+cp .env.benchmark.example .env.benchmark
+
+# Load the file for the component you are operating.
+set -a && . ./.env.cloud && set +a
 ```
 
 ## Terraform Cloud Provisioning
@@ -57,7 +61,7 @@ sudo docker compose up -d
 ## WireGuard Client Join (Edge -> Cloud)
 
 ```bash
-set -a && . ./.env && set +a
+set -a && . ./.env.edge && set +a
 sudo -E bash edge/vpn/setup-wg-client.sh
 ```
 
@@ -87,7 +91,7 @@ Start monitoring on the cloud node:
 
 ```bash
 cd cloud/monitoring
-sudo docker compose --env-file ../../.env up -d
+sudo docker compose --env-file ../../.env.cloud up -d
 sudo docker ps
 curl http://127.0.0.1:9090/-/healthy
 curl http://127.0.0.1:3100/ready
@@ -105,11 +109,11 @@ Grafana loads Prometheus and Loki from `cloud/monitoring/grafana/provisioning/da
 Expose Grafana, Prometheus, and Loki through WireGuard only:
 
 ```bash
-# In .env: set ALLOW_MONITORING_OVER_WIREGUARD=true
+# In .env.cloud: set ALLOW_MONITORING_OVER_WIREGUARD=true
 sudo -E bash shared/scripts/hardening.sh
 cd cloud/monitoring
-sudo docker compose --env-file ../../.env down
-sudo docker compose --env-file ../../.env up -d
+sudo docker compose --env-file ../../.env.cloud down
+sudo docker compose --env-file ../../.env.cloud up -d
 ```
 
 Or with the wrapper (sets `MONITORING_BIND_ADDRESS=10.8.0.1` automatically from `ALLOW_MONITORING_OVER_WIREGUARD`):
@@ -145,7 +149,7 @@ Install Alloy on the edge node after WireGuard can reach the cloud overlay addre
 the default `ALLOY_LOKI_URL` expects cloud Loki to be reachable at `10.8.0.1:3100`.
 
 ```bash
-set -a && . ./.env && set +a
+set -a && . ./.env.edge && set +a
 sudo -E bash edge/observability/alloy/install-alloy.sh
 sudo systemctl status alloy --no-pager
 sudo journalctl -u alloy --no-pager
@@ -293,7 +297,7 @@ Override thresholds or targets inline:
 
 ```bash
 IPERF3_DURATION=30 WG_SERVER_IP=10.8.0.1 bash benchmark/run_all.sh 02
-set -a && . .env && set +a && bash benchmark/run_all.sh 03
+set -a && . ./.env.benchmark && set +a && bash benchmark/run_all.sh 03
 ```
 
 Enable destructive tests (WWAN reconnect, failover):
@@ -361,8 +365,12 @@ Trong đó, Cloud Node đóng vai trò là WireGuard server/gateway và mỗi Ed
 ## Biến Môi Trường
 
 ```bash
-cp .env.example .env
-set -a && . ./.env && set +a
+cp .env.cloud.example .env.cloud
+cp .env.edge.example .env.edge
+cp .env.benchmark.example .env.benchmark
+
+# Nạp file đúng với thành phần đang vận hành.
+set -a && . ./.env.cloud && set +a
 ```
 
 ## Khởi Tạo Hạ Tầng Cloud Qua Terraform
@@ -404,7 +412,7 @@ sudo docker compose up -d
 ## Thiết Lập WireGuard Client Gia Nhập Mạng (Edge -> Cloud)
 
 ```bash
-set -a && . ./.env && set +a
+set -a && . ./.env.edge && set +a
 sudo -E bash edge/vpn/setup-wg-client.sh
 ```
 
@@ -434,7 +442,7 @@ Khởi chạy cụm giám sát trên Cloud Node:
 
 ```bash
 cd cloud/monitoring
-sudo docker compose --env-file ../../.env up -d
+sudo docker compose --env-file ../../.env.cloud up -d
 sudo docker ps
 curl http://127.0.0.1:9090/-/healthy
 curl http://127.0.0.1:3100/ready
@@ -452,11 +460,11 @@ Grafana tự động cấu hình nguồn dữ liệu Prometheus và Loki từ t�
 Chỉ cho phép truy cập Grafana, Prometheus và Loki qua đường hầm bảo mật WireGuard:
 
 ```bash
-# Trong file .env đặt: ALLOW_MONITORING_OVER_WIREGUARD=true
+# Trong file .env.cloud đặt: ALLOW_MONITORING_OVER_WIREGUARD=true
 sudo -E bash shared/scripts/hardening.sh
 cd cloud/monitoring
-sudo docker compose --env-file ../../.env down
-sudo docker compose --env-file ../../.env up -d
+sudo docker compose --env-file ../../.env.cloud down
+sudo docker compose --env-file ../../.env.cloud up -d
 ```
 
 Hoặc dùng script wrapper (tự động cấu hình `MONITORING_BIND_ADDRESS=10.8.0.1` dựa trên giá trị của `ALLOW_MONITORING_OVER_WIREGUARD`):
@@ -491,7 +499,7 @@ Truy cập cục bộ trên trình duyệt máy tính của bạn:
 Khởi chạy Alloy trên Edge Node sau khi kết nối VPN WireGuard đã thông suốt tới địa chỉ IP ảo Cloud Server. Cấu hình mặc định của `ALLOY_LOKI_URL` giả định Loki trên cloud đang lắng nghe tại địa chỉ `10.8.0.1:3100`.
 
 ```bash
-set -a && . ./.env && set +a
+set -a && . ./.env.edge && set +a
 sudo -E bash edge/observability/alloy/install-alloy.sh
 sudo systemctl status alloy --no-pager
 sudo journalctl -u alloy --no-pager
@@ -638,7 +646,7 @@ Ghi đè cấu hình ngưỡng hoặc mục tiêu đo trực tiếp trên câu l
 
 ```bash
 IPERF3_DURATION=30 WG_SERVER_IP=10.8.0.1 bash benchmark/run_all.sh 02
-set -a && . .env && set +a && bash benchmark/run_all.sh 03
+set -a && . ./.env.benchmark && set +a && bash benchmark/run_all.sh 03
 ```
 
 Kích hoạt cả các kịch bản đo đạc phá hủy (destructive - ví dụ: ngắt kết nối di động, failover):

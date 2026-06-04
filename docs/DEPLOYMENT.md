@@ -45,19 +45,23 @@ Install locally:
 
 ## 2. Prepare Environment Variables
 
-Create the deployment environment file:
+Create the role-specific environment files:
 
 ```bash
-cp .env.example .env
+cp .env.cloud.example .env.cloud
+cp .env.edge.example .env.edge
+cp .env.benchmark.example .env.benchmark
 ```
 
-Load the variables into the current shell:
+Load the file that matches the component you are deploying:
 
 ```bash
-set -a && . ./.env && set +a
+set -a && . ./.env.cloud && set +a
 ```
 
-Update `.env` with your real values:
+The full variable inventory is in [`.env.example`](../.env.example). The split workflow is documented in [ENVIRONMENT.md](ENVIRONMENT.md).
+
+Update `.env.cloud` with your real cloud values:
 
 - `TF_VAR_admin_ssh_cidr`
 - `TF_VAR_wireguard_port`
@@ -72,9 +76,11 @@ Update `.env` with your real values:
 - `ALLOY_HTTP_LISTEN_ADDR`
 - `MONITORING_BIND_ADDRESS`
 - `ALLOW_MONITORING_OVER_WIREGUARD`
+
+Update `.env.edge` with edge-specific values:
+
 - `WIREGUARD_PORT`
 - `WIREGUARD_ALLOWED_IPS`
-
 - `EDGE_EXTRA_TCP_PORTS`
 
 Recommended base values:
@@ -99,7 +105,7 @@ Recommended base values:
 
 Review [cloud/terraform/ec2/terraform.tfvars.example](/home/hiengyen/CODE/wireguard-edge-cloud-5g/cloud/terraform/ec2/terraform.tfvars.example:1) and provide the required values either through:
 
-- exported `TF_VAR_*` environment variables from `.env`
+- exported `TF_VAR_*` environment variables from `.env.cloud`
 - or a local non-committed `terraform.tfvars`
 
 Required infrastructure values:
@@ -121,7 +127,7 @@ Current repository default:
 Run:
 
 ```bash
-set -a && . ./.env && set +a
+set -a && . ./.env.cloud && set +a
 cd cloud/terraform/ec2
 terraform init
 terraform validate
@@ -199,7 +205,7 @@ Important note:
 Before starting the monitoring stack, secure the cloud node and install the metrics exporter:
 
 ```bash
-set -a && . ./.env && set +a
+set -a && . ./.env.cloud && set +a
 sudo -E bash shared/scripts/hardening.sh
 sudo -E bash shared/scripts/install-node-exporter.sh
 ```
@@ -226,8 +232,8 @@ The monitoring stack includes a **Unified Edge & Cloud Dashboard** for a single-
 To start the stack:
 
 ```bash
-# Use -E to preserve environment variables loaded from .env
-sudo -E docker compose --env-file ../../.env up -d --force-recreate
+# Use -E to preserve environment variables loaded from .env.cloud
+sudo -E docker compose --env-file ../../.env.cloud up -d --force-recreate
 ```
 
 Alternatively, use the wrapper script which automatically applies `ALLOW_MONITORING_OVER_WIREGUARD` and validates required variables:
@@ -247,7 +253,7 @@ curl http://127.0.0.1:3000/api/health
 
 Notes:
 
-- Prometheus, Loki, and Grafana bind to `127.0.0.1` by default. To reach them through WireGuard instead of SSH tunneling, set `ALLOW_MONITORING_OVER_WIREGUARD=true` in `.env` before running `hardening.sh` and starting the stack. The wrapper script applies this automatically; with the direct `docker compose` command, export `MONITORING_BIND_ADDRESS=10.8.0.1` first.
+- Prometheus, Loki, and Grafana bind to `127.0.0.1` by default. To reach them through WireGuard instead of SSH tunneling, set `ALLOW_MONITORING_OVER_WIREGUARD=true` in `.env.cloud` before running `hardening.sh` and starting the stack. The wrapper script applies this automatically; with the direct `docker compose` command, export `MONITORING_BIND_ADDRESS=10.8.0.1` first.
 - Grafana provisions the Prometheus and Loki data sources from `cloud/monitoring/grafana/provisioning/datasources/datasources.yml`.
 
 To access the web UIs through SSH tunneling from your local machine:
@@ -289,7 +295,7 @@ Then open:
 On the edge device:
 
 ```bash
-set -a && . ./.env && set +a
+set -a && . ./.env.edge && set +a
 cd edge/5g-wwan
 sudo -E bash install.sh
 ```
@@ -297,7 +303,7 @@ sudo -E bash install.sh
 If you use the Docker-based WWAN mode:
 
 ```bash
-set -a && . ./.env && set +a
+set -a && . ./.env.edge && set +a
 cd edge/5g-wwan/docker
 sudo -E docker compose up -d
 ```
@@ -327,7 +333,7 @@ Requirements:
 Run the client setup on the edge node:
 
 ```bash
-set -a && . ./.env && set +a
+set -a && . ./.env.edge && set +a
 sudo -E bash edge/vpn/setup-wg-client.sh
 ```
 
@@ -373,7 +379,7 @@ This only removes the local edge setup. Remove the peer on the cloud server sepa
 Now that the edge node is connected to the VPN, secure it and install Node Exporter:
 
 ```bash
-set -a && . ./.env && set +a
+set -a && . ./.env.edge && set +a
 sudo -E bash shared/scripts/hardening.sh
 sudo -E bash shared/scripts/install-node-exporter.sh
 ```
@@ -428,7 +434,7 @@ ssh -o PasswordAuthentication=no <user>@<edge-ip>
 Once key-based login is confirmed, re-run the hardening script to disable password authentication:
 
 ```bash
-set -a && . ./.env && set +a
+set -a && . ./.env.edge && set +a
 sudo -E bash shared/scripts/hardening.sh
 ```
 
@@ -483,7 +489,7 @@ For this default endpoint to work, you must have started the cloud monitoring st
 >   7. Restart NTPsec: `sudo systemctl restart ntpsec`.
 
 ```bash
-set -a && . ./.env && set +a
+set -a && . ./.env.edge && set +a
 sudo -E bash edge/observability/alloy/install-alloy.sh
 ```
 
@@ -593,7 +599,7 @@ Common causes of failure:
 
 - Reusing `10.8.0.2/32` while the bootstrap sample peer still exists
 - Starting Alloy before Loki is reachable at `ALLOY_LOKI_URL`
-- Changing `ALLOW_MONITORING_OVER_WIREGUARD` in `.env` without restarting the Docker stack
+- Changing `ALLOW_MONITORING_OVER_WIREGUARD` in `.env.cloud` without restarting the Docker stack
 
 ### Loki not reachable on `10.8.0.1:3100`
 
@@ -611,8 +617,8 @@ Fix — restart the stack so Docker picks up the updated bind address:
 
 ```bash
 cd cloud/monitoring
-sudo -E docker compose --env-file ../../.env down
-sudo -E docker compose --env-file ../../.env up -d --force-recreate
+sudo -E docker compose --env-file ../../.env.cloud down
+sudo -E docker compose --env-file ../../.env.cloud up -d --force-recreate
 curl http://10.8.0.1:3100/ready
 ```
 
@@ -644,7 +650,7 @@ If you change a `job_name` in `prometheus.yml` (e.g. from `cloud-gateway` to `cl
 
 ```bash
 cd cloud/monitoring
-set -a && source ../../.env && set +a
+set -a && source ../../.env.cloud && set +a
 sudo docker compose stop prometheus
 sudo docker compose rm -f prometheus
 sudo docker volume rm monitoring_prometheus_data
@@ -735,19 +741,23 @@ Cài đặt sẵn trên máy quản trị local:
 
 ## 2. Chuẩn Bị Biến Môi Trường
 
-Tạo tệp cấu hình môi trường triển khai:
+Tạo các tệp cấu hình môi trường theo vai trò:
 
 ```bash
-cp .env.example .env
+cp .env.cloud.example .env.cloud
+cp .env.edge.example .env.edge
+cp .env.benchmark.example .env.benchmark
 ```
 
-Tải các biến môi trường vào shell hiện tại:
+Nạp file đúng với thành phần đang triển khai:
 
 ```bash
-set -a && . ./.env && set +a
+set -a && . ./.env.cloud && set +a
 ```
 
-Cập nhật tệp `.env` với các thông tin thực tế của bạn:
+Danh sách biến đầy đủ nằm trong [`.env.example`](../.env.example). Quy ước tách file được mô tả trong [ENVIRONMENT.md](ENVIRONMENT.md).
+
+Cập nhật `.env.cloud` với thông tin cloud thực tế:
 
 - `TF_VAR_admin_ssh_cidr`
 - `TF_VAR_wireguard_port`
@@ -762,6 +772,9 @@ Cập nhật tệp `.env` với các thông tin thực tế của bạn:
 - `ALLOY_HTTP_LISTEN_ADDR`
 - `MONITORING_BIND_ADDRESS`
 - `ALLOW_MONITORING_OVER_WIREGUARD`
+
+Cập nhật `.env.edge` với thông tin riêng của edge:
+
 - `WIREGUARD_PORT`
 - `WIREGUARD_ALLOWED_IPS`
 - `EDGE_EXTRA_TCP_PORTS`
@@ -787,7 +800,7 @@ Giá trị cấu hình cơ sở khuyến nghị:
 
 Kiểm tra tệp mẫu [cloud/terraform/ec2/terraform.tfvars.example](/home/hiengyen/CODE/wireguard-edge-cloud-5g/cloud/terraform/ec2/terraform.tfvars.example:1) và cung cấp các giá trị yêu cầu thông qua:
 
-- Biến môi trường xuất ra kiểu `TF_VAR_*` từ `.env`
+- Biến môi trường xuất ra kiểu `TF_VAR_*` từ `.env.cloud`
 - Hoặc một tệp cấu hình cục bộ `terraform.tfvars` (không commit lên git)
 
 Các thông số hạ tầng bắt buộc:
@@ -809,7 +822,7 @@ Mặc định hiện tại trong repository:
 Khởi chạy các lệnh sau:
 
 ```bash
-set -a && . ./.env && set +a
+set -a && . ./.env.cloud && set +a
 cd cloud/terraform/ec2
 terraform init
 terraform validate
@@ -887,7 +900,7 @@ Lưu ý quan trọng:
 Trước khi khởi động cụm giám sát (monitoring stack), hãy bảo mật máy chủ đám mây và cài đặt agent thu thập metric:
 
 ```bash
-set -a && . ./.env && set +a
+set -a && . ./.env.cloud && set +a
 sudo -E bash shared/scripts/hardening.sh
 sudo -E bash shared/scripts/install-node-exporter.sh
 ```
@@ -914,8 +927,8 @@ Cụm dịch vụ giám sát đi kèm sẵn **Dashboard Tổng Hợp (Unified Ed
 Để khởi động cụm giám sát:
 
 ```bash
-# Sử dụng flag -E để giữ lại các biến môi trường được tải từ tệp .env
-sudo -E docker compose --env-file ../../.env up -d --force-recreate
+# Sử dụng flag -E để giữ lại các biến môi trường được tải từ tệp .env.cloud
+sudo -E docker compose --env-file ../../.env.cloud up -d --force-recreate
 ```
 
 Hoặc sử dụng script wrapper để tự động kiểm tra biến cấu hình và thiết lập quyền truy cập `ALLOW_MONITORING_OVER_WIREGUARD`:
@@ -935,7 +948,7 @@ curl http://127.0.0.1:3000/api/health
 
 Lưu ý:
 
-- Prometheus, Loki và Grafana mặc định chỉ lắng nghe địa chỉ cục bộ `127.0.0.1`. Để có thể truy cập qua đường hầm WireGuard thay vì thiết lập SSH tunnel, đặt biến `ALLOW_MONITORING_OVER_WIREGUARD=true` trong `.env` trước khi chạy `hardening.sh` và khởi động stack. Script wrapper sẽ tự động xử lý việc này; nếu dùng lệnh `docker compose` trực tiếp, bạn cần xuất biến `MONITORING_BIND_ADDRESS=10.8.0.1` trước.
+- Prometheus, Loki và Grafana mặc định chỉ lắng nghe địa chỉ cục bộ `127.0.0.1`. Để có thể truy cập qua đường hầm WireGuard thay vì thiết lập SSH tunnel, đặt biến `ALLOW_MONITORING_OVER_WIREGUARD=true` trong `.env.cloud` trước khi chạy `hardening.sh` và khởi động stack. Script wrapper sẽ tự động xử lý việc này; nếu dùng lệnh `docker compose` trực tiếp, bạn cần xuất biến `MONITORING_BIND_ADDRESS=10.8.0.1` trước.
 - Grafana tự động cấu hình các nguồn dữ liệu Prometheus và Loki từ tệp `cloud/monitoring/grafana/provisioning/datasources/datasources.yml`.
 
 Để truy cập giao diện quản trị Web thông qua SSH tunnel từ máy tính của bạn:
@@ -977,7 +990,7 @@ Sau đó truy cập trên trình duyệt local:
 Thực hiện trên thiết bị biên:
 
 ```bash
-set -a && . ./.env && set +a
+set -a && . ./.env.edge && set +a
 cd edge/5g-wwan
 sudo -E bash install.sh
 ```
@@ -985,7 +998,7 @@ sudo -E bash install.sh
 Nếu bạn chạy phân hệ mạng di động qua Docker Container:
 
 ```bash
-set -a && . ./.env && set +a
+set -a && . ./.env.edge && set +a
 cd edge/5g-wwan/docker
 sudo -E docker compose up -d
 ```
@@ -1015,7 +1028,7 @@ Yêu cầu chuẩn bị:
 Khởi chạy script cấu hình client trên Edge Node:
 
 ```bash
-set -a && . ./.env && set +a
+set -a && . ./.env.edge && set +a
 sudo -E bash edge/vpn/setup-wg-client.sh
 ```
 
@@ -1061,7 +1074,7 @@ sudo -E REMOVE_WG_KEYS=true bash edge/vpn/uninstall-wg-client.sh
 Sau khi Edge Node đã kết nối thành công vào mạng ảo VPN, hãy bảo mật thiết bị biên và cài đặt Node Exporter:
 
 ```bash
-set -a && . ./.env && set +a
+set -a && . ./.env.edge && set +a
 sudo -E bash shared/scripts/hardening.sh
 sudo -E bash shared/scripts/install-node-exporter.sh
 ```
@@ -1116,7 +1129,7 @@ ssh -o PasswordAuthentication=no <user>@<edge-ip>
 Khi đã xác nhận đăng nhập qua SSH Key hoạt động thành công, chạy lại script làm cứng hệ thống để vô hiệu hóa hoàn toàn phương thức đăng nhập bằng mật khẩu thông thường:
 
 ```bash
-set -a && . ./.env && set +a
+set -a && . ./.env.edge && set +a
 sudo -E bash shared/scripts/hardening.sh
 ```
 
@@ -1171,7 +1184,7 @@ Cấu hình mặc định của Alloy sẽ đọc log hệ thống từ `journal
 >   7. Khởi động lại dịch vụ NTPsec: `sudo systemctl restart ntpsec`.
 
 ```bash
-set -a && . ./.env && set +a
+set -a && . ./.env.edge && set +a
 sudo -E bash edge/observability/alloy/install-alloy.sh
 ```
 
@@ -1280,7 +1293,7 @@ Các nguyên nhân gây lỗi phổ biến:
 
 - Cố tình dùng IP trùng lặp `10.8.0.2/32` khi peer mẫu ban đầu vẫn còn tồn tại trên server.
 - Khởi động dịch vụ đẩy log Alloy trước khi Loki trên Cloud sẵn sàng nhận dữ liệu tại địa chỉ `ALLOY_LOKI_URL`.
-- Thay đổi cấu hình biến `ALLOW_MONITORING_OVER_WIREGUARD` trong `.env` nhưng quên chưa khởi động lại cụm container Docker.
+- Thay đổi cấu hình biến `ALLOW_MONITORING_OVER_WIREGUARD` trong `.env.cloud` nhưng quên chưa khởi động lại cụm container Docker.
 
 ### Loki không kết nối được tới Loki trên địa chỉ `10.8.0.1:3100`
 
@@ -1298,8 +1311,8 @@ Cách khắc phục — Restart cụm containers để Docker nhận cấu hình
 
 ```bash
 cd cloud/monitoring
-sudo -E docker compose --env-file ../../.env down
-sudo -E docker compose --env-file ../../.env up -d --force-recreate
+sudo -E docker compose --env-file ../../.env.cloud down
+sudo -E docker compose --env-file ../../.env.cloud up -d --force-recreate
 curl http://10.8.0.1:3100/ready
 ```
 
@@ -1331,7 +1344,7 @@ Nếu bạn thay đổi tên `job_name` trong file cấu hình `prometheus.yml` 
 
 ```bash
 cd cloud/monitoring
-set -a && source ../../.env && set +a
+set -a && source ../../.env.cloud && set +a
 sudo docker compose stop prometheus
 sudo docker compose rm -f prometheus
 sudo docker volume rm monitoring_prometheus_data

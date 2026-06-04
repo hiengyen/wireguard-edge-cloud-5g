@@ -56,7 +56,7 @@ cd ~/wireguard-edge-cloud-5g/cloud/monitoring
 # Start the stack using the wrapper
 sudo -E bash setup-monitoring.sh
 # Or run directly via docker compose:
-# sudo -E docker compose --env-file ../../.env up -d --force-recreate
+# sudo -E docker compose --env-file ../../.env.cloud up -d --force-recreate
 ```
 *Confirm all services are healthy:*
 ```bash
@@ -206,7 +206,7 @@ cd ~/wireguard-edge-cloud-5g/cloud/monitoring
 # Khởi chạy stack docker-compose
 sudo -E bash setup-monitoring.sh
 # Hoặc chạy trực tiếp qua docker compose:
-# sudo -E docker compose --env-file ../../.env up -d --force-recreate
+# sudo -E docker compose --env-file ../../.env.cloud up -d --force-recreate
 ```
 *Xác nhận các service đều khỏe mạnh:*
 ```bash
