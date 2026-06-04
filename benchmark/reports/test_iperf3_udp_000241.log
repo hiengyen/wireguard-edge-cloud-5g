@@ -1,0 +1,40 @@
+
+[1m[0;34m══════════════════════════════════════════════[0m
+[1m  02-B  UDP Bandwidth & Jitter (iperf3)[0m
+[1m[0;34m══════════════════════════════════════════════[0m
+[0;34m[00:02:41][0m Verifying iperf3 server at 10.8.0.1:5201
+[0;32m  ✔ PASS[0m  iperf3 server reachable (UDP)
+[0;34m[00:02:44][0m Running: UDP-1Mbps   (uplink) at target 1M
+[0;36m  ℹ INFO[0m  UDP-1Mbps   (uplink): 1.00 Mbps  jitter=7.403ms  loss=0.00%  lost_pkts=0
+[0;32m  ✔ PASS[0m  UDP-1Mbps   (uplink): 1.00 Mbps jitter=7.403ms loss=0.00% (min=0.90 Mbps)
+[0;34m[00:02:55][0m Running: UDP-5Mbps   (uplink) at target 5M
+[0;36m  ℹ INFO[0m  UDP-5Mbps   (uplink): 5.00 Mbps  jitter=2.919ms  loss=0.00%  lost_pkts=0
+[0;32m  ✔ PASS[0m  UDP-5Mbps   (uplink): 5.00 Mbps jitter=2.919ms loss=0.00% (min=2.00 Mbps)
+[0;34m[00:03:06][0m Running: UDP-10Mbps  (uplink) at target 10M
+[0;36m  ℹ INFO[0m  UDP-10Mbps  (uplink): 10.00 Mbps  jitter=1.460ms  loss=0.00%  lost_pkts=0
+[0;32m  ✔ PASS[0m  UDP-10Mbps  (uplink): 10.00 Mbps jitter=1.460ms loss=0.00% (min=2.00 Mbps)
+[0;34m[00:03:17][0m Running: UDP-20Mbps  (uplink) at target 20M
+[0;36m  ℹ INFO[0m  UDP-20Mbps  (uplink): 20.00 Mbps  jitter=1.039ms  loss=0.00%  lost_pkts=0
+[0;32m  ✔ PASS[0m  UDP-20Mbps  (uplink): 20.00 Mbps jitter=1.039ms loss=0.00% (min=2.00 Mbps)
+[0;34m[00:03:28][0m Running: UDP-50Mbps  (uplink) at target 50M
+[0;36m  ℹ INFO[0m  UDP-50Mbps  (uplink): 45.57 Mbps  jitter=0.150ms  loss=0.00%  lost_pkts=0
+[0;32m  ✔ PASS[0m  UDP-50Mbps  (uplink): 45.57 Mbps jitter=0.150ms loss=0.00% (min=2.00 Mbps)
+[0;34m[00:03:39][0m Running: UDP-10Mbps  (downlink) at target 10M
+[0;36m  ℹ INFO[0m  UDP-10Mbps  (downlink): 10.00 Mbps  jitter=1.508ms  loss=0.01%  lost_pkts=1
+[0;32m  ✔ PASS[0m  UDP-10Mbps  (downlink): 10.00 Mbps jitter=1.508ms loss=0.01% (min=2.00 Mbps)
+[0;34m[00:03:50][0m Running: UDP-20Mbps  (downlink) at target 20M
+[0;36m  ℹ INFO[0m  UDP-20Mbps  (downlink): 20.00 Mbps  jitter=0.751ms  loss=0.00%  lost_pkts=0
+[0;32m  ✔ PASS[0m  UDP-20Mbps  (downlink): 20.00 Mbps jitter=0.751ms loss=0.00% (min=2.00 Mbps)
+[0;34m[00:04:01][0m Running: UDP-VoIP    (64kbps, 160B pkt) at target 64K
+[0;36m  ℹ INFO[0m  UDP-VoIP    (64kbps, 160B pkt): 0.06 Mbps  jitter=10.469ms  loss=0.00%  lost_pkts=0
+[0;32m  ✔ PASS[0m  UDP-VoIP    (64kbps, 160B pkt): 0.06 Mbps jitter=10.469ms loss=0.00% (min=0.06 Mbps)
+[0;34m[00:04:12][0m Running: UDP-large-pkt (5Mbps, 1300B) at target 5M
+[0;36m  ℹ INFO[0m  UDP-large-pkt (5Mbps, 1300B): 5.00 Mbps  jitter=3.072ms  loss=0.00%  lost_pkts=0
+[0;32m  ✔ PASS[0m  UDP-large-pkt (5Mbps, 1300B): 5.00 Mbps jitter=3.072ms loss=0.00% (min=2.00 Mbps)
+
+[1m[0;34m══════════════════════════════════════════════[0m
+[1m  SUMMARY — 02-udp-bandwidth[0m
+[1m[0;34m══════════════════════════════════════════════[0m
+  [0;32mPASS: 10[0m  |  [0;31mFAIL: 0[0m  |  [0;33mWARN: 0[0m
+
+[0;36m  ℹ INFO[0m  Report saved: ./reports/02-udp-bandwidth_20260605_000423.txt

@@ -10,4 +10,4 @@
 [1m[0;34m══════════════════════════════════════════════[0m
   [0;32mPASS: 0[0m  |  [0;31mFAIL: 0[0m  |  [0;33mWARN: 1[0m
 
-[0;36m  ℹ INFO[0m  Report saved: /home/hieu/wireguard-edge-cloud-5g/benchmark/02-bandwidth/reports/02-wg-overhead_20260604_231327.txt
+[0;36m  ℹ INFO[0m  Report saved: ./reports/02-wg-overhead_20260605_000423.txt

@@ -1,0 +1,4 @@
+=== 02-rsync-transfer — Fri Jun  5 00:04:23 +07 2026 ===
+PASS=0  FAIL=0  WARN=1
+
+  WARN: SSH key not found at /root/.ssh/wg-key-pair.pem — skipping rsync transfer tests

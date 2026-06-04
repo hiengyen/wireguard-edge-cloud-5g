@@ -1,0 +1,36 @@
+
+[1m[0;34m══════════════════════════════════════════════[0m
+[1m  04-B  Monitoring Stack Load Test[0m
+[1m[0;34m══════════════════════════════════════════════[0m
+[0;34m[00:07:57][0m Load testing: prometheus-health (30 requests, concurrency=10)
+[0;36m  ℹ INFO[0m  prometheus-health: n=30 fail=0 mean=120ms p50=121ms p95=127ms p99=127ms max=127ms
+[0;32m  ✔ PASS[0m  prometheus-health: p95=127ms mean=120ms
+[0;34m[00:07:58][0m Load testing: prometheus-query (30 requests, concurrency=10)
+[0;36m  ℹ INFO[0m  prometheus-query: n=30 fail=0 mean=126ms p50=123ms p95=142ms p99=148ms max=148ms
+[0;32m  ✔ PASS[0m  prometheus-query: p95=142ms mean=126ms
+[0;34m[00:07:58][0m Load testing: prometheus-range (30 requests, concurrency=10)
+[0;36m  ℹ INFO[0m  prometheus-range: n=30 fail=0 mean=156ms p50=135ms p95=213ms p99=236ms max=236ms
+[0;32m  ✔ PASS[0m  prometheus-range: p95=213ms mean=156ms
+[0;34m[00:08:00][0m Load testing: loki-ready (30 requests, concurrency=10)
+[0;36m  ℹ INFO[0m  loki-ready: n=30 fail=0 mean=125ms p50=125ms p95=142ms p99=144ms max=144ms
+[0;32m  ✔ PASS[0m  loki-ready: p95=142ms mean=125ms
+[0;34m[00:08:00][0m Load testing: loki-query (30 requests, concurrency=10)
+[0;36m  ℹ INFO[0m  loki-query: n=30 fail=0 mean=0ms p50=0ms p95=0ms p99=0ms max=0ms
+[0;32m  ✔ PASS[0m  loki-query: p95=0ms mean=0ms
+[0;34m[00:08:01][0m Load testing: grafana-health (20 requests, concurrency=10)
+[0;36m  ℹ INFO[0m  grafana-health: n=20 fail=0 mean=128ms p50=128ms p95=144ms p99=144ms max=144ms
+[0;32m  ✔ PASS[0m  grafana-health: p95=144ms mean=128ms
+[0;34m[00:08:02][0m Load testing: grafana-datasrc (20 requests, concurrency=10)
+[0;36m  ℹ INFO[0m  grafana-datasrc: n=20 fail=0 mean=277ms p50=280ms p95=357ms p99=357ms max=357ms
+[0;32m  ✔ PASS[0m  grafana-datasrc: p95=357ms mean=277ms
+[0;34m[00:08:03][0m Load testing: node-exporter-edge (15 requests, concurrency=10)
+[0;36m  ℹ INFO[0m  node-exporter-edge: n=15 fail=0 mean=171ms p50=138ms p95=277ms p99=277ms max=277ms
+[0;32m  ✔ PASS[0m  node-exporter-edge: p95=277ms mean=171ms
+[0;36m  ℹ INFO[0m  CSV report saved: ./reports/monitoring_load_20260605_000757.csv
+
+[1m[0;34m══════════════════════════════════════════════[0m
+[1m  SUMMARY — 04-monitoring-load[0m
+[1m[0;34m══════════════════════════════════════════════[0m
+  [0;32mPASS: 8[0m  |  [0;31mFAIL: 0[0m  |  [0;33mWARN: 0[0m
+
+[0;36m  ℹ INFO[0m  Report saved: ./reports/04-monitoring-load_20260605_000803.txt

@@ -2,29 +2,29 @@
 [1m[0;34m══════════════════════════════════════════════[0m
 [1m  03-A  Prometheus Service[0m
 [1m[0;34m══════════════════════════════════════════════[0m
-[0;34m[23:13:27][0m Checking Prometheus health: http://10.8.0.1:9090/-/healthy
+[0;34m[00:04:23][0m Checking Prometheus health: http://10.8.0.1:9090/-/healthy
 [0;32m  ✔ PASS[0m  Prometheus healthy: Prometheus Server is Healthy.
-[0;34m[23:13:27][0m Checking Prometheus ready: http://10.8.0.1:9090/-/ready
+[0;34m[00:04:23][0m Checking Prometheus ready: http://10.8.0.1:9090/-/ready
 [0;32m  ✔ PASS[0m  Prometheus ready
-[0;34m[23:13:27][0m Measuring query API response time
-[0;32m  ✔ PASS[0m  Query API latency: 147ms
-[0;34m[23:13:28][0m Checking scrape targets status
+[0;34m[00:04:23][0m Measuring query API response time
+[0;32m  ✔ PASS[0m  Query API latency: 136ms
+[0;34m[00:04:23][0m Checking scrape targets status
 [0;36m  ℹ INFO[0m  Scrape targets: 2/4 UP
 [0;33m  ⚠ WARN[0m  Down targets:  DOWN: edge-nodes @ http://10.8.0.3:9100/metrics
   DOWN: edge-nodes @ http://10.8.0.2:9100/metrics
-[0;31m  ✘ FAIL[0m  Scrape target for edge node 10.8.0.2 is DOWN
-[0;34m[23:13:28][0m Verifying key metrics are present
+[0;33m  ⚠ WARN[0m  Scrape target for edge node 10.8.0.2 is DOWN — check edge node_exporter bind/firewall on wg0:9100
+[0;34m[00:04:24][0m Verifying key metrics are present
 [0;32m  ✔ PASS[0m  Metric present: up (all targets) (4 series)
 [0;32m  ✔ PASS[0m  Metric present: node CPU (cloud) (16 series)
 [0;32m  ✔ PASS[0m  Metric present: node memory (1 series)
 [0;32m  ✔ PASS[0m  Metric present: node disk (5 series)
 [0;32m  ✔ PASS[0m  Metric present: network RX bytes (13 series)
-[0;34m[23:13:29][0m Checking Prometheus storage
+[0;34m[00:04:25][0m Checking Prometheus storage
 [0;36m  ℹ INFO[0m  Active time series: 3041
 
 [1m[0;34m══════════════════════════════════════════════[0m
 [1m  SUMMARY — 03-prometheus[0m
 [1m[0;34m══════════════════════════════════════════════[0m
-  [0;32mPASS: 8[0m  |  [0;31mFAIL: 1[0m  |  [0;33mWARN: 1[0m
+  [0;32mPASS: 8[0m  |  [0;31mFAIL: 0[0m  |  [0;33mWARN: 2[0m
 
-[0;36m  ℹ INFO[0m  Report saved: /home/hieu/wireguard-edge-cloud-5g/benchmark/03-services/reports/03-prometheus_20260604_231329.txt
+[0;36m  ℹ INFO[0m  Report saved: ./reports/03-prometheus_20260605_000425.txt
