@@ -15,6 +15,7 @@ fi
 
 VERSION="${NODE_EXPORTER_VERSION:-1.11.1}"
 BASE_URL="https://github.com/prometheus/node_exporter/releases/download/v${VERSION}"
+NODE_EXPORTER_LISTEN_ADDRESS="${NODE_EXPORTER_LISTEN_ADDRESS:-:9100}"
 ARCH=$(uname -m)
 
 if [[ "$ARCH" == "x86_64" ]]; then
@@ -49,7 +50,7 @@ chown node_exporter:node_exporter /usr/local/bin/node_exporter
 rm -rf "${TAR_FILE}" "${DIR_NAME}" "${SHA_FILE}"
 
 # 4. Create systemd service
-cat > /etc/systemd/system/node_exporter.service << 'EOF'
+cat > /etc/systemd/system/node_exporter.service << EOF
 [Unit]
 Description=Node Exporter
 After=network.target
@@ -58,7 +59,7 @@ After=network.target
 User=node_exporter
 Group=node_exporter
 Type=simple
-ExecStart=/usr/local/bin/node_exporter
+ExecStart=/usr/local/bin/node_exporter --web.listen-address=${NODE_EXPORTER_LISTEN_ADDRESS}
 
 [Install]
 WantedBy=multi-user.target
@@ -67,5 +68,6 @@ EOF
 # 5. Enable and start service
 systemctl daemon-reload
 systemctl enable --now node_exporter
+systemctl restart node_exporter
 
-echo "=== Node Exporter installed and running on port 9100 ==="
+echo "=== Node Exporter installed and listening at ${NODE_EXPORTER_LISTEN_ADDRESS} ==="

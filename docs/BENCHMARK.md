@@ -75,6 +75,7 @@ All tuneable parameters live in [`benchmark/config.sh`](../benchmark/config.sh).
 | `IPERF3_PORT` | `5201` | iperf3 server port |
 | `IPERF3_DURATION` | `10` | Seconds per iperf3 run |
 | `IPERF3_PARALLEL` | `4` | Parallel TCP streams |
+| `TCP_WINDOW_SIZE` | `512K` | Optional TCP socket buffer for the tuned-window iperf3 test |
 | `SUSTAINED_DURATION` | `60` | Seconds for sustained load test (04-A) |
 | `PING_COUNT` | `20` | ICMP packets per ping test |
 | `HTTP_TIMEOUT` | `10` | curl timeout in seconds |
@@ -94,7 +95,8 @@ All tuneable parameters live in [`benchmark/config.sh`](../benchmark/config.sh).
 | `MAX_JITTER_MS` | `30` | 01-A, 02-B UDP jitter |
 | `MAX_HANDSHAKE_AGE` | `180` | 01-B WireGuard handshake age (s) |
 | `MIN_TCP_MBPS` | `5` | 02-A minimum TCP throughput |
-| `MIN_UDP_MBPS` | `2` | 02-B minimum UDP throughput |
+| `MIN_UDP_MBPS` | `2` | 02-B minimum UDP throughput for normal-rate tests |
+| `UDP_LOW_RATE_MIN_RATIO` | `0.90` | 02-B minimum pass ratio for UDP targets below `MIN_UDP_MBPS`, such as 1 Mbps and VoIP 64 kbps |
 | `MIN_RSYNC_MBPS` | `2` | 02-C minimum rsync throughput |
 | `MIN_SUSTAINED_MBPS` | `3` | 04-A minimum sustained throughput |
 | `MAX_VARIANCE_PCT` | `40` | 04-A max throughput stddev as % of mean |
@@ -438,6 +440,7 @@ Tất cả các tham số có thể tinh chỉnh đều nằm trong file [`bench
 | `IPERF3_PORT` | `5201` | Cổng dịch vụ iperf3 |
 | `IPERF3_DURATION` | `10` | Thời gian chạy iperf3 tính bằng giây |
 | `IPERF3_PARALLEL` | `4` | Số lượng luồng TCP chạy song song |
+| `TCP_WINDOW_SIZE` | `512K` | Kích thước socket buffer tùy chọn cho bài test TCP tuned-window |
 | `SUSTAINED_DURATION` | `60` | Thời gian chạy kiểm thử tải liên tục (04-A) tính bằng giây |
 | `PING_COUNT` | `20` | Số lượng gói tin ICMP cho mỗi lần test ping |
 | `HTTP_TIMEOUT` | `10` | Thời gian chờ tối đa của curl tính bằng giây |
@@ -457,7 +460,8 @@ Tất cả các tham số có thể tinh chỉnh đều nằm trong file [`bench
 | `MAX_JITTER_MS` | `30` | 01-A, 02-B Độ trễ biến động (jitter) của UDP |
 | `MAX_HANDSHAKE_AGE` | `180` | 01-B Thời gian bắt tay (handshake) lớn nhất của WireGuard (giây) |
 | `MIN_TCP_MBPS` | `5` | 02-A Băng thông TCP tối thiểu |
-| `MIN_UDP_MBPS` | `2` | 02-B Băng thông UDP tối thiểu |
+| `MIN_UDP_MBPS` | `2` | 02-B Băng thông UDP tối thiểu cho các bài test tốc độ thông thường |
+| `UDP_LOW_RATE_MIN_RATIO` | `0.90` | 02-B Tỷ lệ pass tối thiểu cho các target UDP thấp hơn `MIN_UDP_MBPS`, ví dụ 1 Mbps và VoIP 64 kbps |
 | `MIN_RSYNC_MBPS` | `2` | 02-C Băng thông truyền file rsync tối thiểu |
 | `MIN_SUSTAINED_MBPS` | `3` | 04-A Băng thông tối thiểu khi tải liên tục |
 | `MAX_VARIANCE_PCT` | `40` | 04-A Độ lệch chuẩn băng thông tối đa (tính theo % của giá trị trung bình) |

@@ -8,6 +8,7 @@ section "02-A  TCP Bandwidth (iperf3)"
 require_cmd iperf3 bc
 
 MIN_TCP_MBPS="${MIN_TCP_MBPS:-5}"           # Minimum acceptable throughput Mbps
+TCP_WINDOW_SIZE="${TCP_WINDOW_SIZE:-512K}"  # Optional tuned TCP socket buffer
 REPORT_FILE="${REPORT_DIR}/iperf3_tcp_$(date '+%Y%m%d_%H%M%S').json"
 mkdir -p "$REPORT_DIR"
 
@@ -43,6 +44,10 @@ run_tcp_test() {
     local iperf_err
     iperf_err=$(echo "$result_json" | python3 -c "import sys, json; d=json.load(sys.stdin); print(d.get('error', ''))" 2>/dev/null || true)
     if [[ -n "$iperf_err" ]]; then
+        if [[ "$iperf_err" == *"socket buffer size not set correctly"* ]]; then
+            warn "${label}: kernel rejected requested socket buffer (${TCP_WINDOW_SIZE}); tune net.core.rmem_max/net.core.wmem_max or lower TCP_WINDOW_SIZE"
+            return 0
+        fi
         fail "${label}: iperf3 error: $iperf_err"
         return 1
     fi
@@ -92,8 +97,10 @@ run_tcp_test "TCP-downlink (reverse, ${IPERF3_PARALLEL}P × ${IPERF3_DURATION}s)
 # 3. Single-stream (no parallel) — measures raw overhead
 run_tcp_test "TCP-single-stream (1P × ${IPERF3_DURATION}s)" "-P 1"
 
-# 4. Larger window size — tests buffer performance
-run_tcp_test "TCP-window-512K" "-P 1 -w 512K"
+# 4. Larger window size — tests buffer performance. Some kernels cap socket
+# buffers below the requested value; that is an environment limitation, not a
+# throughput failure.
+run_tcp_test "TCP-window-${TCP_WINDOW_SIZE}" "-P 1 -w ${TCP_WINDOW_SIZE}"
 
 # 5. Bidirectional (requires iperf3 ≥ 3.7)
 if iperf3 --help 2>&1 | grep -q -- '--bidir'; then

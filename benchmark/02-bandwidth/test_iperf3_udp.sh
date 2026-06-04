@@ -10,6 +10,44 @@ require_cmd iperf3 bc
 MAX_JITTER_MS="${MAX_JITTER_MS:-10}"          # max acceptable UDP jitter
 MAX_LOSS_PCT="${MAX_LOSS_PCT:-2}"             # max acceptable UDP packet loss %
 MIN_UDP_MBPS="${MIN_UDP_MBPS:-2}"            # min acceptable UDP throughput
+UDP_LOW_RATE_MIN_RATIO="${UDP_LOW_RATE_MIN_RATIO:-0.90}"
+
+bitrate_to_mbps() {
+    local bitrate="$1"
+    python3 - "$bitrate" <<'PY'
+import re
+import sys
+
+value = sys.argv[1].strip()
+match = re.fullmatch(r"([0-9]+(?:\.[0-9]+)?)([KMG]?)", value, re.IGNORECASE)
+if not match:
+    print("0")
+    raise SystemExit
+
+number = float(match.group(1))
+unit = match.group(2).upper()
+scale = {"": 1_000_000, "K": 1_000, "M": 1_000_000, "G": 1_000_000_000}[unit]
+print(f"{number * scale / 1_000_000:.6f}")
+PY
+}
+
+udp_min_mbps_for_target() {
+    local bitrate="$1"
+    local target_mbps
+    target_mbps=$(bitrate_to_mbps "$bitrate")
+    python3 - "$MIN_UDP_MBPS" "$target_mbps" "$UDP_LOW_RATE_MIN_RATIO" <<'PY'
+import sys
+
+configured_min = float(sys.argv[1])
+target = float(sys.argv[2])
+ratio = float(sys.argv[3])
+
+if target > 0 and target < configured_min:
+    print(f"{target * ratio:.2f}")
+else:
+    print(f"{configured_min:.2f}")
+PY
+}
 
 run_udp_test() {
     local label="$1" bitrate="$2" extra_flags="${3:-}"
@@ -64,11 +102,13 @@ print(d.get('end',{}).get('sum',{}).get('lost_packets', 0))
     info "${label}: ${mbps} Mbps  jitter=${jitter}ms  loss=${loss_pct}%  lost_pkts=${packets_lost}"
 
     local ok=true
-    if (( $(echo "$mbps < $MIN_UDP_MBPS"   | bc -l) )); then fail "${label}: ${mbps} Mbps below min ${MIN_UDP_MBPS} Mbps"; ok=false; fi
+    local min_mbps
+    min_mbps=$(udp_min_mbps_for_target "$bitrate")
+    if (( $(echo "$mbps < $min_mbps"   | bc -l) )); then fail "${label}: ${mbps} Mbps below min ${min_mbps} Mbps"; ok=false; fi
     if (( $(echo "$jitter > $MAX_JITTER_MS"| bc -l) )); then warn "${label}: jitter ${jitter}ms exceeds ${MAX_JITTER_MS}ms"; fi
     if (( $(echo "$loss_pct > $MAX_LOSS_PCT"| bc -l) )); then fail "${label}: loss ${loss_pct}% exceeds ${MAX_LOSS_PCT}%"; ok=false; fi
 
-    $ok && pass "${label}: ${mbps} Mbps jitter=${jitter}ms loss=${loss_pct}%" || true
+    $ok && pass "${label}: ${mbps} Mbps jitter=${jitter}ms loss=${loss_pct}% (min=${min_mbps} Mbps)" || true
 }
 
 # Check server

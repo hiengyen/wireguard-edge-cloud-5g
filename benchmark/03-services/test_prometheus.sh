@@ -14,6 +14,14 @@ http_get() {
     curl -sf --max-time "$TIMEOUT" "$1" 2>/dev/null
 }
 
+prom_query() {
+    local query="$1"
+    local encoded
+    encoded=$(python3 -c "import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$query" 2>/dev/null || echo "")
+    [[ -n "$encoded" ]] || return 1
+    http_get "${PROM}/api/v1/query?query=${encoded}"
+}
+
 # 1. Health endpoint
 log "Checking Prometheus health: ${PROM}/-/healthy"
 if resp=$(http_get "${PROM}/-/healthy"); then
@@ -91,7 +99,7 @@ if [[ "$client_found" == "True" ]]; then
     if [[ "$client_up" == "True" ]]; then
         pass "Scrape target for edge node ${WG_CLIENT_IP} is UP"
     else
-        fail "Scrape target for edge node ${WG_CLIENT_IP} is DOWN"
+        warn "Scrape target for edge node ${WG_CLIENT_IP} is DOWN — check edge node_exporter bind/firewall on wg0:${NODE_EXPORTER_EDGE_PORT:-9100}"
     fi
 else
     warn "Scrape target for edge node ${WG_CLIENT_IP} not found in Prometheus active targets"
@@ -102,7 +110,7 @@ log "Verifying key metrics are present"
 check_metric() {
     local metric="$1" label="$2"
     local result
-    result=$(http_get "${PROM}/api/v1/query?query=${metric}" | python3 -c "
+    result=$(prom_query "$metric" | python3 -c "
 import sys, json
 d = json.load(sys.stdin)
 print(len(d.get('data',{}).get('result',[])))

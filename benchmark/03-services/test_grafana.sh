@@ -44,28 +44,31 @@ info "Data sources configured: ${ds_count}"
 if (( ds_count == 0 )); then
     fail "No data sources found — provisioning may have failed"
 else
-    echo "$ds_json" | python3 -c "
+    while IFS= read -r line; do info "$line"; done < <(echo "$ds_json" | python3 -c "
 import sys, json
 for ds in json.load(sys.stdin):
     print(f\"  {ds.get('name')}: {ds.get('type')} → {ds.get('url')}\")
-" 2>/dev/null | while IFS= read -r line; do info "$line"; done
+" 2>/dev/null)
 
     # Test each data source connection
-    echo "$ds_json" | python3 -c "
-import sys, json
-for ds in json.load(sys.stdin):
-    print(ds.get('uid',''), ds.get('name','?'))
-" 2>/dev/null | while read -r uid name; do
+    while read -r uid name; do
         [[ -z "$uid" ]] && continue
         result=$(curl -sf --max-time "$TIMEOUT" -u "$AUTH" \
             -X POST "${GRAFANA}/api/datasources/uid/${uid}/health" 2>/dev/null || echo '{}')
         status=$(echo "$result" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status','?'))" 2>/dev/null || echo "?")
+        message=$(echo "$result" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('message',''))" 2>/dev/null || echo "")
         if [[ "${status,,}" == "ok" ]]; then
             pass "Data source '${name}': connection OK"
+        elif [[ "$status" == "?" ]]; then
+            warn "Data source '${name}': health status unavailable${message:+ (${message})}"
         else
             fail "Data source '${name}': connection FAILED (status=${status})"
         fi
-    done
+    done < <(echo "$ds_json" | python3 -c "
+import sys, json
+for ds in json.load(sys.stdin):
+    print(ds.get('uid',''), ds.get('name','?'))
+" 2>/dev/null)
 fi
 
 # 4. Dashboard count

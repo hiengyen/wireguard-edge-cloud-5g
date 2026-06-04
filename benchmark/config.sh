@@ -60,6 +60,12 @@ if [[ -z "${SSH_KEY:-}" ]]; then
     done
 fi
 
+# Expand a leading ~ when SSH_KEY came from the local .env parser instead of
+# shell evaluation.
+if [[ "${SSH_KEY:-}" == "~/"* ]]; then
+    export SSH_KEY="${HOME}/${SSH_KEY#"~/"}"
+fi
+
 
 # ─── Network topology ─────────────────────────────────────────────────────────
 WG_SERVER_IP="${WG_SERVER_IP:-10.8.0.1}"          # Cloud gateway WireGuard IP
