@@ -1,0 +1,28 @@
+
+[1m[0;34m══════════════════════════════════════════════[0m
+[1m  02-C  File Transfer Benchmark (rsync over WireGuard)[0m
+[1m[0;34m══════════════════════════════════════════════[0m
+[0;34m[02:22:23][0m Checking SSH access to 10.8.0.1 as ec2-user
+[0;32m  ✔ PASS[0m  SSH to 10.8.0.1 succeeded
+[0;36m  ℹ INFO[0m  rsync-up   1MiB: 1.00 MiB in 2.453s = 3.41 Mbps
+[0;32m  ✔ PASS[0m  rsync-up   1MiB: 3.41 Mbps
+[0;36m  ℹ INFO[0m  rsync-down 1MiB: 1.00 MiB in 4.011s = 2.09 Mbps
+[0;32m  ✔ PASS[0m  rsync-down 1MiB: 2.09 Mbps
+[0;36m  ℹ INFO[0m  rsync-up  10MiB: 10.00 MiB in 5.026s = 16.69 Mbps
+[0;32m  ✔ PASS[0m  rsync-up  10MiB: 16.69 Mbps
+[0;36m  ℹ INFO[0m  rsync-down 10MiB: 10.00 MiB in 7.953s = 10.54 Mbps
+[0;32m  ✔ PASS[0m  rsync-down 10MiB: 10.54 Mbps
+[0;36m  ℹ INFO[0m  rsync-up  50MiB: 50.00 MiB in 11.360s = 36.92 Mbps
+[0;32m  ✔ PASS[0m  rsync-up  50MiB: 36.92 Mbps
+[0;36m  ℹ INFO[0m  rsync-down 50MiB: 50.00 MiB in 24.947s = 16.81 Mbps
+[0;32m  ✔ PASS[0m  rsync-down 50MiB: 16.81 Mbps
+[0;34m[02:23:22][0m Creating multi-file dataset (50 × 100KB)
+[0;36m  ℹ INFO[0m  multi-file 50×100KB: 3.880s = 10.55 Mbps
+[0;32m  ✔ PASS[0m  Multi-file rsync: 10.55 Mbps
+
+[1m[0;34m══════════════════════════════════════════════[0m
+[1m  SUMMARY — 02-rsync-transfer[0m
+[1m[0;34m══════════════════════════════════════════════[0m
+  [0;32mPASS: 8[0m  |  [0;31mFAIL: 0[0m  |  [0;33mWARN: 0[0m
+
+[0;36m  ℹ INFO[0m  Report saved: ./reports/02-rsync-transfer_20260605_022328.txt

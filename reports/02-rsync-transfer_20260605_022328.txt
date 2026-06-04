@@ -1,0 +1,11 @@
+=== 02-rsync-transfer — Fri Jun  5 02:23:28 +07 2026 ===
+PASS=8  FAIL=0  WARN=0
+
+  PASS: SSH to 10.8.0.1 succeeded
+  PASS: rsync-up   1MiB: 3.41 Mbps
+  PASS: rsync-down 1MiB: 2.09 Mbps
+  PASS: rsync-up  10MiB: 16.69 Mbps
+  PASS: rsync-down 10MiB: 10.54 Mbps
+  PASS: rsync-up  50MiB: 36.92 Mbps
+  PASS: rsync-down 50MiB: 16.81 Mbps
+  PASS: Multi-file rsync: 10.55 Mbps

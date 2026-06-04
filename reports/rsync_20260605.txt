@@ -1,0 +1,6 @@
+rsync-up   1MiB: 1.00MiB 2.453s 3.41Mbps
+rsync-down 1MiB: 1.00MiB 4.011s 2.09Mbps
+rsync-up  10MiB: 10.00MiB 5.026s 16.69Mbps
+rsync-down 10MiB: 10.00MiB 7.953s 10.54Mbps
+rsync-up  50MiB: 50.00MiB 11.360s 36.92Mbps
+rsync-down 50MiB: 50.00MiB 24.947s 16.81Mbps

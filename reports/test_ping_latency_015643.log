@@ -1,0 +1,14 @@
+
+[1m[0;34m══════════════════════════════════════════════[0m
+[1m  01-A  Ping Latency Tests[0m
+[1m[0;34m══════════════════════════════════════════════[0m
+[0;34m[01:56:43][0m Pinging WireGuard gateway: 10.8.0.1
+[0;36m  ℹ INFO[0m  WG-overlay → cloud-gateway → 10.8.0.1  min=61.691ms avg=69.471ms max=84.741ms jitter=6.130ms loss=0%
+[0;32m  ✔ PASS[0m  WG-overlay → cloud-gateway: RTT=69.471ms loss=0% jitter=6.130ms
+[0;34m[01:56:47][0m Pinging Google DNS via 5G uplink: 8.8.8.8
+[0;36m  ℹ INFO[0m  5G-uplink → 8.8.8.8 → 8.8.8.8  min=47.603ms avg=54.165ms max=63.956ms jitter=5.221ms loss=0%
+[0;32m  ✔ PASS[0m  5G-uplink → 8.8.8.8: RTT=54.165ms loss=0% jitter=5.221ms
+[0;36m  ℹ INFO[0m  Skipping internet-via-WireGuard test (set WG_ALLOWED_INTERNET=1 to enable)
+[0;34m[01:56:52][0m Large packet ping to detect MTU fragmentation
+[0;32m  ✔ PASS[0m  MTU-1280: no fragmentation over WireGuard tunnel (ping payload 1252B)
+[0;34m[01:56:54][0m Pinging 5G local gateway: 26.101.153.244

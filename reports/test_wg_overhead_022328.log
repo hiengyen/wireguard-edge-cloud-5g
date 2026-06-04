@@ -1,0 +1,68 @@
+
+[1m[0;34m══════════════════════════════════════════════[0m
+[1m  02-D  WireGuard Encryption Overhead[0m
+[1m[0;34m══════════════════════════════════════════════[0m
+[0;36m  ℹ INFO[0m  Raw 5G throughput:        [0;34m[02:23:28][0m Measuring raw 5G (public IP): iperf3 to 52.74.220.78:5201
+47.83 Mbps
+[0;36m  ℹ INFO[0m  WireGuard overlay:        [0;34m[02:23:39][0m Measuring WireGuard overlay: iperf3 to 10.8.0.1:5201
+42.71 Mbps
+(standard_in) 1: illegal character: ^[
+(standard_in) 1: syntax error
+(standard_in) 1: syntax error
+(standard_in) 1: illegal character: :
+(standard_in) 1: syntax error
+(standard_in) 1: illegal character: :
+(standard_in) 1: illegal character: ^[
+(standard_in) 1: illegal character: :
+(standard_in) 1: illegal character: :
+(standard_in) 1: illegal character: ^[
+(standard_in) 1: syntax error
+(standard_in) 1: syntax error
+(standard_in) 1: illegal character: :
+(standard_in) 1: syntax error
+(standard_in) 1: illegal character: :
+(standard_in) 1: illegal character: ^[
+(standard_in) 1: illegal character: :
+(standard_in) 1: illegal character: :
+(standard_in) 1: illegal character: ^[
+(standard_in) 1: syntax error
+(standard_in) 1: syntax error
+(standard_in) 1: illegal character: :
+(standard_in) 1: syntax error
+(standard_in) 1: illegal character: :
+(standard_in) 1: illegal character: ^[
+(standard_in) 1: illegal character: :
+(standard_in) 1: illegal character: :
+(standard_in) 2: illegal character: ^[
+(standard_in) 2: syntax error
+(standard_in) 2: syntax error
+(standard_in) 2: illegal character: :
+(standard_in) 2: syntax error
+(standard_in) 2: illegal character: :
+(standard_in) 2: illegal character: ^[
+(standard_in) 2: illegal character: :
+(standard_in) 2: illegal character: :
+(standard_in) 3: syntax error
+(standard_in) 3: illegal character: ^[
+(standard_in) 3: syntax error
+(standard_in) 3: illegal character: :
+(standard_in) 3: syntax error
+(standard_in) 3: illegal character: :
+(standard_in) 3: illegal character: ^[
+(standard_in) 3: illegal character: :
+(standard_in) 3: illegal character: :
+(standard_in) 4: syntax error
+[0;36m  ℹ INFO[0m  WireGuard overhead:       %
+(standard_in) 1: syntax error
+[0;33m  ⚠ WARN[0m  WireGuard overhead % is high — check CPU, MTU, or AES-NI support
+[0;34m[02:23:49][0m Measuring CPU during WireGuard transfer
+[0;36m  ℹ INFO[0m  CPU snapshot during transfer: %Cpu(s):  0.0 us, 11.8 sy,  0.0 ni, 88.2 id,  0.0 wa,  0.0 hi,  0.0 si,  0.0 st 
+[0;32m  ✔ PASS[0m  AES-NI hardware acceleration: present
+[0;36m  ℹ INFO[0m  ARM architecture: WireGuard uses ChaCha20-Poly1305 (hardware-optimized on ARMv8)
+
+[1m[0;34m══════════════════════════════════════════════[0m
+[1m  SUMMARY — 02-wg-overhead[0m
+[1m[0;34m══════════════════════════════════════════════[0m
+  [0;32mPASS: 1[0m  |  [0;31mFAIL: 0[0m  |  [0;33mWARN: 1[0m
+
+[0;36m  ℹ INFO[0m  Report saved: ./reports/02-wg-overhead_20260605_022400.txt

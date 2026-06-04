@@ -1,0 +1,32 @@
+
+[1m[0;34m══════════════════════════════════════════════[0m
+[1m  05-A  Full Stack End-to-End Test[0m
+[1m[0;34m══════════════════════════════════════════════[0m
+[0;34m[02:24:30][0m [Phase 1] Physical & network connectivity
+[0;32m  ✔ PASS[0m  P1: 5G WWAN connected (wwan0 = 26.101.153.243/29)
+[0;34m[02:24:30][0m [Phase 2] WireGuard overlay
+[0;32m  ✔ PASS[0m  P2: WireGuard interface wg0 exists
+[0;32m  ✔ PASS[0m  P2: Overlay reachable → 10.8.0.1 (avg RTT=82.773ms)
+[0;32m  ✔ PASS[0m  P2: WireGuard handshake fresh (1s ago)
+[0;34m[02:24:34][0m [Phase 3] Monitoring services
+[0;32m  ✔ PASS[0m  P3: Prometheus is UP
+[0;32m  ✔ PASS[0m  P3: Loki is UP
+[0;32m  ✔ PASS[0m  P3: Grafana is UP
+[0;32m  ✔ PASS[0m  P3: Node-Exporter (cloud) is UP
+[0;32m  ✔ PASS[0m  P3: Node-Exporter (edge) is UP
+[0;34m[02:24:36][0m [Phase 4] Metrics pipeline (Prometheus → edge scrape)
+[0;33m  ⚠ WARN[0m  P4: Edge node scrape target is DOWN in Prometheus — check edge node_exporter bind/firewall on wg0:9100
+[0;34m[02:24:36][0m [Phase 5] Log pipeline (edge → Alloy → Loki)
+[0;32m  ✔ PASS[0m  P5: edge-journal logs present in Loki (333 lines in last hour)
+[0;34m[02:24:37][0m [Phase 6] Quick bandwidth baseline
+[0;36m  ℹ INFO[0m  P6: WireGuard bandwidth = 0.0 Mbps
+[0;33m  ⚠ WARN[0m  P6: Low bandwidth (0.0 Mbps)
+[0;34m[02:24:38][0m [Phase 7] SSH connectivity over overlay
+[0;32m  ✔ PASS[0m  P7: SSH to cloud gateway over WireGuard overlay: OK
+
+[1m[0;34m══════════════════════════════════════════════[0m
+[1m  SUMMARY — 05-full-stack[0m
+[1m[0;34m══════════════════════════════════════════════[0m
+  [0;32mPASS: 11[0m  |  [0;31mFAIL: 0[0m  |  [0;33mWARN: 2[0m
+
+[0;36m  ℹ INFO[0m  Report saved: ./reports/05-full-stack_20260605_022439.txt

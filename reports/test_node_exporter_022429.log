@@ -1,0 +1,42 @@
+
+[1m[0;34m══════════════════════════════════════════════[0m
+[1m  03-D  Node Exporter Metrics[0m
+[1m[0;34m══════════════════════════════════════════════[0m
+[0;34m[02:24:29][0m Checking Node Exporter: cloud-gateway at http://10.8.0.1:9100
+[0;32m  ✔ PASS[0m  cloud-gateway: metrics endpoint reachable
+[0;36m  ℹ INFO[0m  cloud-gateway: 340 metric families
+[0;32m  ✔ PASS[0m  cloud-gateway: rich metrics (340 families)
+[0;36m  ℹ INFO[0m  cloud-gateway: CPU idle counter=2.7092128e+06 (cumulative seconds)
+[0;32m  ✔ PASS[0m  cloud-gateway: CPU metrics present
+[0;36m  ℹ INFO[0m  cloud-gateway: free memory = 943 MiB
+[0;32m  ✔ PASS[0m  cloud-gateway: memory metrics present
+[0;36m  ℹ INFO[0m  cloud-gateway: root disk available = 8.7 GiB
+[0;32m  ✔ PASS[0m  cloud-gateway: disk metrics present
+[0;36m  ℹ INFO[0m  cloud-gateway: network interfaces = br-08591a7f02d0 br-b65866c209e4 docker0 ens5 lo veth55064a3 veth8ee6ba8 vethbdc949d vethcfcb161 vetheb4a02b vethf3c9143 vethf9b6c2c wg0 
+[0;32m  ✔ PASS[0m  cloud-gateway: network metrics present (br-08591a7f02d0 br-b65866c209e4 docker0 ens5 lo veth55064a3 veth8ee6ba8 vethbdc949d vethcfcb161 vetheb4a02b vethf3c9143 vethf9b6c2c wg0 )
+[0;36m  ℹ INFO[0m  cloud-gateway: WireGuard wg0 RX=6.997684904e+09B TX=1.810556128e+09B
+[0;32m  ✔ PASS[0m  cloud-gateway: WireGuard interface visible in metrics
+[0;36m  ℹ INFO[0m  cloud-gateway: uptime = 772.4h
+
+[0;34m[02:24:30][0m Checking Node Exporter: edge-node (local) at http://127.0.0.1:9100
+[0;32m  ✔ PASS[0m  edge-node (local): metrics endpoint reachable
+[0;36m  ℹ INFO[0m  edge-node (local): 311 metric families
+[0;32m  ✔ PASS[0m  edge-node (local): rich metrics (311 families)
+[0;36m  ℹ INFO[0m  edge-node (local): CPU idle counter=130182.16 (cumulative seconds)
+[0;32m  ✔ PASS[0m  edge-node (local): CPU metrics present
+[0;36m  ℹ INFO[0m  edge-node (local): free memory = 15449 MiB
+[0;32m  ✔ PASS[0m  edge-node (local): memory metrics present
+[0;36m  ℹ INFO[0m  edge-node (local): root disk available = 53.0 GiB
+[0;32m  ✔ PASS[0m  edge-node (local): disk metrics present
+[0;36m  ℹ INFO[0m  edge-node (local): network interfaces = docker0 enP3p49s0 lo wg0 wwan0 
+[0;32m  ✔ PASS[0m  edge-node (local): network metrics present (docker0 enP3p49s0 lo wg0 wwan0 )
+[0;36m  ℹ INFO[0m  edge-node (local): WireGuard wg0 RX=1.568621372e+09B TX=5.283546484e+09B
+[0;32m  ✔ PASS[0m  edge-node (local): WireGuard interface visible in metrics
+[0;36m  ℹ INFO[0m  edge-node (local): uptime = 36.5h
+
+[1m[0;34m══════════════════════════════════════════════[0m
+[1m  SUMMARY — 03-node-exporter[0m
+[1m[0;34m══════════════════════════════════════════════[0m
+  [0;32mPASS: 14[0m  |  [0;31mFAIL: 0[0m  |  [0;33mWARN: 0[0m
+
+[0;36m  ℹ INFO[0m  Report saved: ./reports/03-node-exporter_20260605_022430.txt

@@ -1,0 +1,5 @@
+=== 02-wg-overhead — Fri Jun  5 02:16:18 +07 2026 ===
+PASS=1  FAIL=0  WARN=1
+
+  WARN: WireGuard overhead % is high — check CPU, MTU, or AES-NI support
+  PASS: AES-NI hardware acceleration: present
