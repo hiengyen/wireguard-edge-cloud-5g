@@ -35,12 +35,9 @@ def parse_latest_logs(reports_dir):
     metrics = {
         'direct_down': 0.0, 'direct_up': 0.0,
         'wg_down': 0.0, 'wg_up': 0.0,
-        'openvpn_down': 0.0, 'openvpn_up': 0.0,
         'direct_lat': 0.0, 'direct_jit': 0.0,
         'wg_lat': 0.0, 'wg_jit': 0.0,
-        'openvpn_lat': 0.0, 'openvpn_jit': 0.0,
-        'wg_cpu': 0.0, 'wg_ram': 0.0,
-        'openvpn_cpu': 0.0, 'openvpn_ram': 0.0
+        'wg_cpu': 0.0, 'wg_ram': 0.0
     }
     
     # 1. Parse Latency Log
@@ -130,46 +127,54 @@ def parse_latest_logs(reports_dir):
             if direct_up_match:
                 metrics['direct_up'] = float(direct_up_match.group(1))
 
-    # Fallback to defaults or demo values if logs are empty/0.0
-    if metrics['direct_down'] == 0.0:
-        # Standard 5G speeds
-        metrics['direct_down'] = 185.4
-        metrics['direct_up'] = 92.6
-    if metrics['wg_down'] == 0.0:
-        # WireGuard speeds
-        metrics['wg_down'] = 164.2
-        metrics['wg_up'] = 84.8
-    if metrics['openvpn_down'] == 0.0:
-        # Reference OpenVPN values
-        metrics['openvpn_down'] = 105.1
-        metrics['openvpn_up'] = 48.3
-        
-    if metrics['direct_lat'] == 0.0:
-        metrics['direct_lat'] = 28.5
-        metrics['direct_jit'] = 5.2
-    if metrics['wg_lat'] == 0.0:
-        metrics['wg_lat'] = 34.7
-        metrics['wg_jit'] = 9.6
-    if metrics['openvpn_lat'] == 0.0:
-        metrics['openvpn_lat'] = 56.2
-        metrics['openvpn_jit'] = 18.4
-
-    if metrics['wg_cpu'] == 0.0:
-        metrics['wg_cpu'] = 14.3
-        metrics['wg_ram'] = 0.25 # Kernel mode space
-    if metrics['openvpn_cpu'] == 0.0:
-        metrics['openvpn_cpu'] = 48.7
-        metrics['openvpn_ram'] = 45.4
-
     return metrics
+
+def annotate_no_data(ax, title, message):
+    ax.set_title(title, fontsize=12, fontweight='bold', pad=15)
+    ax.text(0.5, 0.5, message, ha='center', va='center',
+            transform=ax.transAxes, fontsize=11, color='#555555')
+    ax.set_xticks([])
+    ax.set_yticks([])
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+
+def place_legend_below(ax, columns=2):
+    ax.legend(
+        frameon=True,
+        facecolor='white',
+        loc='upper center',
+        bbox_to_anchor=(0.5, -0.14),
+        ncol=columns,
+        borderaxespad=0.0
+    )
 
 def plot_throughput(output_path, metrics):
     setup_style()
     fig, ax = plt.subplots(figsize=(8, 5))
     
-    categories = ['Direct 5G', 'WireGuard', 'OpenVPN']
-    down_speeds = [metrics['direct_down'], metrics['wg_down'], metrics['openvpn_down']]
-    up_speeds = [metrics['direct_up'], metrics['wg_up'], metrics['openvpn_up']]
+    categories = []
+    down_speeds = []
+    up_speeds = []
+    if metrics['direct_down'] > 0 or metrics['direct_up'] > 0:
+        categories.append('Direct 5G')
+        down_speeds.append(metrics['direct_down'])
+        up_speeds.append(metrics['direct_up'])
+    if metrics['wg_down'] > 0 or metrics['wg_up'] > 0:
+        categories.append('WireGuard')
+        down_speeds.append(metrics['wg_down'])
+        up_speeds.append(metrics['wg_up'])
+
+    if not categories:
+        annotate_no_data(
+            ax,
+            'Băng thông truyền tải thực tế qua 5G',
+            'Không có dữ liệu throughput đo được trong benchmark/reports'
+        )
+        plt.tight_layout()
+        plt.savefig(output_path, dpi=300)
+        plt.close()
+        print(f"Throughput chart successfully saved to {output_path}")
+        return
     
     x = np.arange(len(categories))
     width = 0.35
@@ -182,7 +187,7 @@ def plot_throughput(output_path, metrics):
     ax.set_title('So sánh Băng thông truyền tải thực tế qua 5G', fontsize=13, fontweight='bold', pad=15)
     ax.set_xticks(x)
     ax.set_xticklabels(categories, fontsize=11)
-    ax.legend(frameon=True, facecolor='white', loc='upper right')
+    place_legend_below(ax, columns=2)
     ax.grid(True, axis='y', linestyle='-', alpha=0.7)
     
     ax.spines['top'].set_visible(False)
@@ -200,8 +205,8 @@ def plot_throughput(output_path, metrics):
     autolabel(rects1)
     autolabel(rects2)
     
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=300)
+    plt.tight_layout(rect=[0, 0.08, 1, 1])
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
     plt.close()
     print(f"Throughput chart successfully saved to {output_path}")
 
@@ -209,9 +214,29 @@ def plot_latency(output_path, metrics):
     setup_style()
     fig, ax = plt.subplots(figsize=(8, 5))
     
-    categories = ['Direct 5G', 'WireGuard', 'OpenVPN']
-    latency = [metrics['direct_lat'], metrics['wg_lat'], metrics['openvpn_lat']]
-    jitter = [metrics['direct_jit'], metrics['wg_jit'], metrics['openvpn_jit']]
+    categories = []
+    latency = []
+    jitter = []
+    if metrics['direct_lat'] > 0 or metrics['direct_jit'] > 0:
+        categories.append('Direct 5G')
+        latency.append(metrics['direct_lat'])
+        jitter.append(metrics['direct_jit'])
+    if metrics['wg_lat'] > 0 or metrics['wg_jit'] > 0:
+        categories.append('WireGuard')
+        latency.append(metrics['wg_lat'])
+        jitter.append(metrics['wg_jit'])
+
+    if not categories:
+        annotate_no_data(
+            ax,
+            'Độ trễ RTT và biến thiên trễ',
+            'Không có dữ liệu latency đo được trong benchmark/reports'
+        )
+        plt.tight_layout()
+        plt.savefig(output_path, dpi=300)
+        plt.close()
+        print(f"Latency chart successfully saved to {output_path}")
+        return
     
     x = np.arange(len(categories))
     width = 0.35
@@ -223,7 +248,7 @@ def plot_latency(output_path, metrics):
     ax.set_title('So sánh Độ trễ (Latency RTT) và Biến thiên trễ (Jitter)', fontsize=13, fontweight='bold', pad=15)
     ax.set_xticks(x)
     ax.set_xticklabels(categories, fontsize=11)
-    ax.legend(frameon=True, facecolor='white', loc='upper right')
+    place_legend_below(ax, columns=2)
     ax.grid(True, axis='y', linestyle='-', alpha=0.7)
     
     ax.spines['top'].set_visible(False)
@@ -241,55 +266,54 @@ def plot_latency(output_path, metrics):
     autolabel(rects1)
     autolabel(rects2)
     
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=300)
+    plt.tight_layout(rect=[0, 0.08, 1, 1])
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
     plt.close()
     print(f"Latency chart successfully saved to {output_path}")
 
 def plot_resources(output_path, metrics):
     setup_style()
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9, 5))
     
-    # 1. CPU Comparison
-    labels = ['WireGuard', 'OpenVPN']
-    cpu_usage = [metrics['wg_cpu'], metrics['openvpn_cpu']]
-    colors1 = ['#348ABD', '#A60628']
-    
-    rects1 = ax1.bar(labels, cpu_usage, width=0.5, color=colors1, edgecolor='none')
-    ax1.set_ylabel('Mức tải CPU trung bình (%)', fontsize=11, fontweight='bold')
-    ax1.set_title('Tải CPU của thiết bị biên (Orange Pi)', fontsize=11, fontweight='bold', pad=10)
-    ax1.grid(True, axis='y', linestyle='-', alpha=0.5)
-    ax1.spines['top'].set_visible(False)
-    ax1.spines['right'].set_visible(False)
-    
-    for rect in rects1:
-        height = rect.get_height()
-        ax1.annotate(f'{height:.1f}%',
-                    xy=(rect.get_x() + rect.get_width() / 2, height),
-                    xytext=(0, 3),
-                    textcoords="offset points",
-                    ha='center', va='bottom', fontsize=10)
+    # 1. WireGuard CPU usage
+    if metrics['wg_cpu'] > 0:
+        rects1 = ax1.bar(['WireGuard'], [metrics['wg_cpu']], width=0.5, color=['#348ABD'], edgecolor='none')
+        ax1.set_ylabel('Mức tải CPU trung bình (%)', fontsize=11, fontweight='bold')
+        ax1.set_title('Tải CPU của WireGuard trên thiết bị biên', fontsize=11, fontweight='bold', pad=10)
+        ax1.grid(True, axis='y', linestyle='-', alpha=0.5)
+        ax1.spines['top'].set_visible(False)
+        ax1.spines['right'].set_visible(False)
+
+        for rect in rects1:
+            height = rect.get_height()
+            ax1.annotate(f'{height:.1f}%',
+                        xy=(rect.get_x() + rect.get_width() / 2, height),
+                        xytext=(0, 3),
+                        textcoords="offset points",
+                        ha='center', va='bottom', fontsize=10)
+    else:
+        annotate_no_data(ax1, 'Tải CPU của WireGuard', 'Chưa có dữ liệu CPU đo được')
                     
-    # 2. RAM Comparison
-    ram_usage = [metrics['wg_ram'], metrics['openvpn_ram']]
-    colors2 = ['#467821', '#7A68A6']
-    
-    rects2 = ax2.bar(labels, ram_usage, width=0.5, color=colors2, edgecolor='none')
-    ax2.set_ylabel('Dung lượng RAM tiêu thụ (MB)', fontsize=11, fontweight='bold')
-    ax2.set_title('Dung lượng bộ nhớ RAM sử dụng tĩnh', fontsize=11, fontweight='bold', pad=10)
-    ax2.grid(True, axis='y', linestyle='-', alpha=0.5)
-    ax2.spines['top'].set_visible(False)
-    ax2.spines['right'].set_visible(False)
-    
-    for rect in rects2:
-        height = rect.get_height()
-        ax2.annotate(f'{height:.2f} MB',
-                    xy=(rect.get_x() + rect.get_width() / 2, height),
-                    xytext=(0, 3),
-                    textcoords="offset points",
-                    ha='center', va='bottom', fontsize=10)
+    # 2. WireGuard RAM usage
+    if metrics['wg_ram'] > 0:
+        rects2 = ax2.bar(['WireGuard'], [metrics['wg_ram']], width=0.5, color=['#467821'], edgecolor='none')
+        ax2.set_ylabel('Dung lượng RAM tiêu thụ (MB)', fontsize=11, fontweight='bold')
+        ax2.set_title('Dung lượng RAM tĩnh của WireGuard', fontsize=11, fontweight='bold', pad=10)
+        ax2.grid(True, axis='y', linestyle='-', alpha=0.5)
+        ax2.spines['top'].set_visible(False)
+        ax2.spines['right'].set_visible(False)
+
+        for rect in rects2:
+            height = rect.get_height()
+            ax2.annotate(f'{height:.2f} MB',
+                        xy=(rect.get_x() + rect.get_width() / 2, height),
+                        xytext=(0, 3),
+                        textcoords="offset points",
+                        ha='center', va='bottom', fontsize=10)
+    else:
+        annotate_no_data(ax2, 'RAM của WireGuard', 'Chưa có dữ liệu RAM đo được')
                     
-    plt.suptitle('So sánh mức tiêu hao tài nguyên phần cứng hệ thống', fontsize=13, fontweight='bold', y=0.98)
+    plt.suptitle('Mức tiêu hao tài nguyên phần cứng của WireGuard', fontsize=13, fontweight='bold', y=0.98)
     plt.tight_layout()
     plt.savefig(output_path, dpi=300)
     plt.close()
@@ -309,12 +333,9 @@ def main():
         metrics = {
             'direct_down': 185.4, 'direct_up': 92.6,
             'wg_down': 164.2, 'wg_up': 84.8,
-            'openvpn_down': 105.1, 'openvpn_up': 48.3,
             'direct_lat': 28.5, 'direct_jit': 5.2,
             'wg_lat': 34.7, 'wg_jit': 9.6,
-            'openvpn_lat': 56.2, 'openvpn_jit': 18.4,
-            'wg_cpu': 14.3, 'wg_ram': 0.25,
-            'openvpn_cpu': 48.7, 'openvpn_ram': 45.4
+            'wg_cpu': 14.3, 'wg_ram': 0.25
         }
     else:
         print("Scanning benchmark/reports/ directory for latest logs...")
