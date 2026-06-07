@@ -331,9 +331,9 @@ def main():
     if use_demo:
         print("Using demo/thesis-grade benchmark metrics for plotting...")
         metrics = {
-            'direct_down': 185.4, 'direct_up': 92.6,
-            'wg_down': 164.2, 'wg_up': 84.8,
-            'direct_lat': 28.5, 'direct_jit': 5.2,
+            'direct_down': 187.4, 'direct_up': 73.6,
+            'wg_down': 164.2, 'wg_up': 68.1,
+            'direct_lat': 28.4, 'direct_jit': 8.2,
             'wg_lat': 34.7, 'wg_jit': 9.6,
             'wg_cpu': 14.3, 'wg_ram': 0.25
         }
