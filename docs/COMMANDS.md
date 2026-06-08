@@ -353,6 +353,47 @@ sudo -E bash shared/scripts/verify-vpn-security.sh --mitm
 sudo -E bash shared/scripts/verify-vpn-security.sh --replay
 ```
 
+## Tearing Down the Deployment / Uninstallation
+
+Clean local workspace:
+
+```bash
+./clean_local_workspace.sh
+```
+
+Uninstall all components on the Edge node (run as root):
+
+```bash
+# Remove WireGuard Client and keys
+sudo REMOVE_WG_KEYS=true bash edge/vpn/uninstall-wg-client.sh
+
+# Remove 5G WWAN service
+sudo bash edge/5g-wwan/uninstall.sh
+
+# Remove Grafana Alloy package and config
+sudo REMOVE_ALLOY_CONFIG=true REMOVE_ALLOY_PACKAGE=true bash edge/observability/alloy/uninstall-alloy.sh
+
+# Uninstall Node Exporter
+sudo bash shared/scripts/uninstall-node-exporter.sh
+
+# Revert UFW firewall and SSH hardening
+sudo bash shared/scripts/undo-hardening.sh
+```
+
+Uninstall all components on the Cloud Gateway (run as root):
+
+```bash
+# Uninstall Docker monitoring, PeerSight, Node Exporter, and hardening
+sudo bash shared/scripts/uninstall_cloud_services.sh
+```
+
+Destroy Cloud AWS infrastructure via Terraform:
+
+```bash
+cd cloud/terraform/ec2
+terraform destroy
+```
+
 ---
 
 ## 🇻🇳 Tiếng Việt
@@ -701,3 +742,45 @@ sudo -E bash shared/scripts/verify-vpn-security.sh --mitm
 # Chỉ chạy kiểm thử cơ chế chặn tấn công phát lại (TAI64N anti-replay)
 sudo -E bash shared/scripts/verify-vpn-security.sh --replay
 ```
+
+## Gỡ Bỏ Triển Khai / Gỡ Cài Đặt
+
+Dọn dẹp workspace cục bộ:
+
+```bash
+./clean_local_workspace.sh
+```
+
+Gỡ cài đặt toàn bộ thành phần trên Edge node (chạy dưới quyền root):
+
+```bash
+# Gỡ cài đặt WireGuard Client và cặp khóa
+sudo REMOVE_WG_KEYS=true bash edge/vpn/uninstall-wg-client.sh
+
+# Gỡ cài đặt dịch vụ 5G WWAN
+sudo bash edge/5g-wwan/uninstall.sh
+
+# Gỡ cài đặt Grafana Alloy và cấu hình
+sudo REMOVE_ALLOY_CONFIG=true REMOVE_ALLOY_PACKAGE=true bash edge/observability/alloy/uninstall-alloy.sh
+
+# Gỡ cài đặt Node Exporter
+sudo bash shared/scripts/uninstall-node-exporter.sh
+
+# Hoàn tác tường lửa UFW và làm cứng SSH
+sudo bash shared/scripts/undo-hardening.sh
+```
+
+Gỡ cài đặt toàn bộ thành phần trên Cloud Gateway (chạy dưới quyền root):
+
+```bash
+# Dọn dẹp cụm Docker, PeerSight, Node Exporter và hoàn tác hardening
+sudo bash shared/scripts/uninstall_cloud_services.sh
+```
+
+Hủy tài nguyên đám mây AWS thông qua Terraform:
+
+```bash
+cd cloud/terraform/ec2
+terraform destroy
+```
+

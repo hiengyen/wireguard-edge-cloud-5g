@@ -700,6 +700,49 @@ For a comprehensive breakdown of the threat model, cryptography foundations, and
 
 ---
 
+## 15. Tearing Down the Deployment
+
+If you need to uninstall/tear down the entire deployment to start over, you can use the newly added automated cleanup scripts:
+
+### 15.1. Local Workspace Cleanup
+On your local development machine, run the following to reset git changes and delete local configurations (such as `.env.cloud`, `.env.edge`, `.env.benchmark`):
+```bash
+./clean_local_workspace.sh
+```
+
+### 15.2. Edge Node Cleanup
+On the Edge Node, run the following commands as root to completely clean up:
+```bash
+# 1. Remove WireGuard Client and keys
+sudo REMOVE_WG_KEYS=true bash edge/vpn/uninstall-wg-client.sh
+
+# 2. Remove 5G WWAN service
+sudo bash edge/5g-wwan/uninstall.sh
+
+# 3. Remove Grafana Alloy package and config
+sudo REMOVE_ALLOY_CONFIG=true REMOVE_ALLOY_PACKAGE=true bash edge/observability/alloy/uninstall-alloy.sh
+
+# 4. Uninstall Node Exporter
+sudo bash shared/scripts/uninstall-node-exporter.sh
+
+# 5. Revert firewall and SSH hardening
+sudo bash shared/scripts/undo-hardening.sh
+```
+
+### 15.3. Cloud Gateway Cleanup
+On the Cloud Gateway host, run the following as root:
+```bash
+# Uninstall Docker monitoring, PeerSight, Node Exporter, and hardening
+sudo bash shared/scripts/uninstall_cloud_services.sh
+```
+To destroy the AWS cloud infrastructure, run from your Terraform environment:
+```bash
+cd cloud/terraform/ec2
+terraform destroy
+```
+
+---
+
 ## 🇻🇳 Tiếng Việt
 
 Tài liệu này hướng dẫn quy trình triển khai khuyến nghị cho dự án `wireguard-edge-cloud-5g` trong môi trường thực tế (production).
@@ -1391,3 +1434,47 @@ Bạn cũng có thể chỉ định chạy kiểm thử một kịch bản bảo
   ```
 
 Để hiểu rõ chi tiết về mô hình đe dọa (threat model), nền tảng mã hóa học và hướng dẫn các bước tái lập thủ công bằng tay, xem tài liệu chi tiết tại [VPN Security Verification Guide](./VPN_SECURITY_VERIFICATION.md).
+
+---
+
+## 15. Gỡ Bỏ Triển Khai (Teardown)
+
+Nếu bạn cần gỡ bỏ hoàn toàn triển khai của hệ thống để bắt đầu lại từ đầu, hãy sử dụng các script dọn dẹp tự động đã được thêm vào:
+
+### 15.1. Dọn dẹp Workspace Cục bộ
+Trên máy tính phát triển cục bộ, chạy script sau để reset các thay đổi trong Git và xóa các file cấu hình cục bộ (như `.env.cloud`, `.env.edge`, `.env.benchmark`):
+```bash
+./clean_local_workspace.sh
+```
+
+### 15.2. Dọn dẹp trên Edge Node (Thiết bị Biên / Orange Pi)
+Trên Edge Node, chạy các lệnh sau dưới quyền root để gỡ bỏ toàn bộ dịch vụ:
+```bash
+# 1. Gỡ cài đặt WireGuard Client và cặp khóa
+sudo REMOVE_WG_KEYS=true bash edge/vpn/uninstall-wg-client.sh
+
+# 2. Gỡ cài đặt dịch vụ 5G WWAN
+sudo bash edge/5g-wwan/uninstall.sh
+
+# 3. Gỡ cài đặt Grafana Alloy và cấu hình
+sudo REMOVE_ALLOY_CONFIG=true REMOVE_ALLOY_PACKAGE=true bash edge/observability/alloy/uninstall-alloy.sh
+
+# 4. Gỡ cài đặt Node Exporter
+sudo bash shared/scripts/uninstall-node-exporter.sh
+
+# 5. Hoàn tác tường lửa và làm cứng SSH
+sudo bash shared/scripts/undo-hardening.sh
+```
+
+### 15.3. Dọn dẹp trên Cloud Gateway (AWS EC2)
+Trên máy chủ Cloud Gateway EC2, chạy lệnh sau dưới quyền root:
+```bash
+# Dọn dẹp cụm Docker, PeerSight, Node Exporter và hoàn tác hardening
+sudo bash shared/scripts/uninstall_cloud_services.sh
+```
+Để hủy hoàn toàn các tài nguyên đã tạo trên AWS qua Terraform:
+```bash
+cd cloud/terraform/ec2
+terraform destroy
+```
+

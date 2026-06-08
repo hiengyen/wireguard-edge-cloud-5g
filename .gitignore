@@ -48,6 +48,7 @@ plans/
 
 dataset/
 docx/
+pptx/
 .agents/
 gen_docx_documents/
 __pycache__/
