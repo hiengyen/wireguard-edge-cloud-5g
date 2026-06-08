@@ -543,7 +543,7 @@ __main_loop:
                                     || (profile->enable_ipv6 && IPv6ConnectionStatus ==  QWDS_PKT_DATA_DISCONNECTED)) {
                                 const unsigned long allow_time[] = {5, 10, 20, 40, 60};
 
-                                if (SetupCallFail < (sizeof(allow_time)/sizeof(unsigned)))
+                                if (SetupCallFail < (sizeof(allow_time)/sizeof(allow_time[0])))
                                     SetupCallAllowTime = allow_time[SetupCallFail];
                                 else
                                     SetupCallAllowTime = 60;

@@ -352,7 +352,7 @@ void udhcpc_start(PROFILE_T *profile) {
                         d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15]);
                 }
                 
-                update_resolv_conf(6, ifname, profile->ipv6.DnsPrimary[0] ? dns1str : NULL, profile->ipv6.DnsSecondary ? dns2str : NULL);
+                update_resolv_conf(6, ifname, profile->ipv6.DnsPrimary[0] ? dns1str : NULL, profile->ipv6.DnsSecondary[0] ? dns2str : NULL);
             }
 #else
 #ifdef USE_DHCLIENT
