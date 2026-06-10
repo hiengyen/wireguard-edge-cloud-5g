@@ -43,8 +43,8 @@ TMP_DIR=$(mktemp -d -t node_exporter_install.XXXXXX)
 trap 'cd / && rm -rf "${TMP_DIR}"' EXIT
 
 cd "${TMP_DIR}"
-wget -q "${BASE_URL}/${TAR_FILE}"
-wget -q "${BASE_URL}/${SHA_FILE}"
+wget -q --show-progress "${BASE_URL}/${TAR_FILE}"
+wget -q --show-progress "${BASE_URL}/${SHA_FILE}"
 grep " ${TAR_FILE}\$" "${SHA_FILE}" | sha256sum -c -
 tar xvfz "${TAR_FILE}"
 mv "${DIR_NAME}/node_exporter" /usr/local/bin/
