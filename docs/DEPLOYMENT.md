@@ -269,6 +269,7 @@ ssh -i <your-key.pem> -N \
   -L 3100:10.8.0.1:3100 \
   -L 9100:10.8.0.1:9100 \
   -L 12345:10.8.0.2:12345 \
+  -L 12346:127.0.0.1:12346 \
   -L 4000:10.8.0.1:4000 \
   -L 5173:10.8.0.1:5173 \
   ec2-user@<elastic-ip>
@@ -281,6 +282,7 @@ Then open:
 - Loki readiness: `http://127.0.0.1:3100/ready`
 - Node Exporter (cloud): `http://127.0.0.1:9100/metrics`
 - Alloy UI (edge): `http://127.0.0.1:12345`
+- Alloy UI (cloud): `http://127.0.0.1:12346`
 - PeerSight API: `http://127.0.0.1:4000/health`
 - PeerSight UI: `http://127.0.0.1:5173`
 
@@ -288,7 +290,24 @@ Then open:
 > the UI is reachable over WireGuard. Also open the port on the edge UFW (one-time):
 > `sudo ufw allow in on wg0 to any port 12345 proto tcp`
 
+### Optional: Cloud Log Forwarding with Grafana Alloy
+
+To collect and forward systemd journal logs from the cloud host itself to the local Loki instance, deploy Grafana Alloy on the Cloud Node:
+
+```bash
+set -a && . ./.env.cloud && set +a
+sudo -E ./cloud/monitoring/alloy/install-alloy.sh
+```
+
+Verify Alloy on the cloud:
+```bash
+sudo systemctl status alloy --no-pager
+curl http://127.0.0.1:12346
+```
+The cloud Alloy logs are tagged with `job="cloud-journal"` and automatically integrated into the **Unified Edge & Cloud Dashboard** and the **Edge Log Dashboard** dropdown filter.
+
 ---
+
 
 ## 8. Prepare the Edge Node
 
@@ -1007,6 +1026,7 @@ ssh -i <your-key.pem> -N \
   -L 3100:10.8.0.1:3100 \
   -L 9100:10.8.0.1:9100 \
   -L 12345:10.8.0.2:12345 \
+  -L 12346:127.0.0.1:12346 \
   -L 4000:10.8.0.1:4000 \
   -L 5173:10.8.0.1:5173 \
   ec2-user@<elastic-ip>
@@ -1019,6 +1039,7 @@ Sau đó truy cập trên trình duyệt local:
 - Loki: `http://127.0.0.1:3100/ready`
 - Node Exporter (Cloud): `http://127.0.0.1:9100/metrics`
 - Alloy UI (Edge): `http://127.0.0.1:12345`
+- Alloy UI (Cloud): `http://127.0.0.1:12346`
 - PeerSight API: `http://127.0.0.1:4000/health`
 - Giao diện PeerSight: `http://127.0.0.1:5173`
 
@@ -1026,7 +1047,24 @@ Sau đó truy cập trên trình duyệt local:
 > giao diện UI có thể truy cập được thông qua đường hầm WireGuard. Hãy mở cổng này trên tường lửa (UFW) của Edge Node (chỉ cần làm một lần):
 > `sudo ufw allow in on wg0 to any port 12345 proto tcp`
 
+### Tùy chọn: Đẩy Log Tự Động Từ Cloud Node Với Grafana Alloy
+
+Để thu thập và đẩy journald log của chính Cloud Node lên Loki cục bộ, bạn có thể tùy chọn cài đặt Grafana Alloy trên Cloud Node:
+
+```bash
+set -a && . ./.env.cloud && set +a
+sudo -E ./cloud/monitoring/alloy/install-alloy.sh
+```
+
+Xác thực Alloy trên Cloud:
+```bash
+sudo systemctl status alloy --no-pager
+curl http://127.0.0.1:12346
+```
+Log của Cloud Node sẽ được gắn nhãn `job="cloud-journal"` và tự động hiển thị trong **Dashboard Tổng Hợp (Unified Edge & Cloud)** cũng như xuất hiện trong bộ lọc dropdown của **Dashboard Log Edge**.
+
 ---
+
 
 ## 8. Cấu Hình Thiết Bị Biên (Edge Node)
 

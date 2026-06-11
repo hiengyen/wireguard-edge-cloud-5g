@@ -134,6 +134,7 @@ ssh -i <your-key.pem> \
   -L 9090:127.0.0.1:9090 \
   -L 3100:127.0.0.1:3100 \
   -L 9100:127.0.0.1:9100 \
+  -L 12346:127.0.0.1:12346 \
   ec2-user@<EC2_PUBLIC_IP>
 ```
 
@@ -142,6 +143,8 @@ Open locally:
 - `http://127.0.0.1:9090`
 - `http://127.0.0.1:3100/ready`
 - `http://127.0.0.1:9100/metrics`
+- `http://127.0.0.1:12346` (Alloy UI - cloud)
+
 
 ## Edge Alloy
 
@@ -184,6 +187,30 @@ Uninstall local Alloy service/config:
 ```bash
 sudo -E bash edge/observability/alloy/uninstall-alloy.sh
 ```
+
+## Cloud Alloy
+
+Install Alloy on the cloud node to collect local system logs and forward them to Loki:
+
+```bash
+set -a && . ./.env.cloud && set +a
+sudo -E ./cloud/monitoring/alloy/install-alloy.sh
+sudo systemctl status alloy --no-pager
+```
+
+Access the Cloud Alloy UI from your laptop via SSH tunnel:
+
+```bash
+ssh -i <your-key.pem> -N -L 12346:127.0.0.1:12346 ec2-user@<EC2_PUBLIC_IP>
+# Open: http://127.0.0.1:12346
+```
+
+Uninstall Cloud Alloy:
+
+```bash
+sudo -E ./cloud/monitoring/alloy/uninstall-alloy.sh
+```
+
 
 ## Node Exporter
 
@@ -526,6 +553,7 @@ ssh -i <your-key.pem> \
   -L 9090:127.0.0.1:9090 \
   -L 3100:127.0.0.1:3100 \
   -L 9100:127.0.0.1:9100 \
+  -L 12346:127.0.0.1:12346 \
   ec2-user@<EC2_PUBLIC_IP>
 ```
 
@@ -534,6 +562,8 @@ Truy cập cục bộ trên trình duyệt máy tính của bạn:
 - `http://127.0.0.1:9090`
 - `http://127.0.0.1:3100/ready`
 - `http://127.0.0.1:9100/metrics`
+- `http://127.0.0.1:12346` (Giao diện Alloy - cloud)
+
 
 ## Cài Đặt Grafana Alloy Trên Edge
 
@@ -574,6 +604,30 @@ Gỡ bỏ hoàn toàn cấu hình và dịch vụ Alloy cục bộ trên Edge No
 ```bash
 sudo -E bash edge/observability/alloy/uninstall-alloy.sh
 ```
+
+## Cài Đặt Grafana Alloy Trên Cloud
+
+Cài đặt Alloy trên Cloud Node để thu thập log hệ thống cục bộ và đẩy về Loki:
+
+```bash
+set -a && . ./.env.cloud && set +a
+sudo -E ./cloud/monitoring/alloy/install-alloy.sh
+sudo systemctl status alloy --no-pager
+```
+
+Truy cập giao diện Alloy UI của Cloud từ laptop qua SSH tunnel:
+
+```bash
+ssh -i <your-key.pem> -N -L 12346:127.0.0.1:12346 ec2-user@<EC2_PUBLIC_IP>
+# Mở: http://127.0.0.1:12346
+```
+
+Gỡ cài đặt Alloy trên Cloud:
+
+```bash
+sudo -E ./cloud/monitoring/alloy/uninstall-alloy.sh
+```
+
 
 ## Cài Đặt Node Exporter
 
