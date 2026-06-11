@@ -56,7 +56,7 @@ peersight/
 ├── install-go.sh           # Auto-detecting compiler installer (Go 1.23.0+)
 ├── install-agent.sh        # Systemd daemon registrar
 ├── stop-peersight.sh       # Script to halt Docker containers while keeping volumes
-├── uninstall.sh            # Safe uninstaller (agent + logs + containers, preserves DB)
+├── uninstall_agent.sh      # Safe agent-only uninstaller (stops agent, removes systemd service, logs & configuration)
 ├── peersight-api/          # REST API codebase (Gin + pgx + migrations)
 ├── peersight-agent/        # Agent daemon codebase (WireGuard kernel sync)
 ├── peersight-broker/       # Broker daemon codebase (SIEM bridge)
@@ -104,7 +104,7 @@ The deployment lifecycle is fully managed by shell scripts in the `peersight/` d
 | `install-go.sh` | Portable script to download, verify, and register Go 1.23.0+ from official upstream tarballs | Both |
 | `install-agent.sh` | Internal helper called by deploy scripts to set up the systemd unit and register API tokens | Both |
 | `stop-peersight.sh`| Halts all PeerSight containers while leaving database volumes intact | Cloud Gateway |
-| `uninstall.sh` | Safe uninstaller. Stops agent, removes binaries/logs/configs, and tears down containers (keeps database volumes) | Both |
+| `uninstall_agent.sh` | Safe agent-only uninstaller. Stops peersight-agent, removes binaries, configuration, and logs | Both |
 
 ---
 
@@ -350,11 +350,11 @@ cd ~/wireguard-edge-cloud-5g/peersight
 sudo -E bash stop-peersight.sh
 ```
 
-### 11.2 Complete PeerSight Clean-Up
-To fully erase all PeerSight files (systemd configurations, log queues, configurations, and binaries) while **preserving your DB volumes**:
+### 11.2 PeerSight Agent Clean-Up
+To fully erase the PeerSight Agent (systemd configurations, configurations, logs, and binaries):
 ```bash
 cd ~/wireguard-edge-cloud-5g/peersight
-sudo -E bash uninstall.sh
+sudo -E bash uninstall_agent.sh
 ```
 
 ---
@@ -484,7 +484,7 @@ peersight/
 ├── install-go.sh           # Tự động phát hiện và cài đặt trình biên dịch Go (1.23.0+)
 ├── install-agent.sh        # Đăng ký Systemd daemon
 ├── stop-peersight.sh       # Dừng các Docker container nhưng giữ lại volumes dữ liệu
-├── uninstall.sh            # Gỡ bỏ an toàn (agent + logs + containers, giữ lại DB)
+├── uninstall_agent.sh      # Gỡ bỏ an toàn chỉ cho Agent (dừng agent, xóa dịch vụ systemd, logs & cấu hình)
 ├── peersight-api/          # Mã nguồn REST API (Gin + pgx + migrations)
 ├── peersight-agent/        # Mã nguồn Agent daemon (Đồng bộ kernel WireGuard)
 ├── peersight-broker/       # Mã nguồn Broker daemon (SIEM bridge)
@@ -532,7 +532,7 @@ Vòng đời triển khai hệ thống được quản lý hoàn toàn bằng c�
 | `install-go.sh` | Tải xuống, xác thực và cấu hình Go 1.23.0+ từ trang chủ chính thức | Cả hai |
 | `install-agent.sh` | Đăng ký dịch vụ systemd unit và cấu hình API tokens | Cả hai |
 | `stop-peersight.sh`| Dừng các container PeerSight nhưng giữ lại PostgreSQL volumes | Cloud Gateway |
-| `uninstall.sh` | Gỡ bỏ an toàn. Dừng agent, xóa file nhị phân/logs/cấu hình và dừng cụm container (giữ lại DB volumes) | Cả hai |
+| `uninstall_agent.sh` | Gỡ bỏ an toàn chỉ cho Agent. Dừng peersight-agent, xóa file nhị phân, cấu hình và logs | Cả hai |
 
 ---
 
@@ -778,11 +778,11 @@ cd ~/wireguard-edge-cloud-5g/peersight
 sudo -E bash stop-peersight.sh
 ```
 
-### 11.2 Gỡ bỏ hoàn toàn PeerSight
-Để xóa sạch toàn bộ các file của PeerSight (cấu hình systemd, log queues, tệp nhị phân) nhưng **giữ lại DB volumes**:
+### 11.2 Gỡ bỏ PeerSight Agent
+Để xóa sạch toàn bộ các file của PeerSight Agent (cấu hình systemd, logs, tệp nhị phân và cấu hình):
 ```bash
 cd ~/wireguard-edge-cloud-5g/peersight
-sudo -E bash uninstall.sh
+sudo -E bash uninstall_agent.sh
 ```
 
 ---

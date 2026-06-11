@@ -30,21 +30,35 @@ if [[ -d "${MONITORING_DIR}" ]]; then
     fi
 fi
 
-# 3. Uninstall PeerSight
-PEERSIGHT_UNINSTALL="${REPO_DIR}/peersight/uninstall.sh"
-if [[ -f "${PEERSIGHT_UNINSTALL}" ]]; then
-    echo "[INFO] Running PeerSight uninstaller..."
-    bash "${PEERSIGHT_UNINSTALL}" || true
+# 3. Stop and remove PeerSight Docker stack (Cloud Gateway)
+PEERSIGHT_DIR="${REPO_DIR}/peersight"
+if [[ -d "${PEERSIGHT_DIR}" ]]; then
+    if [[ -f "${PEERSIGHT_DIR}/docker-compose.yml" ]]; then
+        echo "[INFO] Stopping and cleaning PeerSight Docker containers & volumes..."
+        if command -v docker &>/dev/null; then
+            (cd "${PEERSIGHT_DIR}" && docker compose down -v || true)
+            echo "[OK] PeerSight Docker stack removed."
+        else
+            echo "[WARN] Docker not found. Skipping docker compose down."
+        fi
+    fi
 fi
 
-# 4. Uninstall Node Exporter
+# 4. Uninstall PeerSight Agent
+PEERSIGHT_AGENT_UNINSTALL="${REPO_DIR}/peersight/uninstall_agent.sh"
+if [[ -f "${PEERSIGHT_AGENT_UNINSTALL}" ]]; then
+    echo "[INFO] Running PeerSight Agent uninstaller..."
+    bash "${PEERSIGHT_AGENT_UNINSTALL}" || true
+fi
+
+# 5. Uninstall Node Exporter
 NODE_EXP_UNINSTALL="${REPO_DIR}/shared/scripts/uninstall-node-exporter.sh"
 if [[ -f "${NODE_EXP_UNINSTALL}" ]]; then
     echo "[INFO] Running Node Exporter uninstaller..."
     bash "${NODE_EXP_UNINSTALL}" || true
 fi
 
-# 5. Undo Hardening
+# 6. Undo Hardening
 UNDO_HARDENING="${REPO_DIR}/shared/scripts/undo-hardening.sh"
 if [[ -f "${UNDO_HARDENING}" ]]; then
     echo "[INFO] Reverting system hardening..."
