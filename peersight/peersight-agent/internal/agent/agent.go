@@ -58,7 +58,15 @@ func Run(cfg *config.Config) {
 			failureCount++
 			backoff := backoffDelay(cfg.LoopInterval, failureCount)
 			log.Printf("[agent] backing off for %s after %d failed cycle(s)", backoff, failureCount)
-			time.Sleep(backoff)
+			
+			// Use select to wait for backoff or immediate stop signal
+			select {
+			case <-time.After(backoff):
+				// Backoff elapsed, continue loop
+			case sig := <-stop:
+				log.Printf("[agent] Received signal %v during backoff, shutting down", sig)
+				return
+			}
 
 		case sig := <-stop:
 			log.Printf("[agent] Received signal %v, shutting down", sig)
