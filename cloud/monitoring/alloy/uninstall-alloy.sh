@@ -27,7 +27,7 @@ fi
 
 header "Grafana Alloy Uninstall"
 
-if systemctl list-unit-files | grep -q '^alloy\.service'; then
+if systemctl list-unit-files | grep -q 'alloy\.service'; then
   log "Stopping Alloy if active..."
   systemctl stop alloy.service 2>/dev/null || true
 
