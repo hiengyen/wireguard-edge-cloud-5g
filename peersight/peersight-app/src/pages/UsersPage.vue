@@ -82,7 +82,7 @@
                 <button
                   class="btn btn-secondary" 
                   style="padding:4px 8px;color:var(--color-danger);border-color:rgba(239,68,68,0.2)"
-                  @click="deleteUser(user.id)"
+                  @click="deleteUser(user.id, user.email)"
                   :disabled="user.id === authStore.userId"
                 >
                   <span class="material-symbols-outlined" style="font-size:16px">delete</span>
@@ -205,7 +205,7 @@ onMounted(async () => {
     if (err.response?.status === 403) {
       error.value = t('users.adminRequired')
     } else {
-      error.value = "Failed to fetch users."
+      error.value = t('users.fetchFailed')
     }
   }
 })
@@ -240,8 +240,8 @@ function closeCreateModal() {
   newUser.value = { email: '', password: '', role: 'operator' }
 }
 
-async function deleteUser(id) {
-  if (!confirm('Are you sure you want to delete this user?')) return
+async function deleteUser(id, email) {
+  if (!confirm(t('users.deleteConfirm').replace('{email}', email))) return
   try {
     error.value = ''
     await userStore.deleteUser(id)

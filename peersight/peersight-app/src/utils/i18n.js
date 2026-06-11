@@ -67,11 +67,21 @@ const translations = {
       installCommand: 'Agent Installation Command',
       installInstructions: 'Copy the command below and run it with superuser permissions on the target host to automatically configure and register the peersight agent:',
       noInterfaces: 'No interfaces configured for this host.',
+      noInterfacesDesc: 'No WireGuard interfaces reported by the agent yet.',
       noEndpoints: 'No active WireGuard peer endpoints.',
+      noEndpointsDesc: 'No peer connections discovered yet.',
+      noChanges: 'No desired changes',
+      noChangesDesc: 'No desired changes have been created for this host.',
       pushChange: 'Push Configuration Change',
       addPeer: 'Add Peer',
       removePeer: 'Remove Peer',
-      updateInterface: 'Update Interface'
+      updateInterface: 'Update Interface',
+      payload: 'Payload',
+      executed: 'Executed',
+      tokenDesc: 'Generate a host-scoped Agent Token (10 years) to authenticate the peersight-agent daemon for "{name}".',
+      tokenSuccessBanner: 'Host-scoped token valid for 10 years',
+      tokenSaveWarning: 'Save this token — it will not be shown again.',
+      done: 'Done'
     },
     peers: {
       title: 'Peers',
@@ -88,7 +98,14 @@ const translations = {
       relatedHost: 'Related Host',
       allowedIps: 'Allowed IPs',
       traffic: 'Traffic',
-      allStatuses: 'All Statuses'
+      allStatuses: 'All Statuses',
+      noEndpoints: 'No Endpoints',
+      noEndpointsDesc: 'This peer is not active on any managed WireGuard interface.',
+      peersDiscovered: 'Peers are discovered automatically when an agent reports its WireGuard state.',
+      deleteConfirm: 'Are you sure you want to remove peer "{name}"?',
+      deleteWarning: 'This will not remove the peer from the WireGuard interface.',
+      tunnelIp: 'Tunnel IP',
+      rxTxData: 'RX / TX Data'
     },
     alerts: {
       title: 'Alerts',
@@ -158,7 +175,8 @@ const translations = {
       deleteConfirm: 'Are you sure you want to delete user {email}?',
       noUsers: 'No Users Registered',
       noUsersDesc: 'Manage your organizational users and permissions here.',
-      adminRequired: 'Only administrators can access user management settings.'
+      adminRequired: 'Only administrators can access user management settings.',
+      fetchFailed: 'Failed to fetch users.'
     },
     auth: {
       loginTitle: 'Sign In to peerSight',
@@ -243,11 +261,21 @@ const translations = {
       installCommand: 'Lệnh cài đặt Agent',
       installInstructions: 'Sao chép lệnh dưới đây và chạy với quyền root (sudo) trên thiết bị Edge/Gateway để tự động thiết lập và đăng ký peersight-agent:',
       noInterfaces: 'Không có interface nào được cấu hình cho thiết bị này.',
+      noInterfacesDesc: 'Chưa ghi nhận cổng kết nối WireGuard nào từ agent.',
       noEndpoints: 'Không có WireGuard peer endpoint nào đang hoạt động.',
+      noEndpointsDesc: 'Chưa phát hiện kết nối peer nào đang hoạt động.',
+      noChanges: 'Chưa có thay đổi',
+      noChangesDesc: 'Chưa có lệnh thay đổi cấu hình nào được tạo cho thiết bị này.',
       pushChange: 'Đẩy thay đổi cấu hình',
       addPeer: 'Thêm Peer',
       removePeer: 'Xóa Peer',
-      updateInterface: 'Cập nhật Interface'
+      updateInterface: 'Cập nhật Interface',
+      payload: 'Dữ liệu (Payload)',
+      executed: 'Đã thực thi',
+      tokenDesc: 'Sinh mã xác thực Agent theo host (hiệu lực 10 năm) để kết nối peersight-agent cho "{name}".',
+      tokenSuccessBanner: 'Mã xác thực theo host có hiệu lực trong 10 năm',
+      tokenSaveWarning: 'Hãy lưu lại mã này — mã sẽ không được hiển thị lại lần sau.',
+      done: 'Xong'
     },
     peers: {
       title: 'Kết nối (Peers)',
@@ -264,7 +292,14 @@ const translations = {
       relatedHost: 'Host liên quan',
       allowedIps: 'Allowed IP',
       traffic: 'Lưu lượng',
-      allStatuses: 'Tất cả trạng thái'
+      allStatuses: 'Tất cả trạng thái',
+      noEndpoints: 'Không có kết nối đầu cuối',
+      noEndpointsDesc: 'Kết nối này không hoạt động trên bất kỳ cổng interface WireGuard nào được quản lý.',
+      peersDiscovered: 'Các kết nối (peers) được tự động phát hiện khi agent báo cáo trạng thái WireGuard.',
+      deleteConfirm: 'Bạn có chắc chắn muốn xóa peer "{name}"?',
+      deleteWarning: 'Hành động này sẽ không gỡ bỏ peer khỏi interface của WireGuard.',
+      tunnelIp: 'IP Đường hầm',
+      rxTxData: 'Dữ liệu Nhận / Gửi'
     },
     alerts: {
       title: 'Cảnh báo hệ thống',
@@ -334,7 +369,8 @@ const translations = {
       deleteConfirm: 'Bạn có chắc chắn muốn xóa tài khoản {email}?',
       noUsers: 'Chưa có tài khoản nào',
       noUsersDesc: 'Quản lý tài khoản người dùng và phân quyền tại đây.',
-      adminRequired: 'Chỉ quản trị viên mới được quyền truy cập quản lý người dùng.'
+      adminRequired: 'Chỉ quản trị viên mới được quyền truy cập quản lý người dùng.',
+      fetchFailed: 'Lỗi khi tải danh sách người dùng.'
     },
     auth: {
       loginTitle: 'Đăng nhập vào peerSight',

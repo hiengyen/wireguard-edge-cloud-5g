@@ -62,7 +62,7 @@
       <div v-else-if="endpoints.length === 0" class="empty-state">
         <span class="material-symbols-outlined">swap_horiz</span>
         <h3>{{ t('peers.noEndpoints') }}</h3>
-        <p>This peer is not active on any managed WireGuard interface.</p>
+        <p>{{ t('peers.noEndpointsDesc') }}</p>
       </div>
 
       <table v-else class="data-table">
@@ -70,10 +70,10 @@
           <tr>
             <th>{{ t('hosts.hostName') }}</th>
             <th>{{ t('hosts.interfaces') }}</th>
-            <th>Tunnel IP</th>
-            <th>Allowed IPs</th>
-            <th>Last Handshake</th>
-            <th>RX / TX Data</th>
+            <th>{{ t('peers.tunnelIp') }}</th>
+            <th>{{ t('peers.allowedIps') }}</th>
+            <th>{{ t('peers.lastHandshake') }}</th>
+            <th>{{ t('peers.rxTxData') }}</th>
             <th>{{ t('common.status') }}</th>
           </tr>
         </thead>

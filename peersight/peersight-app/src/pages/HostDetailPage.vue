@@ -95,7 +95,7 @@
       <div v-if="interfaces.length === 0" class="empty-state">
         <span class="material-symbols-outlined">lan</span>
         <h3>{{ t('hosts.noInterfaces') }}</h3>
-        <p>No WireGuard interfaces reported by the agent yet.</p>
+        <p>{{ t('hosts.noInterfacesDesc') }}</p>
       </div>
       <table v-else class="data-table">
         <thead>
@@ -136,7 +136,7 @@
       <div v-if="endpoints.length === 0" class="empty-state">
         <span class="material-symbols-outlined">hub</span>
         <h3>{{ t('peers.noEndpoints') }}</h3>
-        <p>No peer connections discovered yet.</p>
+        <p>{{ t('hosts.noEndpointsDesc') }}</p>
       </div>
       <table v-else class="data-table">
         <thead>
@@ -197,7 +197,7 @@
             </select>
           </div>
           <div class="form-group" style="margin-bottom:0;flex:1;min-width:250px">
-            <label class="form-label">Payload (JSON)</label>
+            <label class="form-label">{{ t('hosts.payload') }} (JSON)</label>
             <input v-model="newChange.payload" class="form-input" placeholder='{"interface":"wg0","public_key":"...","allowed_ips":"10.0.0.2/32"}' />
           </div>
           <button type="submit" class="btn btn-primary" :disabled="changeSending">
@@ -213,7 +213,7 @@
         <div v-if="changes.length === 0" class="empty-state">
           <span class="material-symbols-outlined">history</span>
           <h3>{{ t('hosts.noChanges') }}</h3>
-          <p>No desired changes have been created for this host.</p>
+          <p>{{ t('hosts.noChangesDesc') }}</p>
         </div>
         <table v-else class="data-table">
           <thead>
@@ -222,7 +222,7 @@
               <th>{{ t('common.status') }}</th>
               <th>{{ t('common.message') }}</th>
               <th>{{ t('common.time') }}</th>
-              <th>Executed</th>
+              <th>{{ t('hosts.executed') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -261,14 +261,14 @@
         </div>
 
         <div v-if="!agentToken" class="modal-body">
-          <p class="hint">Generate a host-scoped Agent Token (10 years) to authenticate the <code>peersight-agent</code> daemon for <strong>{{ host?.name }}</strong>.</p>
+          <p class="hint" v-html="t('hosts.tokenDesc').replace('{name}', '<strong>' + (host?.name || '') + '</strong>')"></p>
           <div class="modal-footer">
-            <button class="btn btn-secondary" @click="showTokenModal = false">Cancel</button>
+            <button class="btn btn-secondary" @click="showTokenModal = false">{{ t('common.cancel') }}</button>
             <button class="btn btn-primary" :disabled="tokenLoading" @click="handleGenerateToken">
               <span v-if="tokenLoading" class="spinner-sm"></span>
               <span v-else style="display:flex;align-items:center;gap:5px">
                 <span class="material-symbols-outlined" style="font-size:16px">key</span>
-                Generate Agent Token
+                {{ t('settings.generateToken') }}
               </span>
             </button>
           </div>
@@ -277,7 +277,7 @@
         <div v-else class="modal-body animate-fade">
           <div class="success-banner">
             <span class="material-symbols-outlined">key</span>
-            Host-scoped token valid for <strong>10 years</strong>
+            {{ t('hosts.tokenSuccessBanner') }}
           </div>
 
           <div class="info-row">
@@ -303,7 +303,7 @@
           <div class="cmd-block-wrap">
             <div class="cmd-label">
               <span class="material-symbols-outlined" style="font-size:13px">terminal</span>
-              Install command
+              {{ t('hosts.installCommand') }}
             </div>
             <div class="cmd-block">
               <pre>{{ installCmd }}</pre>
@@ -315,11 +315,11 @@
 
           <div class="warning-note">
             <span class="material-symbols-outlined">warning</span>
-            Save this token — it will not be shown again.
+            {{ t('hosts.tokenSaveWarning') }}
           </div>
 
           <div class="modal-footer">
-            <button class="btn btn-primary" @click="showTokenModal = false">Done</button>
+            <button class="btn btn-primary" @click="showTokenModal = false">{{ t('hosts.done') }}</button>
           </div>
         </div>
       </div>

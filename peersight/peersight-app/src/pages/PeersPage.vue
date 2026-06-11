@@ -27,7 +27,7 @@
     <div v-else-if="peerStore.peers.length === 0" class="empty-state">
       <span class="material-symbols-outlined">hub</span>
       <h3>{{ t('peers.noEndpoints') }}</h3>
-      <p>Peers are discovered automatically when an agent reports its WireGuard state.</p>
+      <p>{{ t('peers.peersDiscovered') }}</p>
     </div>
 
     <div v-else class="card animate-fade" style="padding: 0; overflow: hidden;">
@@ -132,8 +132,8 @@
       <div class="modal-content">
         <h3 style="margin-bottom:var(--space-md)">{{ t('common.delete') }}</h3>
         <p style="color:var(--color-text-secondary);margin-bottom:var(--space-lg)">
-          Are you sure you want to remove <strong>{{ peerToDelete.name }}</strong>?
-          This will not remove the peer from the WireGuard interface.
+          {{ t('peers.deleteConfirm').replace('{name}', peerToDelete.name) }}<br/>
+          {{ t('peers.deleteWarning') }}
         </p>
         <div style="display:flex;gap:var(--space-sm);justify-content:flex-end">
           <button class="btn btn-secondary" @click="peerToDelete = null">{{ t('common.cancel') }}</button>
