@@ -153,13 +153,20 @@ chmod 644 /etc/systemd/system/wwan.service
 chmod 644 /etc/systemd/system/wwan-monitor.service
 
 # 6. Setup default environment file
+WWAN_APN_VAL="${WWAN_APN:-v-internet}"
+WWAN_TIMEOUT_VAL="${WWAN_DEVICE_WAIT_TIMEOUT:-45}"
+
 if [[ ! -f /etc/default/wwan ]]; then
     echo "[INFO] Creating default configuration at /etc/default/wwan..."
     cat <<EOF > /etc/default/wwan
 # WWAN Configuration
-WWAN_APN=internet
-WWAN_DEVICE_WAIT_TIMEOUT=45
+WWAN_APN=${WWAN_APN_VAL}
+WWAN_DEVICE_WAIT_TIMEOUT=${WWAN_TIMEOUT_VAL}
 EOF
+else
+    echo "[INFO] Updating configuration at /etc/default/wwan..."
+    sed -i "s|^WWAN_APN=.*|WWAN_APN=${WWAN_APN_VAL}|g" /etc/default/wwan
+    sed -i "s|^WWAN_DEVICE_WAIT_TIMEOUT=.*|WWAN_DEVICE_WAIT_TIMEOUT=${WWAN_TIMEOUT_VAL}|g" /etc/default/wwan
 fi
 
 # 7. Reload daemon and enable services
