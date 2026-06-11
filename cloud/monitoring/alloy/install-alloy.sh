@@ -21,7 +21,7 @@ SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
 ALLOY_CONFIG_SRC="${ALLOY_CONFIG_SRC:-${SCRIPT_DIR}/config.alloy}"
 ALLOY_CONFIG_DST="${ALLOY_CONFIG_DST:-/etc/alloy/config.alloy}"
 ALLOY_LOKI_URL="${ALLOY_LOKI_URL:-http://127.0.0.1:3100/loki/api/v1/push}"
-ALLOY_HTTP_LISTEN_ADDR="${ALLOY_HTTP_LISTEN_ADDR:-0.0.0.0:12346}"
+ALLOY_HTTP_LISTEN_ADDR="${ALLOY_HTTP_LISTEN_ADDR:-0.0.0.0:12345}"
 PKG_MANAGER=""
 ALLOY_ENV_FILE=""
 
@@ -192,10 +192,10 @@ print_summary() {
   echo "Useful checks:"
   echo "  sudo systemctl status alloy --no-pager"
   echo "  sudo journalctl -u alloy --no-pager"
-  echo "  curl http://127.0.0.1:12346"
+  echo "  curl http://127.0.0.1:12345"
   echo
   echo "Access Cloud Alloy UI from your laptop via SSH tunnel:"
-  echo "  ssh -N -L 12346:127.0.0.1:12346 ec2-user@<EC2_PUBLIC_IP>"
+  echo "  ssh -N -L 12346:127.0.0.1:12345 ec2-user@<EC2_PUBLIC_IP>"
   echo "  Then open: http://127.0.0.1:12346"
 }
 

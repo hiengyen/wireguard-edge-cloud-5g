@@ -134,7 +134,7 @@ ssh -i <your-key.pem> \
   -L 9090:127.0.0.1:9090 \
   -L 3100:127.0.0.1:3100 \
   -L 9100:127.0.0.1:9100 \
-  -L 12346:127.0.0.1:12346 \
+  -L 12346:127.0.0.1:12345 \
   ec2-user@<EC2_PUBLIC_IP>
 ```
 
@@ -201,7 +201,7 @@ sudo systemctl status alloy --no-pager
 Access the Cloud Alloy UI from your laptop via SSH tunnel:
 
 ```bash
-ssh -i <your-key.pem> -N -L 12346:127.0.0.1:12346 ec2-user@<EC2_PUBLIC_IP>
+ssh -i <your-key.pem> -N -L 12346:127.0.0.1:12345 ec2-user@<EC2_PUBLIC_IP>
 # Open: http://127.0.0.1:12346
 ```
 
@@ -553,7 +553,7 @@ ssh -i <your-key.pem> \
   -L 9090:127.0.0.1:9090 \
   -L 3100:127.0.0.1:3100 \
   -L 9100:127.0.0.1:9100 \
-  -L 12346:127.0.0.1:12346 \
+  -L 12346:127.0.0.1:12345 \
   ec2-user@<EC2_PUBLIC_IP>
 ```
 
@@ -618,7 +618,7 @@ sudo systemctl status alloy --no-pager
 Truy cập giao diện Alloy UI của Cloud từ laptop qua SSH tunnel:
 
 ```bash
-ssh -i <your-key.pem> -N -L 12346:127.0.0.1:12346 ec2-user@<EC2_PUBLIC_IP>
+ssh -i <your-key.pem> -N -L 12346:127.0.0.1:12345 ec2-user@<EC2_PUBLIC_IP>
 # Mở: http://127.0.0.1:12346
 ```
 

@@ -270,13 +270,14 @@ To access the monitoring web UIs through SSH tunneling from your local machine:
 
 ```bash
 # -N keeps the tunnel open without opening a shell
-# Cloud services (10.8.0.1) + Alloy UI on edge (10.8.0.2:12345)
+# Cloud services (10.8.0.1) + Alloy UI on edge (10.8.0.2:12345) & cloud (127.0.0.1:12345)
 ssh -i <your-key.pem> -N \
   -L 3000:10.8.0.1:3000 \
   -L 9090:10.8.0.1:9090 \
   -L 3100:10.8.0.1:3100 \
   -L 9100:10.8.0.1:9100 \
   -L 12345:10.8.0.2:12345 \
+  -L 12346:127.0.0.1:12345 \
   -L 4000:10.8.0.1:4000 \
   -L 5173:10.8.0.1:5173 \
   ec2-user@<EC2_PUBLIC_IP>
@@ -288,6 +289,7 @@ Then open:
 - Loki readiness: `http://127.0.0.1:3100/ready`
 - Node Exporter (cloud): `http://127.0.0.1:9100/metrics`
 - Alloy UI (edge): `http://127.0.0.1:12345`
+- Alloy UI (cloud): `http://127.0.0.1:12346`
 - PeerSight API: `http://127.0.0.1:4000/health`
 - PeerSight UI: `http://127.0.0.1:5173`
 
@@ -615,13 +617,14 @@ Nếu muốn truy cập Web UI của monitoring qua SSH tunnel từ máy local:
 
 ```bash
 # -N giữ tunnel mở mà không mở shell
-# Cloud services (10.8.0.1) + Alloy UI trên edge (10.8.0.2:12345)
+# Cloud services (10.8.0.1) + Alloy UI trên edge (10.8.0.2:12345) & cloud (127.0.0.1:12345)
 ssh -i <your-key.pem> -N \
   -L 3000:10.8.0.1:3000 \
   -L 9090:10.8.0.1:9090 \
   -L 3100:10.8.0.1:3100 \
   -L 9100:10.8.0.1:9100 \
   -L 12345:10.8.0.2:12345 \
+  -L 12346:127.0.0.1:12345 \
   -L 4000:10.8.0.1:4000 \
   -L 5173:10.8.0.1:5173 \
   ec2-user@<EC2_PUBLIC_IP>
@@ -633,6 +636,7 @@ Sau đó mở:
 - Loki readiness: `http://127.0.0.1:3100/ready`
 - Node Exporter (cloud): `http://127.0.0.1:9100/metrics`
 - Alloy UI (edge): `http://127.0.0.1:12345`
+- Alloy UI (cloud): `http://127.0.0.1:12346`
 - PeerSight API: `http://127.0.0.1:4000/health`
 - PeerSight UI: `http://127.0.0.1:5173`
 
