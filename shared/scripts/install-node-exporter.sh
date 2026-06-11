@@ -39,17 +39,26 @@ if ! id "node_exporter" &>/dev/null; then
 fi
 
 # 3. Download and extract
-TMP_DIR=$(mktemp -d -t node_exporter_install.XXXXXX)
-trap 'cd / && rm -rf "${TMP_DIR}"' EXIT
+cd /tmp
 
-cd "${TMP_DIR}"
-wget -q --show-progress "${BASE_URL}/${TAR_FILE}"
-wget -q --show-progress "${BASE_URL}/${SHA_FILE}"
-grep " ${TAR_FILE}\$" "${SHA_FILE}" | sha256sum -c -
+# Download the latest checksum file (overwriting if it exists)
+wget -q -O "${SHA_FILE}" "${BASE_URL}/${SHA_FILE}"
+
+# Check if the archive already exists and matches the checksum
+if [[ -f "${TAR_FILE}" ]] && grep " ${TAR_FILE}\$" "${SHA_FILE}" | sha256sum -c - &>/dev/null; then
+    echo "[INFO] Valid archive ${TAR_FILE} already exists in /tmp. Skipping download."
+else
+    echo "[INFO] Downloading ${TAR_FILE}..."
+    wget -q --show-progress -O "${TAR_FILE}" "${BASE_URL}/${TAR_FILE}"
+    # Verify the download
+    grep " ${TAR_FILE}\$" "${SHA_FILE}" | sha256sum -c -
+fi
+
 tar xvfz "${TAR_FILE}"
 mv "${DIR_NAME}/node_exporter" /usr/local/bin/
 
 chown node_exporter:node_exporter /usr/local/bin/node_exporter
+rm -rf "${DIR_NAME}"
 
 # 4. Create systemd service
 cat > /etc/systemd/system/node_exporter.service << EOF
