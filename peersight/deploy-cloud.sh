@@ -21,7 +21,6 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-ENV_FILE="${REPO_ROOT}/.env"
 API_HEALTH_RETRIES=15
 API_HEALTH_INTERVAL=4
 
@@ -34,16 +33,26 @@ die()     { echo -e "${RED}[ERROR]${NC} $*" >&2; exit 1; }
 # ── 1. Root check ──────────────────────────────────────────────
 [[ $EUID -eq 0 ]] || die "This script must be run as root. Please use: sudo -E $0"
 
-# ── 2. Load .env ───────────────────────────────────────────────
-[[ -f "$ENV_FILE" ]] || die ".env not found at ${ENV_FILE}. Copy .env.example → .env and fill in values."
+# ── 2. Load environment file ───────────────────────────────────
+if [[ -f "${REPO_ROOT}/.env" ]]; then
+    ENV_FILE="${REPO_ROOT}/.env"
+elif [[ -f "${REPO_ROOT}/.env.cloud" ]]; then
+    ENV_FILE="${REPO_ROOT}/.env.cloud"
+else
+    # Output to stderr directly since die is not defined if we didn't define it, but here it is defined!
+    die "Environment file not found. Copy .env.example → .env or .env.cloud and fill in values."
+fi
+
+ENV_BASE="$(basename "$ENV_FILE")"
+info "Loading environment from ${ENV_FILE}..."
 set -a
 # shellcheck source=/dev/null
 . "$ENV_FILE"
 set +a
 
 # ── 3. Required variable checks ────────────────────────────────
-: "${PEERSIGHT_DB_PASSWORD:?'PEERSIGHT_DB_PASSWORD is not set in .env'}"
-: "${PEERSIGHT_JWT_SECRET:?'PEERSIGHT_JWT_SECRET is not set in .env'}"
+: "${PEERSIGHT_DB_PASSWORD:?"PEERSIGHT_DB_PASSWORD is not set in ${ENV_BASE}"}"
+: "${PEERSIGHT_JWT_SECRET:?"PEERSIGHT_JWT_SECRET is not set in ${ENV_BASE}"}"
 : "${PEERSIGHT_API_PORT:=4000}"
 : "${PEERSIGHT_APP_PORT:=5173}"
 : "${MONITORING_BIND_ADDRESS:=10.8.0.1}"

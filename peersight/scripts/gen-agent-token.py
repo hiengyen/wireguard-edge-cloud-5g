@@ -39,18 +39,21 @@ def make_jwt(secret: str, user_id: str, role: str, years: int = 10) -> str:
 secret = os.environ.get("PEERSIGHT_JWT_SECRET", "")
 
 if not secret:
-    # Thử đọc từ .env trong thư mục gốc repo
+    # Thử đọc từ .env hoặc .env.cloud trong thư mục gốc repo
     script_dir = os.path.dirname(os.path.abspath(__file__))
     repo_root = os.path.join(script_dir, "..", "..")
-    env_file = os.path.normpath(os.path.join(repo_root, ".env"))
 
-    if os.path.exists(env_file):
-        with open(env_file) as f:
-            for line in f:
-                line = line.strip()
-                if line.startswith("PEERSIGHT_JWT_SECRET=") and not line.startswith("#"):
-                    secret = line.split("=", 1)[1].strip().strip("'\"")
-                    break
+    for filename in [".env", ".env.cloud"]:
+        env_file = os.path.normpath(os.path.join(repo_root, filename))
+        if os.path.exists(env_file):
+            with open(env_file) as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith("PEERSIGHT_JWT_SECRET=") and not line.startswith("#"):
+                        secret = line.split("=", 1)[1].strip().strip("'\"")
+                        break
+            if secret:
+                break
 
 if not secret:
     print("[ERROR] Không tìm thấy PEERSIGHT_JWT_SECRET.")
