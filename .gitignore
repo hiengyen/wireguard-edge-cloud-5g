@@ -48,6 +48,7 @@ plans/
 
 dataset/
 docx/
+docx_unpacked/
 pptx/
 .agents/
 gen_docx_documents/
